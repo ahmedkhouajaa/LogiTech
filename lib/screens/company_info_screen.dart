@@ -5,6 +5,7 @@ import '../blocs/enterprise/enterprise_bloc.dart';
 import '../models/enterprise.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/company_logo_helper.dart';
 import '../widgets/custom_app_bar.dart';
 
@@ -154,11 +155,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Le nom de la société est obligatoire.'),
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(context.tr('Le nom de la société est obligatoire.')),
             ],
           ),
           backgroundColor: AppColors.error,
@@ -172,7 +173,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
     if (eid == null || eid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Aucune entreprise active sélectionnée.'),
+          content: Text(context.tr('Aucune entreprise active sélectionnée.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -227,11 +228,11 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Informations de la société enregistrées avec succès.'),
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(context.tr('Informations de la société enregistrées avec succès.')),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -248,7 +249,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               children: [
                 const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text('Erreur lors de l\'enregistrement: $e')),
+                Expanded(child: Text('${context.tr('Erreur')} : $e')),
               ],
             ),
             backgroundColor: AppColors.error,
@@ -287,7 +288,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Informations sur la société',
+                    context.tr('Informations sur la société'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -296,12 +297,12 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Gérez les coordonnées et informations légales de votre entreprise',
+                    context.tr('Gérez les coordonnées et informations légales de votre entreprise'),
                     style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppButton(
-                    label: 'Enregistrer',
+                    label: context.tr('Enregistrer'),
                     icon: Icons.save_rounded,
                     isLoading: _isSaving,
                     onPressed: _isSaving ? null : _saveSettings,
@@ -317,7 +318,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Informations sur la société',
+                          context.tr('Informations sur la société'),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -327,7 +328,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Gérez les coordonnées et informations légales de votre entreprise',
+                          context.tr('Gérez les coordonnées et informations légales de votre entreprise'),
                           style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                         ),
                       ],
@@ -335,7 +336,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                   ),
                   const SizedBox(width: AppSpacing.md),
                   AppButton(
-                    label: 'Enregistrer',
+                    label: context.tr('Enregistrer'),
                     icon: Icons.save_rounded,
                     isLoading: _isSaving,
                     onPressed: _isSaving ? null : _saveSettings,
@@ -358,59 +359,59 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                   _buildStampSection(isMobile),
                   if (isMobile) ...[
                     AppTextField(
-                      label: 'Nom de votre société (Tireur) *',
+                      label: context.tr('Nom de votre société (Tireur) *'),
                       controller: _nameController,
-                      hint: 'Nom de votre société',
+                      hint: context.tr('Nom de votre société'),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
-                      label: 'Téléphone',
+                      label: context.tr('Téléphone'),
                       controller: _phoneController,
-                      hint: '+216 00 000 000',
+                      hint: context.tr('+216 00 000 000'),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
-                      label: 'Email',
+                      label: context.tr('Email'),
                       controller: _emailController,
-                      hint: 'contact@masociete.com',
+                      hint: context.tr('contact@masociete.com'),
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
-                      label: 'Site Web',
+                      label: context.tr('Site Web'),
                       controller: _websiteController,
-                      hint: 'www.masociete.com',
+                      hint: context.tr('www.masociete.com'),
                       keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
-                      label: 'Matricule Fiscale',
+                      label: context.tr('Matricule Fiscale'),
                       controller: _taxIdController,
-                      hint: 'MF1234567/A/B/C/000',
+                      hint: context.tr('MF1234567/A/B/C/000'),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
-                      label: 'Registre de Commerce',
+                      label: context.tr('Registre de Commerce'),
                       controller: _rcNumberController,
-                      hint: 'RC123456789',
+                      hint: context.tr('RC123456789'),
                     ),
                   ] else ...[
                     Row(
                       children: [
                         Expanded(
                           child: AppTextField(
-                            label: 'Nom de votre société (Tireur) *',
+                            label: context.tr('Nom de votre société (Tireur) *'),
                             controller: _nameController,
-                            hint: 'Nom de votre société',
+                            hint: context.tr('Nom de votre société'),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.lg),
                         Expanded(
                           child: AppTextField(
-                            label: 'Téléphone',
+                            label: context.tr('Téléphone'),
                             controller: _phoneController,
-                            hint: '+216 00 000 000',
+                            hint: context.tr('+216 00 000 000'),
                             keyboardType: TextInputType.phone,
                           ),
                         ),
@@ -421,18 +422,18 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                       children: [
                         Expanded(
                           child: AppTextField(
-                            label: 'Email',
+                            label: context.tr('Email'),
                             controller: _emailController,
-                            hint: 'contact@masociete.com',
+                            hint: context.tr('contact@masociete.com'),
                             keyboardType: TextInputType.emailAddress,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.lg),
                         Expanded(
                           child: AppTextField(
-                            label: 'Site Web',
+                            label: context.tr('Site Web'),
                             controller: _websiteController,
-                            hint: 'www.masociete.com',
+                            hint: context.tr('www.masociete.com'),
                             keyboardType: TextInputType.url,
                           ),
                         ),
@@ -443,17 +444,17 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                       children: [
                         Expanded(
                           child: AppTextField(
-                            label: 'Matricule Fiscale',
+                            label: context.tr('Matricule Fiscale'),
                             controller: _taxIdController,
-                            hint: 'MF1234567/A/B/C/000',
+                            hint: context.tr('MF1234567/A/B/C/000'),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.lg),
                         Expanded(
                           child: AppTextField(
-                            label: 'Registre de Commerce',
+                            label: context.tr('Registre de Commerce'),
                             controller: _rcNumberController,
-                            hint: 'RC123456789',
+                            hint: context.tr('RC123456789'),
                           ),
                         ),
                       ],
@@ -461,15 +462,15 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   AppTextField(
-                    label: 'Adresse de votre société',
+                    label: context.tr('Adresse de votre société'),
                     controller: _addressController,
-                    hint: '123 Rue Exemple, Ville, Pays',
+                    hint: context.tr('123 Rue Exemple, Ville, Pays'),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   AppTextField(
-                    label: 'Coordonnées bancaires (RIB)',
+                    label: context.tr('Coordonnées bancaires (RIB)'),
                     controller: _ribController,
-                    hint: 'BIAT - Agence X - RIB: 08001002003004005006',
+                    hint: context.tr('BIAT - Agence X - RIB: 08001002003004005006'),
                   ),
                 ],
               ),
@@ -557,7 +558,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 Row(
                   children: [
                     Text(
-                      'Logo officiel de l\'entreprise',
+                      context.tr('Logo officiel de l\'entreprise'),
                       style: TextStyle(
                         fontSize: isMobile ? 14 : 16,
                         fontWeight: FontWeight.bold,
@@ -574,7 +575,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        _logoBase64 != null ? 'Logo configuré' : 'Aucun logo',
+                        _logoBase64 != null ? context.tr('Logo configuré') : context.tr('Aucun logo'),
                         style: TextStyle(
                           fontSize: 11,
                           color: _logoBase64 != null ? AppColors.success : AppColors.primary,
@@ -587,8 +588,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 const SizedBox(height: 6),
                 Text(
                   _logoBase64 != null
-                      ? 'Logo importé avec succès'
-                      : 'Formats supportés : PNG, JPG, JPEG, WebP. Ce logo apparaîtra sur vos devis, factures, bons de livraison et modèles de documents.',
+                      ? context.tr('Logo importé avec succès')
+                      : context.tr('Formats supportés : PNG, JPG, JPEG, WebP. Ce logo apparaîtra sur vos devis, factures, bons de livraison et modèles de documents.'),
                   style: TextStyle(
                     fontSize: 12,
                     color: _logoBase64 != null ? AppColors.success : AppColors.textSecondary,
@@ -608,7 +609,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         size: 16,
                       ),
                       label: Text(
-                        _logoBase64 != null ? 'Modifier le logo' : 'Télécharger un logo',
+                        _logoBase64 != null ? context.tr('Modifier le logo') : context.tr('Télécharger un logo'),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -622,7 +623,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                       TextButton.icon(
                         onPressed: _removeLogo,
                         icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                        label: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                        label: Text(context.tr('Supprimer'), style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           shape: RoundedRectangleBorder(
@@ -648,7 +649,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ajouter le cachet de l\'entreprise',
+              context.tr('Ajouter le cachet de l\'entreprise'),
               style: TextStyle(
                 fontSize: isMobile ? 15 : 17,
                 fontWeight: FontWeight.bold,
@@ -657,7 +658,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Téléchargez votre cachet d\'entreprise (formats PNG, JPG)',
+              context.tr('Téléchargez votre cachet d\'entreprise (formats PNG, JPG)'),
               style: TextStyle(
                 fontSize: isMobile ? 12 : 13,
                 color: AppColors.textSecondary,
@@ -700,8 +701,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                               color: Color(0xFF64748B),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              'Cliquez, glissez ou collez\nune image',
+                            Text(
+                              context.tr('Cliquez, glissez ou collez\nune image'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 12.5,
@@ -787,7 +788,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 Row(
                   children: [
                     Text(
-                      'Cachet officiel de l\'entreprise',
+                      context.tr('Cachet officiel de l\'entreprise'),
                       style: TextStyle(
                         fontSize: isMobile ? 14 : 16,
                         fontWeight: FontWeight.bold,
@@ -802,7 +803,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'Cachet configuré',
+                        context.tr('Cachet configuré'),
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.success,
@@ -814,7 +815,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Cachet importé avec succès. Vous pouvez maintenant l\'activer et le positionner sur vos documents via l\'éditeur de modèle.',
+                  context.tr('Cachet importé avec succès. Vous pouvez maintenant l\'activer et le positionner sur vos documents via l\'éditeur de modèle.'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -829,8 +830,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                     OutlinedButton.icon(
                       onPressed: _isPickingStamp ? null : _pickStamp,
                       icon: const Icon(Icons.photo_library_rounded, size: 16),
-                      label: const Text(
-                        'Modifier le cachet',
+                      label: Text(
+                        context.tr('Modifier le cachet'),
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -841,7 +842,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                     TextButton.icon(
                       onPressed: _removeStamp,
                       icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
-                      label: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                      label: Text(context.tr('Supprimer'), style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

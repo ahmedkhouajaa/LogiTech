@@ -20,6 +20,7 @@ import '../../utils/offline_action_helper.dart';
 import '../../services/permission_service.dart';
 import '../../services/sync_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileCustomerOrdersScreen extends StatefulWidget {
   const MobileCustomerOrdersScreen({super.key});
@@ -174,8 +175,12 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
 
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLabel = translateStatus(item.status).toLowerCase();
+              final rawStatus = item.status.toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('customer_order', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower) return false;
+              if (statusLabel != filterLower && rawStatus != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -185,7 +190,8 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
 
           cards = filteredItems.map((item) {
             final reference = item.number;
-            final status = translateStatus(item.status);
+            final sInfo = CustomStatusService.instance.getStatusInfo('customer_order', item.status);
+            final status = sInfo.label;
             final name = item.customerName;
             final date = item.date;
             final amount = item.totalTTC;
@@ -193,6 +199,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: sInfo.color,
               name: name,
               date: date,
               amount: amount,
@@ -268,7 +275,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
               _fetchFilteredOrders();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Créé', 'Validé', 'Validée et facturée', 'Livré', 'Annulé'],
+            documentType: 'customer_order',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredOrders();

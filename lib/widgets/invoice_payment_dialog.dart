@@ -27,6 +27,7 @@ import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import '../l10n/app_localizations.dart';
 
 class InvoicePaymentDialog extends StatefulWidget {
   final Invoice invoice;
@@ -389,8 +390,8 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Nouveau paiement', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
-          Text('Facture', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(context.tr('Nouveau paiement'), style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
+          Text(context.tr('Facture'), style: TextStyle(color: Colors.white70, fontSize: 12)),
         ],
       ),
       actions: [
@@ -399,7 +400,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
           child: TextButton.icon(
             onPressed: _save,
             icon: Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            label: Text('Créer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            label: Text(context.tr('Créer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             style: TextButton.styleFrom(
               backgroundColor: Colors.white.withOpacity(0.15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -544,7 +545,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
       children: [
         Icon(icon, size: 18, color: AppColors.textTertiary),
         SizedBox(width: 10),
-        Text('$label: ', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text('${context.tr(label)}: ', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         Expanded(
           child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), textAlign: TextAlign.end),
         ),
@@ -555,7 +556,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
   Widget _buildAmountBlock(String label, String amount, Color color) {
     return Column(
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
         SizedBox(height: 4),
         Text(amount, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
       ],
@@ -601,7 +602,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
               Icon(icon, size: 16, color: isSelected ? AppColors.primary : AppColors.textTertiary),
               SizedBox(width: 6),
               Text(
-                label,
+                context.tr(label),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -632,8 +633,8 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
               _applyWithholdingTax = v;
               _updateAmountField();
             }),
-            title: Text('Retenue à la source', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            subtitle: Text('Appliquer la retenue fiscale', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+            title: Text(context.tr('Retenue à la source'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            subtitle: Text(context.tr('Appliquer la retenue fiscale'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
             secondary: Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -992,7 +993,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
                 side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
             ),
           ),
           SizedBox(width: 12),
@@ -1015,7 +1016,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
                 icon: _isSaving
                     ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : Icon(Icons.check_circle, color: Colors.white, size: 20),
-                label: Text(_isSaving ? 'Traitement en cours...' : 'Confirmer le paiement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                label: Text(_isSaving ? context.tr('Enregistrement...') : context.tr('Valider'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
@@ -1090,7 +1091,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
             Icon(icon, size: 14, color: AppColors.textTertiary),
             SizedBox(width: 6),
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
           ],
@@ -1461,7 +1462,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(label, style: TextStyle(color: isSelected ? AppColors.textPrimary : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500, fontSize: 13)),
+              Text(context.tr(label), style: TextStyle(color: isSelected ? AppColors.textPrimary : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500, fontSize: 13)),
               if (index > 0) ...[
                 SizedBox(width: 8),
                 Container(
@@ -1511,7 +1512,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
         SizedBox(height: 6),
         child,
       ],

@@ -38,6 +38,8 @@ import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/supplier_order_payment_dialog.dart';
 import 'forms/mobile_supplier_order_form_screen.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileSupplierOrderDetailScreen extends StatefulWidget {
   final SupplierOrder order;
@@ -95,8 +97,9 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentOrder.status);
-    final statusColor = _getStatusColor(currentOrder.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('supplier_order', currentOrder.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -338,6 +341,9 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         final docWa = DocumentWrapper.fromSupplierOrder(order);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
+      case 'status':
+        _showChangeStatusDialog(context, order);
+        break;
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
@@ -384,54 +390,20 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
   }
 
   void _showChangeStatusDialog(BuildContext context, SupplierOrder order) {
-    String selectedStatus = order.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedOrder = order.copyWith(status: selectedStatus);
-                  context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'supplier_order',
+      currentStatus: order.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedOrder = order.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${order.notes ?? ''}\n$notes' : order.notes,
+        );
+        setState(() {
+          currentOrder = updatedOrder;
+        });
+        context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
+      },
     );
   }
 
@@ -611,7 +583,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: generateDocNumber(DocPrefix.receivingVoucher, seq),
+      number: generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers'),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,

@@ -41,6 +41,10 @@ import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
+import '../l10n/app_localizations.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
   const PurchaseInvoicesScreen({super.key});
@@ -55,7 +59,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  InvoiceStatus? _statusFilter;
+  String? _statusFilter;
 
   // Pagination state
   int _rowsPerPage = 20;
@@ -78,7 +82,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               children: [
                 const Icon(Icons.check_circle_outline, color: Colors.white),
                 const SizedBox(width: 8),
-                Text('$count document(s) synchronisé(s) avec succès !'),
+                Text('$count ${context.tr('document(s) synchronisé(s) avec succès !')}'),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -101,7 +105,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       supplierId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() {
       _currentPage = 0;
@@ -123,11 +127,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Factures d\'achat',
+                    context.tr('Factures d\'achat'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 2),
-                  Text('Gérer vos factures d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos factures d\'achat'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               Row(
@@ -138,7 +142,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   ],
                   if (PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices))
                     AppButton(
-                      label: 'Nouvelle facture',
+                      label: context.tr('Nouvelle facture'),
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
                         context,
@@ -187,7 +191,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   Widget _buildFilterBar(PurchaseInvoicesState state) {
     int totalItems = 0;
     if (state is PurchaseInvoicesLoaded) {
-      totalItems = state.filteredPurchaseInvoices.length;
+      List<PurchaseInvoice> filteredInvoices = state.filteredPurchaseInvoices;
+      if (_selectedClientId != null && _selectedClientId != 'all') {
+        filteredInvoices = filteredInvoices.where((q) => q.supplierId == _selectedClientId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredInvoices = filteredInvoices.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredInvoices = filteredInvoices.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredInvoices = filteredInvoices.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
+      }
+      totalItems = filteredInvoices.length;
     }
 
     final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
@@ -209,15 +226,15 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           Expanded(
             flex: 3,
             child: _buildFilterField(
-              label: 'Fournisseur',
+              label: context.tr('Fournisseur'),
               child: BlocBuilder<SuppliersBloc, SuppliersState>(
                 builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                  String selectedSupplierName = 'Tous les fournisseurs';
+                  String selectedSupplierName = context.tr('Tous les fournisseurs');
                   if (_selectedClientId != null && _selectedClientId != 'all') {
                     final found = suppliers.firstWhere(
                       (s) => s.id == _selectedClientId,
-                      orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                      orElse: () => Supplier(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                     );
                     selectedSupplierName = found.companyName?.isNotEmpty == true
                         ? found.companyName!
@@ -248,7 +265,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                           Expanded(
                             child: Text(
                               _selectedClientId == null || _selectedClientId == 'all'
-                                  ? 'Tous les fournisseurs'
+                                  ? context.tr('Tous les fournisseurs')
                                   : selectedSupplierName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -273,10 +290,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           Expanded(
             flex: 2,
             child: _buildFilterField(
-              label: 'Date de début',
+              label: context.tr('Date de début'),
               child: _buildDateFilterField(
                 value: _dateFrom,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onChanged: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -289,10 +306,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           Expanded(
             flex: 2,
             child: _buildFilterField(
-              label: 'Date de fin',
+              label: context.tr('Date de fin'),
               child: _buildDateFilterField(
                 value: _dateTo,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onChanged: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -305,114 +322,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           Expanded(
             flex: 2,
             child: _buildFilterField(
-              label: 'Statut',
-              child: PopupMenuButton<InvoiceStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (v) {
+              label: context.tr('Statut'),
+              child: DocumentStatusFilterDropdown(
+                documentType: 'purchase_invoice',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (v) {
                   setState(() => _statusFilter = v);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<InvoiceStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...InvoiceStatus.values.map(
-                    (s) => PopupMenuItem<InvoiceStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -432,7 +349,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -472,7 +389,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (picked != null) onChanged(picked);
       },
@@ -538,7 +455,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un fournisseur',
+                          context.tr('Sélectionner un fournisseur'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -558,7 +475,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un fournisseur...',
+                          hintText: context.tr('Rechercher un fournisseur...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -590,14 +507,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                       selected: selectedSupplierId == null || selectedSupplierId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les fournisseurs',
+                        context.tr('Tous les fournisseurs'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
                           ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
                           : null,
                       onTap: () {
-                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: 'Tous les fournisseurs', country: ''));
+                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: context.tr('Tous les fournisseurs'), country: ''));
                       },
                     ),
 
@@ -608,7 +525,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun fournisseur trouvé',
+                                  context.tr('Aucun fournisseur trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -693,11 +610,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -708,7 +625,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         if (state is PurchaseInvoicesLoading || state is PurchaseInvoicesInitial) return _buildTableShimmer();
         if (state is PurchaseInvoicesError) return AppErrorWidget(message: state.message);
         if (state is PurchaseInvoicesLoaded) {
-          final purchaseInvoices = state.filteredPurchaseInvoices;
+          List<PurchaseInvoice> filteredInvoices = state.filteredPurchaseInvoices;
+          if (_selectedClientId != null && _selectedClientId != 'all') {
+            filteredInvoices = filteredInvoices.where((q) => q.supplierId == _selectedClientId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredInvoices = filteredInvoices.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredInvoices = filteredInvoices.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredInvoices = filteredInvoices.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
+          }
+          final purchaseInvoices = filteredInvoices;
           final totalRows = purchaseInvoices.length;
           final int totalPages = (totalRows / _rowsPerPage).ceil().clamp(1, 9999).toInt();
           _currentPage = _currentPage.clamp(0, totalPages - 1);
@@ -734,7 +664,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                             children: [
                               Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
                               SizedBox(height: 12),
-                              Text('Aucune facture trouvee', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                              Text(context.tr('Aucune facture trouvee'), style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                             ],
                           ),
                         )
@@ -779,14 +709,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      const Text('Reference'),
+                                      Text(context.tr('Reference')),
                                     ],
                                   ),
                                 ),
-                                const DataColumn(label: Text('Fournisseur')),
-                                const DataColumn(label: Text('Statut')),
-                                const DataColumn(label: Text('Montant')),
-                                const DataColumn(label: Text('Actions')),
+                                DataColumn(label: Text(context.tr('Fournisseur'))),
+                                DataColumn(label: Text(context.tr('Statut'))),
+                                DataColumn(label: Text(context.tr('Montant'))),
+                                DataColumn(label: Text(context.tr('Actions'))),
                               ],
                               rows: pagePurchaseInvoices.map((inv) => _buildPurchaseInvoiceRow(inv)).toList(),
                             ),
@@ -873,7 +803,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         // Statut badge
         DataCell((!inv.isSynced || inv.number.startsWith('BROUILLON-'))
             ? const PendingSyncBadge()
-            : StatusBadge(label: inv.status.label, color: inv.status.color)),
+            : () {
+                final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', inv.effectiveStatus, fallbackLabel: inv.status.label, fallbackColor: inv.status.color);
+                return StatusBadge(label: context.tr(sInfo.label), color: sInfo.color);
+              }()),
         // Montant
         DataCell(
           Text(
@@ -909,7 +842,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
               void addItem(String val, IconData icon, Color col, String label) {
                 if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                entries.add(_buildMenuItem(val, icon, col, label));
+                entries.add(_buildMenuItem(val, icon, col, context.tr(label)));
               }
 
               if (canRead) {
@@ -965,7 +898,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       child: Row(
         children: [
           // Rows per page
-          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 8),
           Container(
             height: 28,
@@ -989,11 +922,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           ),
           const SizedBox(width: 20),
           // Page info
-          Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
           // Display info
           Text(
-            totalRows == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $startRow à $endRow sur $totalRows résultats',
+            totalRows == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} $startRow ${context.tr('à')} $endRow ${context.tr('sur')} $totalRows ${context.tr('résultats')}',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           const SizedBox(width: 12),
@@ -1038,10 +971,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer la facture ${inv.number} ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer la facture')} ${inv.number} ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Annuler'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -1050,7 +983,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               context.read<ProductsBloc>().add(const ResetProductsPagination());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text(context.tr('Supprimer'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1065,24 +998,24 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.warning),
             SizedBox(width: 8),
-            Text('Confirmation'),
+            Text(context.tr('Confirmation')),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Voulez-vous transformer cette facture en avoir ?'),
+            Text(context.tr('Voulez-vous transformer cette facture en avoir ?')),
             SizedBox(height: 16),
-            Text('Facture: ${inv.number}', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text('Client: ${inv.supplierName}'),
-            Text('Montant: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
+            Text('${context.tr('Facture')}: ${inv.number}', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('${context.tr('Fournisseur')}: ${inv.supplierName ?? context.tr('Inconnu')}'),
+            Text('${context.tr('Montant')}: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1097,7 +1030,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 prefix: DocPrefix.supplierCreditNote,
               );
               if (seq == null) return;
-              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq);
+              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
               
               final creditNote = SupplierCreditNote(
                 id: cnId,
@@ -1129,14 +1062,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Avoir fournisseur $cnNumber créé et stock réajusté avec succès'),
+                    content: Text('${context.tr('Avoir fournisseur')} $cnNumber ${context.tr('créé et stock réajusté avec succès')}'),
                     backgroundColor: AppColors.success,
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: Text('Confirmer', style: TextStyle(color: Colors.white)),
+            child: Text(context.tr('Confirmer'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1150,7 +1083,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     if (!mounted) return;
     if (creditNote == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Avoir fournisseur introuvable'),
+        content: Text(context.tr('Avoir fournisseur introuvable')),
         backgroundColor: AppColors.error,
       ));
       return;
@@ -1193,7 +1126,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           MaterialPageRoute(
             builder: (_) => DocumentDetailScreen(
               document: doc,
-              status: inv.status.label,
+              status: context.tr(inv.status.label),
               statusColor: inv.status.color,
             ),
           ),
@@ -1224,7 +1157,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Cette fonctionnalité sera disponible prochainement'))));
     }
   }
 
@@ -1277,82 +1210,19 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, PurchaseInvoice inv) {
-    InvoiceStatus selectedStatus = inv.status;
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: InvoiceStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<PurchaseInvoicesBloc>().add(
-                    UpdatePurchaseInvoice(inv.copyWith(status: selectedStatus))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'purchase_invoice',
+      currentStatus: inv.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final enumMatch = InvoiceStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        final updatedInv = inv.copyWith(
+          status: enumMatch ?? InvoiceStatus.unpaid,
+          customStatus: enumMatch == null ? newStatusKey : null,
+          notes: notes != null && notes.isNotEmpty ? '${inv.notes ?? ''}\n$notes' : inv.notes,
+        );
+        context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInv));
+      },
     );
   }
 
@@ -1371,17 +1241,17 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${context.tr('Télécharger')} $count documents ( pdf )' : context.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1396,7 +1266,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -1439,7 +1309,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${selectedInvoices.length} document(s) exporté(s) en PDF'),
+        content: Text('${selectedInvoices.length} ${context.tr('document(s) exporté(s) en PDF')}'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -1502,14 +1372,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error),
             const SizedBox(width: 8),
-            const Text('Suppression groupée'),
+            Text(context.tr('Suppression groupée')),
           ],
         ),
-        content: Text('Voulez-vous vraiment supprimer ${selectedInvoices.length} facture(s) d\'achat sélectionnée(s) ?'),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer les')} ${selectedInvoices.length} ${context.tr('facture(s) d\'achat sélectionnée(s)')} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1519,7 +1389,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               }
               setState(() => _selectedPurchaseInvoiceIds.clear());
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${selectedInvoices.length} facture(s) d\'achat supprimée(s)'),
+                content: Text('${selectedInvoices.length} ${context.tr('facture(s) d\'achat supprimée(s)')}'),
                 backgroundColor: AppColors.success,
               ));
             },
@@ -1527,7 +1397,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),

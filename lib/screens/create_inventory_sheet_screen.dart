@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -244,7 +245,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                           side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         ),
-                        child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                        child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                       ),
                     ),
                     SizedBox(width: 12),
@@ -258,7 +259,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                           elevation: 0,
                         ),
-                        child: Text('Valider', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ],
@@ -286,16 +287,16 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(context.tr('Informations'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
             if (isMobile) ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   SizedBox(height: 4),
                   TextFormField(
-                    initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
+                    initialValue: formatDateLong(_date, Localizations.localeOf(context).languageCode),
                     readOnly: true,
                     enabled: !widget.isViewOnly,
                     decoration: InputDecoration(
@@ -306,8 +307,8 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   ),
                   SizedBox(height: 16),
                   SmartSearchableSelector(
-                    label: 'Entrepôt',
-                    hint: 'Sélectionner un entrepôt',
+                    label: context.tr('Entrepôt'),
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
                     onTap: () async {
                       if (widget.isViewOnly) return;
@@ -326,10 +327,10 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         SizedBox(height: 4),
                         TextFormField(
-                          initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
+                          initialValue: formatDateLong(_date, Localizations.localeOf(context).languageCode),
                           readOnly: true,
                           enabled: !widget.isViewOnly,
                           decoration: InputDecoration(
@@ -344,8 +345,8 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   SizedBox(width: 16),
                   Expanded(
                     child: SmartSearchableSelector(
-                      label: 'Entrepôt',
-                      hint: 'Sélectionner un entrepôt',
+                      label: context.tr('Entrepôt'),
+                      hint: context.tr('Sélectionner un entrepôt'),
                       selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
                       onTap: () async {
                         if (widget.isViewOnly) return;
@@ -492,7 +493,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Raison (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       SizedBox(height: 4),
                       TextFormField(
                         controller: _reasonController,
@@ -512,14 +513,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Notes (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       SizedBox(height: 4),
                       TextFormField(
                         controller: _notesController,
                         readOnly: widget.isViewOnly,
                         maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: 'Notes additionnelles...',
+                          hintText: context.tr('Notes additionnelles...'),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
@@ -544,14 +545,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(context.tr('Articles'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
             
             if (!isMobile) ...[
               // Desktop Header
               Row(
                 children: [
-                  Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
+                  Expanded(flex: 3, child: Text(context.tr('Produit'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
                   SizedBox(width: 8),
                   Expanded(flex: 1, child: Text('Théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
                   SizedBox(width: 8),
@@ -631,7 +632,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                               children: [
                                 Row(
                                   children: [
-                                    Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                    Text(context.tr('Produit'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                     Spacer(),
                                     if (!widget.isViewOnly)
                                       IconButton(
@@ -672,7 +673,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                           child: Text(
                                             (item.productName != null && item.productName!.isNotEmpty)
                                                 ? item.productName!
-                                                : 'Sélectionner un article',
+                                                : context.tr('Sélectionner un article'),
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: (item.productName != null && item.productName!.isNotEmpty) ? AppColors.textPrimary : AppColors.textSecondary,
@@ -797,7 +798,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                               orElse: () => null,
                                             );
                                             return SearchableSelectorField(
-                                              hint: 'Sélectionner un article',
+                                              hint: context.tr('Sélectionner un article'),
                                               selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
                                               hasError: isDuplicate,
                                               onTap: () async {
@@ -945,7 +946,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                       }
                     },
                     icon: Icon(Icons.add, size: 16),
-                    label: Text('Ajouter une ligne'),
+                    label: Text(context.tr('Ajouter une ligne')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -954,7 +955,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   SizedBox(width: 8),
                   IconButton(
                     icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                    tooltip: 'Créer un nouvel article',
+                    tooltip: context.tr('Créer un nouvel article'),
                     onPressed: () {
                       if (isMobile) {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));

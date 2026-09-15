@@ -13,6 +13,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -27,6 +28,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 
 class MobileCreditNoteFormScreen extends StatefulWidget {
   final CreditNote? existing;
@@ -51,6 +53,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   String _notes = '';
   CreditNoteStatus _status = CreditNoteStatus.unused;
   bool _withTimbreFiscal = true;
+  Map<String, dynamic> _customFields = {};
 
   bool get _isEditing => widget.existing != null;
 
@@ -86,6 +89,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       _reason = cn.reason ?? '';
       _notes = cn.notes ?? '';
       _status = cn.status;
+      _customFields = cn.customFields != null ? Map<String, dynamic>.from(cn.customFields!) : {};
       _items = cn.items.map((i) => CreditNoteItem(
         id: i.id,
         productId: i.productId,
@@ -103,7 +107,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -115,13 +119,13 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error));
       return;
     }
 
@@ -142,7 +146,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           setState(() => _isLoading = false);
           return;
         }
-        number = generateDocNumber('AV', seq);
+        number = generateDocNumber('AV', seq, docCollection: 'credit_notes');
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -167,6 +171,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
         date: _date,
         reason: _reason.trim().isEmpty ? null : _reason.trim(),
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
+        customFields: _customFields,
         status: _status,
         totalHT: _totalHT,
         totalTva: _totalTva,
@@ -191,7 +196,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Avoir mis à jour' : 'Avoir créé avec succès'),
+          content: Text(_isEditing ? context.tr('Avoir mis à jour') : context.tr('Avoir créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -403,7 +408,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
               if (_items.isEmpty)
                 Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary))),
+                  child: Center(child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary))),
                 )
               else
                 ListView.separated(
@@ -446,7 +451,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
      SizedBox(width: 8),
       IconButton(
         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-        tooltip: 'Créer un nouvel article',
+        tooltip: context.tr('Créer un nouvel article'),
         onPressed: () async {
           final newProd = await Navigator.push(
             context,
@@ -487,6 +492,14 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           applyTimbreFiscal: _withTimbreFiscal,
           onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
           totalTTC: _totalTTC,
+        ),
+
+        CustomFieldsFormSection(
+          documentType: 'credit_note',
+          initialValues: _customFields,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
 
         MobileFormSection(

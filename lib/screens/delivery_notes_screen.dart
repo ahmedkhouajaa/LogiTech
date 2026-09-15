@@ -43,6 +43,10 @@ import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
+import '../l10n/app_localizations.dart';
 
 class DeliveryNotesScreen extends StatefulWidget {
   const DeliveryNotesScreen({super.key});
@@ -57,7 +61,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  DeliveryNoteStatus? _statusFilter;
+  String? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -102,7 +106,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       clientId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() => _currentPage = 0);
   }
@@ -124,7 +128,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   Row(
                     children: [
                       Text(
-                        'Bon de Livraison',
+                        context.tr('Bon de Livraison'),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -136,7 +140,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Gérer vos bons de livraison',
+                    context.tr('Gérer vos bons de livraison'),
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
@@ -151,7 +155,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _navigate(context, null),
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Créer un Bon de Livraison'),
+                      label: Text(context.tr('Créer un Bon de Livraison')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -220,7 +224,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter!.name).toList();
+        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = filteredOrders.length;
     }
@@ -248,7 +252,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
               child: BlocBuilder<CustomersBloc, CustomersState>(
                 builder: (context, state) {
                   final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  String selectedCustomerName = 'Tous les clients';
+                  String selectedCustomerName = context.tr('Tous les clients');
                   if (_selectedClientId != null && _selectedClientId != 'all') {
                     final found = customers.firstWhere(
                       (c) => c.id == _selectedClientId,
@@ -283,7 +287,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                           Expanded(
                             child: Text(
                               _selectedClientId == null || _selectedClientId == 'all'
-                                  ? 'Tous les clients'
+                                  ? context.tr('Tous les clients')
                                   : selectedCustomerName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -344,113 +348,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             flex: 2,
             child: _filterSection(
               label: 'Statut',
-              child: PopupMenuButton<DeliveryNoteStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (val) {
+              child: DocumentStatusFilterDropdown(
+                documentType: 'delivery_note',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (val) {
                   setState(() => _statusFilter = val);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<DeliveryNoteStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...DeliveryNoteStatus.values.map(
-                    (s) => PopupMenuItem<DeliveryNoteStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -470,7 +374,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -524,7 +428,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -544,7 +448,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -576,7 +480,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
@@ -594,7 +498,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -658,7 +562,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         child,
       ],
@@ -705,7 +609,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (picked != null) onPicked(picked);
       },
@@ -722,7 +626,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                value != null ? formatDateLong(value) : hint,
+                value != null ? formatDateLong(value) : context.tr(hint),
                 style: TextStyle(
                   fontSize: 12,
                   color: value != null ? AppColors.textPrimary : AppColors.textSecondary,
@@ -751,11 +655,11 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -772,7 +676,20 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   style: TextStyle(color: AppColors.error)));
         }
         if (state is DeliveryNotesLoaded) {
-          final notes = state.notes;
+          List<DeliveryNote> filteredNotes = state.notes;
+          if (_selectedClientId != null && _selectedClientId != 'all') {
+            filteredNotes = filteredNotes.where((q) => q.customerId == _selectedClientId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredNotes = filteredNotes.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredNotes = filteredNotes.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredNotes = filteredNotes.where((q) => q.status == _statusFilter).toList();
+          }
+          final notes = filteredNotes;
           final total = notes.length;
           final totalPages = total == 0 ? 1 : (total / _rowsPerPage).ceil();
           final page = _currentPage.clamp(0, totalPages - 1);
@@ -828,35 +745,35 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                               ),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Reference',
+                                  child: Text(context.tr('Reference'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 3,
-                                  child: Text('Client',
+                                  child: Text(context.tr('Client'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Statut',
+                                  child: Text(context.tr('Statut'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Montant',
+                                  child: Text(context.tr('Montant'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               SizedBox(
                                   width: 60,
-                                  child: Text('Actions',
+                                  child: Text(context.tr('Actions'),
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -876,7 +793,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text('Aucun bon de livraison trouvé',
+                                      Text(context.tr('Aucun bon de livraison trouvé'),
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors.textSecondary)),
@@ -903,7 +820,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes',
+                              Text(context.tr('Lignes'),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -942,15 +859,15 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${page + 1} sur $totalPages',
+                              Text('${context.tr('Page')} ${page + 1} ${context.tr('sur')} $totalPages',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}'
+                                    : '${context.tr('Affichage de')} ${start + 1} ${context.tr('à')} $end ${context.tr('sur')} $total ${context.tr('résultats')}',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary),
@@ -991,7 +908,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       orElse: () => DeliveryNoteStatus.draft,
     );
     final clientLabel =
-        note.customerCompany ?? note.customerName ?? 'Client inconnu';
+        note.customerCompany ?? note.customerName ?? context.tr('Client inconnu');
     final isDraft = statusEnum == DeliveryNoteStatus.draft;
 
     final isSelected = _selectedDeliveryIds.contains(note.id);
@@ -1072,22 +989,30 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
               alignment: Alignment.centerLeft,
               child: (!note.isSynced || note.number.startsWith('BROUILLON-'))
                   ? const PendingSyncBadge()
-                  : Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusEnum.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        statusEnum.label,
-                        style: TextStyle(
-                          color: statusEnum.color,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
+                  : () {
+                      final sInfo = CustomStatusService.instance.getStatusInfo(
+                        'delivery_note',
+                        note.status,
+                        fallbackLabel: statusEnum.label,
+                        fallbackColor: statusEnum.color,
+                      );
+                      return Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: sInfo.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ),
-                    ),
+                        child: Text(
+                          sInfo.label,
+                          style: TextStyle(
+                            color: sInfo.color,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }(),
             ),
           ),
 
@@ -1249,9 +1174,9 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Color(0xFF64748B)),
-          SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          const SizedBox(width: 12),
+          Text(context.tr(text), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -1358,85 +1283,17 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, DeliveryNote note) {
-    DeliveryNoteStatus selectedStatus = DeliveryNoteStatus.values.firstWhere(
-      (e) => e.name == note.status,
-      orElse: () => DeliveryNoteStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: DeliveryNoteStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<DeliveryNotesBloc>().add(
-                    UpdateDeliveryNote(note.copyWith(status: selectedStatus.name))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'delivery_note',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${note.notes ?? ''}\n$notes' : note.notes,
+        );
+        context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
+      },
     );
   }
 
@@ -1585,10 +1442,10 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: 'FA',
+      prefix: DocPrefix.invoice,
     );
     if (seq == null) return;
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
 
     final invoiceItems = note.items.map((i) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1829,17 +1686,17 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1854,7 +1711,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

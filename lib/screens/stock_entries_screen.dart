@@ -28,6 +28,7 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
 
 enum StockEntryStatus {
   draft('Brouillon'),
@@ -36,6 +37,8 @@ enum StockEntryStatus {
 
   final String label;
   const StockEntryStatus(this.label);
+
+  String localized(BuildContext context) => context.tr(label);
 
   Color get color {
     switch (this) {
@@ -111,11 +114,15 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
   }
 
   String _getWarehouseName(String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
     try {
-      return _warehouses.firstWhere((w) => w.id == id).name;
+      final name = _warehouses.firstWhere((w) => w.id == id).name;
+      if (name.toLowerCase() == 'entrepôt par défaut' || name.toLowerCase() == 'entrepot par defaut') {
+        return context.tr('Entrepôt par défaut');
+      }
+      return name;
     } catch (_) {
-      return 'Entrepôt par défaut';
+      return context.tr('Entrepôt par défaut');
     }
   }
 
@@ -137,7 +144,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     final wrapper = DocumentWrapper(
       id: entry.id,
       number: entry.number,
-      documentTitle: "BON D'ENTRÉE",
+      documentTitle: context.tr("Bons d'entrée"),
       date: entry.date,
       totalHT: 0,
       totalTva: 0,
@@ -146,7 +153,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       items: entry.items.map((item) {
         final product = _getProduct(item.productId);
         return DocumentItemWrapper(
-          productName: product?.name ?? 'Article Inconnu',
+          productName: product?.name ?? context.tr('Article Inconnu'),
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           tvaRate: 0,
@@ -170,7 +177,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       MaterialPageRoute(
         builder: (_) => DocumentDetailScreen(
           document: wrapper,
-          status: 'Validé',
+          status: context.tr('Validé'),
           statusColor: AppColors.success,
         ),
       ),
@@ -234,7 +241,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Bons d'entrée",
+                      context.tr("Bons d'entrée"),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -254,7 +261,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   OutlinedButton.icon(
                     onPressed: () => setState(() => _showMobileFilters = !_showMobileFilters),
                     icon: Icon(_showMobileFilters ? Icons.filter_list_off : Icons.filter_list, size: 18),
-                    label: Text(_showMobileFilters ? 'Masquer filtres' : 'Filtres'),
+                    label: Text(_showMobileFilters ? context.tr('Masquer filtres') : context.tr('Filtres')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -281,7 +288,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   children: [
                     TextField(
                       decoration: InputDecoration(
-                        hintText: 'Rechercher article...',
+                        hintText: context.tr('Rechercher un article...'),
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -311,7 +318,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                             ),
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
-                              const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
+                              DropdownMenuItem<String?>(value: null, child: Text(context.tr('Entrepôt'), style: const TextStyle(fontSize: 12))),
                               ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
@@ -321,7 +328,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Référence',
+                              hintText: context.tr('Référence'),
                               hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                               prefixIcon: Icon(Icons.numbers, size: 16, color: AppColors.textSecondary),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -362,7 +369,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               child: Text(
                                 _filterDateRange != null
                                     ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                    : 'Toutes les dates',
+                                    : context.tr('Toutes les dates'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -399,7 +406,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${entries.length} résultat${entries.length > 1 ? 's' : ''}',
+                        '${entries.length} ${entries.length > 1 ? context.tr('résultats') : context.tr('résultat')}',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                       ),
                     ),
@@ -413,7 +420,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         _currentPage = 0;
                       }),
                       icon: const Icon(Icons.clear_all, size: 16),
-                      label: const Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                      label: Text(context.tr('Réinitialiser'), style: const TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(foregroundColor: AppColors.error, padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
@@ -455,9 +462,9 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                     children: [
                                       Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                                       const SizedBox(height: 12),
-                                      Text("Aucun bon d'entrée", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                                      Text(context.tr("Aucun bon d'entrée"), style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                                       const SizedBox(height: 4),
-                                      Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                      Text(context.tr("Appuyez sur + pour en créer un"), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                                     ],
                                   ),
                                 ),
@@ -584,7 +591,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                       ),
                     ),
                     Text(
-                      '${entry.items.length} article${entry.items.length > 1 ? 's' : ''}',
+                      '${entry.items.length} ${entry.items.length > 1 ? context.tr('articles') : context.tr('article')}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -639,14 +646,14 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
         border: Border.all(color: entryStatus.color.withValues(alpha: 0.2)),
       ),
       child: Text(
-        entryStatus.label,
+        entryStatus.localized(context),
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: entryStatus.color),
       ),
     );
   }
 
   Widget _buildArticlesDisplay(List<StockEntryItem> items) {
-    if (items.isEmpty) return Text('0 article', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
     
     final summaryText = items.map((item) {
       final pName = _getProductName(item.productId);
@@ -661,7 +668,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       showDuration: Duration(seconds: 3),
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
-      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
   }
 
@@ -679,7 +686,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Bons d'entrée",
+                    context.tr("Bons d'entrée"),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -687,7 +694,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text("Gérer vos bons d'entrée de stock", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr("Gérer vos bons d'entrée de stock"), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -695,7 +702,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Créer'),
+                  label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -728,7 +735,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Entrepôt', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -739,8 +746,8 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               orElse: () => null,
                             );
                             return SearchableSelectorField(
-                              hint: 'Tous les Entrepôts',
-                              selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                              hint: context.tr('Tous les Entrepôts'),
+                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -767,13 +774,13 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Article', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Article'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Rechercher produit...',
+                            hintText: context.tr('Rechercher un produit...'),
                             hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                             prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -798,7 +805,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Date', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Date'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -827,7 +834,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                 child: Text(
                                   _filterDateRange != null
                                       ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : 'Toutes les dates',
+                                      : context.tr('Toutes les dates'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -860,7 +867,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         _currentPage = 0;
                       }),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
-                      tooltip: 'Réinitialiser les filtres',
+                      tooltip: context.tr('Réinitialiser les filtres'),
                       style: IconButton.styleFrom(
                         foregroundColor: AppColors.error,
                         backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -893,12 +900,12 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   if (state is StockEntriesLoading || state is StockEntriesInitial) {
                     return ShimmerTable(
                       headerColumns: [
-                        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Créé par', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                       ],
                     );
                   }
@@ -908,7 +915,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   if (state is StockEntriesLoaded) {
                     if (entries.isEmpty) {
                       return Center(
-                        child: Text("Aucun bon d'entrée trouvé", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                        child: Text(context.tr("Aucun bon d'entrée trouvé"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                       );
                     }
 
@@ -929,12 +936,12 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Créé par', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -959,7 +966,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -985,10 +992,10 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} à $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -1110,7 +1117,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           children: [
                             Icon(Icons.visibility_rounded, size: 16, color: AppColors.textSecondary),
                             const SizedBox(width: 8),
-                            const Text('Voir'),
+                            Text(context.tr('Voir')),
                           ],
                         ),
                       ),
@@ -1125,7 +1132,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           children: [
                             Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            const Text('Modifier'),
+                            Text(context.tr('Modifier')),
                           ],
                         ),
                       ),
@@ -1140,7 +1147,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           children: [
                             Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
                             const SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                            Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error)),
                           ],
                         ),
                       ),
@@ -1175,12 +1182,12 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text("Voulez-vous vraiment supprimer le bon d'entrée ${entry.number} ?"),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${entry.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1190,7 +1197,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
               context.read<ProductsBloc>().add(LoadProducts());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),

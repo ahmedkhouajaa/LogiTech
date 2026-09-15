@@ -13,6 +13,7 @@ import '../../../models/inventory_sheet_item.dart';
 import '../../../models/product.dart';
 import '../../../models/stock_movement.dart'; // Contains Warehouse
 import '../../../database/database_helper.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import '../../../utils/offline_action_helper.dart';
@@ -80,14 +81,14 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
 
     if (_selectedWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un entrepôt')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -95,7 +96,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     for (var item in _items) {
       if (item.productId.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Un ou plusieurs articles n\'ont pas été sélectionnés'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(context.tr('Un ou plusieurs articles n\'ont pas été sélectionnés')), backgroundColor: AppColors.error),
         );
         return;
       }
@@ -201,29 +202,29 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                   ),
                   SizedBox(height: 16),
                   SmartDropdown<String>(
-                    label: 'Entrepôt',
+                    label: context.tr('Entrepôt'),
                     value: _selectedWarehouseId,
                     items: _warehouses.map((w) {
                       return DropdownMenuItem(value: w.id, child: Text(w.name));
                     }).toList(),
                     onChanged: (v) => setState(() => _selectedWarehouseId = v),
-                    hint: 'Sélectionner l\'entrepôt...',
+                    hint: context.tr('Sélectionner l\'entrepôt...'),
                   ),
                   SizedBox(height: 16),
                   SmartTextInput(
-                    label: 'Compté par',
+                    label: context.tr('Compté par'),
                     initialValue: _countedByCtrl.text,
                     onChanged: (v) => _countedByCtrl.text = v,
                   ),
                   SizedBox(height: 16),
                   SmartTextInput(
-                    label: 'Motif (Optionnel)',
+                    label: context.tr('Motif (Optionnel)'),
                     initialValue: _reasonCtrl.text,
                     onChanged: (v) => _reasonCtrl.text = v,
                   ),
                   SizedBox(height: 16),
                   SmartTextInput(
-                    label: 'Notes (Optionnel)',
+                    label: context.tr('Notes (Optionnel)'),
                     initialValue: _notesCtrl.text,
                     maxLines: 3,
                     onChanged: (v) => _notesCtrl.text = v,
@@ -233,7 +234,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
             ),
           ),
           MobileFormSection(
-            title: 'Articles',
+            title: context.tr('Articles'),
             icon: Icons.inventory_2_outlined,
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -244,13 +245,13 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
                       child: Center(
-                        child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textSecondary)),
+                        child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textSecondary)),
                       ),
                     )
                   else
                     ...List.generate(_items.length, (index) {
                       final item = _items[index];
-                      String productName = item.productId.isNotEmpty ? 'Produit sélectionné' : 'Sélectionner un produit';
+                      String productName = item.productId.isNotEmpty ? context.tr('Produit sélectionné') : context.tr('Sélectionner un produit');
                       if (_products.isNotEmpty && item.productId.isNotEmpty) {
                         try {
                           productName = _products.firstWhere((p) => p.id == item.productId).name;
@@ -274,7 +275,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                           children: [
                             Row(
                               children: [
-                                Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                Text(context.tr('Produit'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                 Spacer(),
                                 IconButton(
                                   icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
@@ -304,7 +305,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        item.productId.isNotEmpty ? productName : 'Sélectionner un article',
+                                        item.productId.isNotEmpty ? productName : context.tr('Sélectionner un article'),
                                         style: TextStyle(
                                           fontSize: 13,
                                           color: item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary,
@@ -324,7 +325,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Théorique', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      Text(context.tr('Théorique'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                       SizedBox(height: 4),
                                       Container(
                                         padding: EdgeInsets.all(10),
@@ -339,7 +340,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Réel', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      Text(context.tr('Réel'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                       SizedBox(height: 4),
                                       TextFormField(
                                         initialValue: item.actualQty > 0 ? item.actualQty.toInt().toString() : '',
@@ -366,7 +367,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Surplus', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      Text(context.tr('Surplus'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                       SizedBox(height: 4),
                                       Container(
                                         padding: EdgeInsets.all(10),
@@ -381,7 +382,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Manquant', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      Text(context.tr('Manquant'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                       SizedBox(height: 4),
                                       Container(
                                         padding: EdgeInsets.all(10),
@@ -404,7 +405,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                       OutlinedButton.icon(
                         onPressed: _addItem,
                         icon: Icon(Icons.add, size: 16),
-                        label: Text('Ajouter une ligne'),
+                        label: Text(context.tr('Ajouter une ligne')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
                           side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -413,7 +414,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
                         },

@@ -10,6 +10,7 @@ import '../models/product_family.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../l10n/app_localizations.dart';
 
 class CreateArticleScreen extends StatefulWidget {
   final Product? existing;
@@ -117,10 +118,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     _barcodeCtrl = TextEditingController(text: p?.barcode ?? '');
     _privateNotesCtrl = TextEditingController(text: p?.privateNotes ?? '');
     
+    _destination = p?.destination ?? 'Vente et Achat';
     _productType = ['produit', 'service', 'consommable', 'immobilisation'].contains(p?.productType) ? p!.productType : 'produit';
     if (_productType == 'immobilisation') {
       _destination = 'Achat';
-    } else if (p != null) {
+    } else if (p != null && (p.destination.isEmpty || p.destination == 'Vente et Achat')) {
       if (p.purchasePrice > 0 && p.sellingPrice == 0) {
         _destination = 'Achat';
       } else if (p.sellingPrice > 0 && p.purchasePrice == 0) {
@@ -439,14 +441,14 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             child: Row(
               children: [
                 Text(
-                  widget.existing == null ? 'Creer un Nouvel Article' : 'Modifier l\'Article',
+                  context.tr(widget.existing == null ? 'Creer un Nouvel Article' : 'Modifier l\'Article'),
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 Spacer(),
                 OutlinedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                  label: Text('Retour', style: TextStyle(color: AppColors.textSecondary)),
+                  label: Text(context.tr('Retour'), style: TextStyle(color: AppColors.textSecondary)),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -465,7 +467,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : Text(widget.existing == null ? 'Creer' : 'Enregistrer',
+                      : Text(context.tr(widget.existing == null ? 'Creer' : 'Enregistrer'),
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -486,11 +488,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               indicatorWeight: 3,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-              tabs: const [
-                Tab(text: 'General', icon: Icon(Icons.info_outline_rounded, size: 20)),
-                Tab(text: 'Prix & TVA', icon: Icon(Icons.attach_money_rounded, size: 20)),
-                Tab(text: 'Classification', icon: Icon(Icons.category_outlined, size: 20)),
-                Tab(text: 'Stock & Alertes', icon: Icon(Icons.inventory_2_outlined, size: 20)),
+              tabs: [
+                Tab(text: context.tr('General'), icon: Icon(Icons.info_outline_rounded, size: 20)),
+                Tab(text: context.tr('Prix & TVA'), icon: Icon(Icons.attach_money_rounded, size: 20)),
+                Tab(text: context.tr('Classification'), icon: Icon(Icons.category_outlined, size: 20)),
+                Tab(text: context.tr('Stock & Alertes'), icon: Icon(Icons.inventory_2_outlined, size: 20)),
               ],
             ),
           ),
@@ -546,7 +548,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 _tabController.animateTo(currentIndex - 1);
               },
               icon: const Icon(Icons.arrow_back_rounded, size: 16),
-              label: const Text('Précédent', style: TextStyle(fontWeight: FontWeight.w600)),
+              label: Text(context.tr('Précédent'), style: TextStyle(fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
                 side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -621,7 +623,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 }
                 _tabController.animateTo(currentIndex + 1);
               },
-              icon: const Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              icon: Text(context.tr('Suivant'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
               label: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -642,7 +644,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      widget.existing == null ? 'Terminer & Créer' : 'Terminer & Enregistrer',
+                      context.tr(widget.existing == null ? 'Terminer & Créer' : 'Terminer & Enregistrer'),
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
               style: ElevatedButton.styleFrom(
@@ -669,7 +671,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Destination', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+          Text(context.tr('Destination'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           SizedBox(height: 8),
           Row(
             children: [
@@ -1248,7 +1250,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                   const SizedBox(width: 8),
                 ],
                 Text(
-                  title,
+                  context.tr(title),
                   style: TextStyle(
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected ? AppColors.primary : AppColors.textPrimary,
@@ -1306,6 +1308,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         reference: _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         productType: _productType,
+        destination: _destination,
         familyId: _family,
         subFamilyId: _subFamily,
         category: _category,

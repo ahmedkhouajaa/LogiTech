@@ -8,10 +8,12 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/return_note_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
+import '../l10n/app_localizations.dart';
 
-import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -25,21 +27,13 @@ import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_return_note_screen.dart';
-import '../services/pdf_service.dart';
-import '../services/permission_service.dart';
-import '../models/user_management_model.dart';
-import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
-import '../blocs/payments/payments_bloc.dart';
-import '../models/payment_model.dart';
-import 'package:uuid/uuid.dart';
-import '../database/database_helper.dart';
-import '../blocs/invoices/invoices_bloc.dart';
-import '../models/invoice.dart';
-import 'create_invoice_screen.dart';
+import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 
 class ReturnNotesScreen extends StatefulWidget {
   const ReturnNotesScreen({super.key});
@@ -53,7 +47,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  ReturnNoteStatus? _statusFilter;
+  String? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -71,7 +65,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       customerId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() => _currentPage = 0);
   }
@@ -91,7 +85,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bon de Retour',
+                    context.tr('Bon de Retour'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -100,7 +94,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Gérer vos bons de retour',
+                    context.tr('Gérer vos bons de retour'),
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
@@ -115,7 +109,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _navigate(context, null),
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Créer un Bon de Retour'),
+                      label: Text(context.tr('Créer un Bon de Retour')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -184,7 +178,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         filteredNotes = filteredNotes.where((q) => q.dateEmission.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredNotes = filteredNotes.where((q) => q.status == _statusFilter!.name).toList();
+        filteredNotes = filteredNotes.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = filteredNotes.length;
     }
@@ -206,15 +200,15 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           Expanded(
             flex: 3,
             child: _filterSection(
-              label: 'Client',
+              label: context.tr('Client'),
               child: BlocBuilder<CustomersBloc, CustomersState>(
                 builder: (context, state) {
                   final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  String selectedCustomerName = 'Tous les clients';
+                  String selectedCustomerName = context.tr('Tous les clients');
                   if (_selectedClientId != null && _selectedClientId != 'all') {
                     final found = customers.firstWhere(
                       (c) => c.id == _selectedClientId,
-                      orElse: () => Customer(id: '', code: '', name: 'Inconnu', country: ''),
+                      orElse: () => Customer(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                     );
                     selectedCustomerName = found.companyName?.isNotEmpty == true
                         ? found.companyName!
@@ -245,7 +239,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                           Expanded(
                             child: Text(
                               _selectedClientId == null || _selectedClientId == 'all'
-                                  ? 'Tous les clients'
+                                  ? context.tr('Tous les clients')
                                   : selectedCustomerName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -271,10 +265,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de début',
+              label: context.tr('Date de début'),
               child: _datePicker(
                 value: _dateFrom,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onPicked: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -288,10 +282,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de fin',
+              label: context.tr('Date de fin'),
               child: _datePicker(
                 value: _dateTo,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onPicked: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -305,114 +299,14 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Statut',
-              child: PopupMenuButton<ReturnNoteStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (val) {
+              label: context.tr('Statut'),
+              child: DocumentStatusFilterDropdown(
+                documentType: 'return_voucher',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (val) {
                   setState(() => _statusFilter = val);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<ReturnNoteStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...ReturnNoteStatus.values.map(
-                    (s) => PopupMenuItem<ReturnNoteStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -432,7 +326,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -486,7 +380,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -506,7 +400,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -538,7 +432,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
@@ -556,7 +450,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -639,7 +533,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (d != null) onPicked(d);
       },
@@ -686,11 +580,11 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -707,7 +601,20 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   style: TextStyle(color: AppColors.error)));
         }
         if (state is ReturnNotesLoaded) {
-          final notes = state.notes;
+          List<ReturnNote> filteredNotes = state.notes;
+          if (_selectedClientId != null && _selectedClientId != 'all') {
+            filteredNotes = filteredNotes.where((q) => q.customerId == _selectedClientId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredNotes = filteredNotes.where((q) => q.dateEmission.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredNotes = filteredNotes.where((q) => q.dateEmission.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredNotes = filteredNotes.where((q) => q.status == _statusFilter).toList();
+          }
+          final notes = filteredNotes;
           final total = notes.length;
           final totalPages = total == 0 ? 1 : ((total / _rowsPerPage).ceil().toInt());
           final page = _currentPage.clamp(0, totalPages - 1);
@@ -763,35 +670,35 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                               ),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Reference',
+                                  child: Text(context.tr('Reference'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 3,
-                                  child: Text('Client',
+                                  child: Text(context.tr('Client'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Statut',
+                                  child: Text(context.tr('Statut'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Montant',
+                                  child: Text(context.tr('Montant'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               SizedBox(
                                   width: 60,
-                                  child: Text('Actions',
+                                  child: Text(context.tr('Actions'),
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -811,7 +718,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text('Aucun bon de retour trouvé',
+                                      Text(context.tr('Aucun bon de retour trouvé'),
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors.textSecondary)),
@@ -838,7 +745,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes',
+                              Text(context.tr('Lignes'),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -877,15 +784,15 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${page + 1} sur $totalPages',
+                              Text('${context.tr('Page')} ${page + 1} ${context.tr('sur')} $totalPages',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}'
+                                    : '${context.tr('Affichage de')} ${start + 1} ${context.tr('à')} $end ${context.tr('sur')} $total ${context.tr('résultats')}',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary),
@@ -926,7 +833,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       orElse: () => ReturnNoteStatus.draft,
     );
     final clientLabel =
-        note.customerCompany ?? note.customerName ?? 'Client inconnu';
+        note.customerCompany ?? note.customerName ?? context.tr('Client inconnu');
     final isDraft = statusEnum == ReturnNoteStatus.draft;
 
     final isSelected = _selectedReturnNoteIds.contains(note.id);
@@ -1003,21 +910,27 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             flex: 2,
             child: Container(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusEnum.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusEnum.label,
-                  style: TextStyle(
-                      color: statusEnum.color,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
+              child: () {
+                final sInfo = CustomStatusService.instance.getStatusInfo(
+                  'return_voucher',
+                  note.status,
+                );
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: sInfo.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    context.tr(sInfo.label),
+                    style: TextStyle(
+                        color: sInfo.color,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500),
+                  ),
+                );
+              }(),
             ),
           ),
 
@@ -1128,13 +1041,13 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
+        title: Text(context.tr('Confirmer la suppression')),
         content: Text(
-            'Voulez-vous vraiment supprimer le bon ${note.returnNumber} ?'),
+            '${context.tr('Voulez-vous vraiment supprimer')} ${note.returnNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler',
+              child: Text(context.tr('Annuler'),
                   style: TextStyle(color: AppColors.textSecondary))),
           ElevatedButton(
             onPressed: () {
@@ -1146,7 +1059,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -1161,7 +1074,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Text(context.tr(text), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -1254,85 +1167,17 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, ReturnNote note) {
-    ReturnNoteStatus selectedStatus = ReturnNoteStatus.values.firstWhere(
-      (e) => e.name == note.status,
-      orElse: () => ReturnNoteStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: ReturnNoteStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<ReturnNotesBloc>().add(
-                    UpdateReturnNote(note.copyWith(status: selectedStatus.name))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'return_voucher',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${note.notes ?? ''}\n$notes' : note.notes,
+        );
+        context.read<ReturnNotesBloc>().add(UpdateReturnNote(updatedNote));
+      },
     );
   }
 
@@ -1351,17 +1196,17 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1376,7 +1221,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

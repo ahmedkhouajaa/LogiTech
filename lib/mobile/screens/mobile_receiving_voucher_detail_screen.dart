@@ -34,10 +34,9 @@ import '../../database/database_helper.dart';
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/receiving_voucher_payment_dialog.dart';
-import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_receiving_voucher_form_screen.dart';
-import 'forms/mobile_purchase_invoice_form_screen.dart';
-import 'forms/mobile_supplier_return_form_screen.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileReceivingVoucherDetailScreen extends StatefulWidget {
   final ReceivingVoucher voucher;
@@ -95,8 +94,9 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentVoucher.status);
-    final statusColor = _getStatusColor(currentVoucher.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('receiving_voucher', currentVoucher.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -200,29 +200,6 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
         ),
       ),
     );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-      ],
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft': return AppColors.info;
-      case 'validated': 
-      case 'paid':
-      case 'payee':
-      case 'payée':
-        return AppColors.success;
-      case 'cancelled': return AppColors.error;
-      default: return AppColors.textSecondary;
-    }
   }
 
   PopupMenuItem<String> _buildMenuItem(String value, IconData icon, Color iconColor, String text) {
@@ -343,6 +320,9 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
         final docWa = DocumentWrapper.fromReceivingVoucher(voucher);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
+      case 'status':
+        _showChangeStatusDialog(context, voucher);
+        break;
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
@@ -385,78 +365,20 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   }
 
   void _showChangeStatusDialog(BuildContext context, ReceivingVoucher voucher) {
-    String selectedStatus = voucher.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedVoucher = voucher.copyWith(status: selectedStatus);
-                  context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _showConvertDialog(BuildContext context, ReceivingVoucher voucher, bool toInvoice) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text(toInvoice ? 'Transformer en facture d\'achat' : 'Transformer en bon de retour'),
-        content: Text('Voulez-vous transformer ce bon de réception en ${toInvoice ? 'facture d\'achat' : 'bon de retour fournisseur'} ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              if (toInvoice) {
-                _convertToInvoice(context, voucher);
-              } else {
-                _convertToReturn(context, voucher);
-              }
-            },
-            child: Text('Confirmer'),
-          ),
-        ],
-      ),
+      documentType: 'receiving_voucher',
+      currentStatus: voucher.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedVoucher = voucher.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${voucher.notes ?? ''}\n$notes' : voucher.notes,
+        );
+        setState(() {
+          currentVoucher = updatedVoucher;
+        });
+        context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+      },
     );
   }
 
@@ -526,7 +448,7 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   Future<void> _convertToReturn(BuildContext context, ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
-    final returnNumber = generateDocNumber('BRF', seq);
+    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
 
     List<SupplierReturnItem> newItems = [];
 
@@ -559,6 +481,8 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       updatedAt: DateTime.now(),
       items: newItems,
     );
+
+    if (!mounted) return;
 
     try {
       context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));

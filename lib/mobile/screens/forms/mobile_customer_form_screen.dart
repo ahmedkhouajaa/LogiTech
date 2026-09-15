@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../models/customer.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../utils/constants.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MobileFormSection extends StatefulWidget {
   final String title;
@@ -96,7 +97,7 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.title,
+                          context.tr(widget.title),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -106,7 +107,7 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                         if (widget.showProgress && widget.totalFields > 0) ...[
                           SizedBox(height: 4),
                           Text(
-                            '${widget.completedFields}/${widget.totalFields} complétés',
+                            '${widget.completedFields}/${widget.totalFields} ${context.tr('complétés')}',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,

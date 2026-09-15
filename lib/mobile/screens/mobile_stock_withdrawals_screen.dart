@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
@@ -22,6 +23,7 @@ import '../../models/stock_withdrawal.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 import '../../utils/offline_action_helper.dart';
 
 class MobileStockWithdrawalsScreen extends StatefulWidget {
@@ -175,8 +177,8 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
 
   Widget _buildListScreen(List<StockWithdrawal> items, bool isLoading, bool isLoadingMore, int totalMatchingCount, List<Customer> customersList, WarehousesState wState) {
     String getWhName(String? id) {
-      if (id == null || id.isEmpty) return 'Entrepôt par défaut';
-      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (id == null || id.isEmpty) return context.tr('Entrepôt par défaut');
+      if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
       if (wState is WarehousesLoaded) {
         final match = wState.warehouses.cast<dynamic>().firstWhere(
           (w) => w.id == id, 
@@ -184,7 +186,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
         );
         if (match != null) return match.name;
       }
-      return 'Entrepôt par défaut';
+      return context.tr('Entrepôt par défaut');
     }
 
     final filteredItems = items.where((item) {
@@ -217,8 +219,11 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
       if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
         final statusStr = translateStatus(item.status).toLowerCase();
         final rawStatus = item.status.toLowerCase();
+        final sInfo = CustomStatusService.instance.getStatusInfo('exit_voucher', item.status);
         final filterLower = _selectedStatus!.toLowerCase();
-        if (statusStr != filterLower && rawStatus != filterLower) return false;
+        if (statusStr != filterLower && rawStatus != filterLower && sInfo.label.toLowerCase() != filterLower) {
+          return false;
+        }
       }
 
       return true;
@@ -228,10 +233,12 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
 
     List<Widget> cards = filteredItems.map((item) {
       final resKey = _isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
+      final sInfo = CustomStatusService.instance.getStatusInfo('exit_voucher', item.status);
       return MobileGenericCard(
         reference: item.number,
-        status: item.status,
-        name: item.customerName ?? item.customerCompany ?? 'Client non spécifié',
+        status: sInfo.label,
+        statusColor: sInfo.color,
+        name: item.customerName ?? item.customerCompany ?? context.tr('Client non spécifié'),
         nameIcon: Icons.person_outline,
         subtitle: getWhName(item.warehouseId),
         subtitleIcon: Icons.storefront_outlined,
@@ -326,7 +333,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
           _fetchFilteredWithdrawals();
         },
         selectedStatus: _selectedStatus,
-        statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Facturé', 'Annulé'],
+        documentType: 'exit_voucher',
         onStatusChanged: (s) {
           setState(() => _selectedStatus = s);
           _fetchFilteredWithdrawals();
@@ -345,7 +352,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
       scrollController: _scrollController,
       isLoading: isLoading,
       isEmpty: isEmpty,
-      emptyMessage: 'Aucun élément trouvé.',
+      emptyMessage: context.tr('Aucun élément trouvé.'),
       itemCount: totalMatchingCount > 0 ? totalMatchingCount : cards.length,
       fabText: _config.fabText,
       onFabPressed: () {

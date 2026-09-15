@@ -19,10 +19,11 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import 'customers_screen.dart';
-import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/custom_fields_form_section.dart';
 import 'create_article_screen.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -54,6 +55,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   bool _pricingModeHT = true;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0.0;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -111,6 +113,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       _withTimbreFiscal = n.timbreFiscal > 0;
       _notesCtrl.text = n.notes ?? '';
       _conditionsCtrl.text = n.conditionsGenerales ?? '';
+      _customFields = Map<String, dynamic>.from(n.customFields);
       _items = n.items.map((i) => QuoteItem(
         id: i.id,
         quoteId: i.quoteId,
@@ -141,7 +144,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez ajouter au moins un article'),
+          content: Text(context.tr('Veuillez ajouter au moins un article')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -156,7 +159,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -166,7 +169,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez selectionner un client'),
+          content: Text(context.tr('Veuillez selectionner un client')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -179,6 +182,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       final bloc = context.read<QuotesBloc>();
       final nav = Navigator.of(context);
       final messenger = ScaffoldMessenger.of(context);
+      final l10n = AppLocalizations.of(context);
 
       final isOnline = ConnectivityService.instance.isOnline;
 
@@ -189,13 +193,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             context: context,
             docCollection: 'quotes',
             docTypeName: 'Devis',
-            prefix: 'DV',
+            prefix: DocPrefix.quote,
           );
           if (seq == null) {
             setState(() => _isSaving = false);
             return;
           }
-          number = generateDocNumber('DV', seq);
+          number = generateDocNumber(DocPrefix.quote, seq, docCollection: 'quotes');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -237,6 +241,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+        customFields: _customFields,
         items: _items.map((item) => QuoteItem(
           id: item.id,
           quoteId: quoteId,
@@ -261,7 +266,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         bloc.add(const LoadFirstDevis());
         nav.pop();
         messenger.showSnackBar(SnackBar(
-          content: Text('Devis ${quote.number} enregistré hors-ligne (en attente de sync)'),
+          content: Text('${l10n.tr('Devis')} ${quote.number} ${l10n.tr('enregistré hors-ligne (en attente de sync)')}'),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 3),
         ));
@@ -276,9 +281,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
       nav.pop();
       messenger.showSnackBar(SnackBar(
-        content: Text(_isEditing
-            ? 'Devis ${quote.number} mis a jour'
-            : 'Devis ${quote.number} cree avec succes'),
+        content: Text(_isEditing ? '${l10n.tr('Devis')} ${quote.number} ${l10n.tr('mis à jour avec succès')}' : '${l10n.tr('Devis')} ${quote.number} ${l10n.tr('créé avec succès')}'),
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
@@ -308,6 +311,12 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormCard(),
+                    SizedBox(height: AppSpacing.lg),
+                    CustomFieldsFormSection(
+                      documentType: 'quote',
+                      initialValues: _customFields,
+                      onChanged: (vals) => _customFields = vals,
+                    ),
                     SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
                     SizedBox(height: AppSpacing.md),
@@ -342,19 +351,18 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       child: Row(
         children: [
           Text(
-            _isEditing ? 'Modifier le devis' : 'Nouveau devis',
+            context.tr(_isEditing ? 'Modifier le devis' : 'Nouveau devis'),
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
           SizedBox(width: 12),
-          StatusBadge(label: _status.label, color: _status.color),
+          StatusBadge(label: context.tr(_status.label), color: _status.color),
           const Spacer(),
-          _buildHeaderButton(
-              Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
+          _buildHeaderButton(Icons.arrow_back_rounded, context.tr('Retour'), () => Navigator.pop(context)),
           SizedBox(width: 8),
-          _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
+          _buildHeaderButton(Icons.description_rounded, context.tr('Brouillon'), () {
             setState(() => _status = DocumentStatus.draft);
           }),
           SizedBox(width: 8),
@@ -369,7 +377,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Icon(Icons.check_rounded, size: 16),
-              label: Text(_isSaving ? 'Enregistrement...' : 'Valider',
+              label: Text(_isSaving ? context.tr('Enregistrement...') : context.tr('Valider'),
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -393,7 +401,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 14),
-        label: Text(label,
+        label: Text(context.tr(label),
             style:
                 TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
@@ -426,7 +434,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Date d'emission",
+                    Text(context.tr("Date d'emission"),
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -439,14 +447,14 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                           initialDate: _date,
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2030),
-                          locale: const Locale('fr', 'FR'),
+                          locale: Localizations.localeOf(context),
                         );
                         if (picked != null) setState(() => _date = picked);
                       },
                       child: AbsorbPointer(
                         child: TextFormField(
                           controller:
-                              TextEditingController(text: formatDateLong(_date)),
+                              TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: AppColors.surfaceAlt,
@@ -467,7 +475,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Date de validite",
+                    Text(context.tr("Date de validite"),
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -480,14 +488,14 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                           initialDate: _validityDate,
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2030),
-                          locale: const Locale('fr', 'FR'),
+                          locale: Localizations.localeOf(context),
                         );
                         if (picked != null) setState(() => _validityDate = picked);
                       },
                       child: AbsorbPointer(
                         child: TextFormField(
                           controller:
-                              TextEditingController(text: formatDateLong(_validityDate)),
+                              TextEditingController(text: formatDateLong(_validityDate, Localizations.localeOf(context).languageCode)),
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: AppColors.surfaceAlt,
@@ -515,7 +523,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Client'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     Row(
                       children: [
@@ -527,13 +535,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
                               return FormField<String>(
                                 initialValue: _selectedCustomerId,
-                                validator: (v) => _selectedCustomerId == null ? 'Requis' : null,
+                                validator: (v) => _selectedCustomerId == null ? context.tr('Requis') : null,
                                 builder: (field) {
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       _buildSearchableField(
-                                        hint: 'Rechercher un client...',
+                                        hint: context.tr('Rechercher un client...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -570,7 +578,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                         SizedBox(
                           height: 48,
                           child: Tooltip(
-                            message: 'Créer un nouveau client',
+                            message: context.tr('Créer un nouveau client'),
                             child: ElevatedButton(
                               onPressed: () async {
                                 final newRes = await showDialog<dynamic>(
@@ -619,7 +627,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Projet'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
@@ -644,7 +652,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                         );
 
                         return _buildSearchableField(
-                          hint: 'Sélectionner un projet',
+                          hint: context.tr('Sélectionner un projet'),
                           selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
@@ -669,7 +677,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
               BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
@@ -689,7 +697,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                   final warehouseName = selectedWh?.name;
 
                   return SearchableSelectorField(
-                    hint: 'Sélectionner un entrepôt',
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: warehouseName,
                     onTap: () async {
                       final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -704,7 +712,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           ),
           SizedBox(height: 20),
           // Pricing mode radio
-          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(context.tr('Les prix des articles sont en'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           SizedBox(height: 8),
           Row(
             children: [
@@ -714,7 +722,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Hors taxes'), style: TextStyle(fontSize: 13)),
               SizedBox(width: 24),
               Radio<bool>(
                 value: false,
@@ -722,7 +730,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Taxe incluse'), style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -732,7 +740,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
   InputDecoration _formInputDecoration({String? hint}) {
     return InputDecoration(
-      hintText: hint,
+      hintText: hint != null ? context.tr(hint) : null,
       hintStyle:
           TextStyle(color: AppColors.textTertiary, fontSize: 13),
       filled: true,
@@ -828,7 +836,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -847,7 +855,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -877,7 +885,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -953,7 +961,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Text('Articles',
+            child: Text(context.tr('Articles'),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -974,31 +982,31 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Designation',
+                    child: Text(context.tr('Designation'),
                         style: _tableHeaderStyle())),
                 SizedBox(
                     width: 140,
-                    child: Text('Quantite',
+                    child: Text(context.tr('Quantite'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 130,
-                    child: Text('P.U HT',
+                    child: Text(context.tr('P.U HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('Remise %',
+                    child: Text(context.tr('Remise %'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('TVA',
+                    child: Text(context.tr('TVA'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 140,
-                    child: Text('Total HT',
+                    child: Text(context.tr('Total HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
                 SizedBox(width: 60),
@@ -1010,7 +1018,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              child: Text(context.tr('Aucun article'), textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -1052,17 +1060,18 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                     Expanded(
                       child: BlocBuilder<ProductsBloc, ProductsState>(
                         builder: (context, state) {
-                          final products = state is ProductsLoaded ? state.products : <Product>[];
+                          final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+                          final products = allProducts.where((p) => p.isForSale).toList();
                           final currentDescription = (item.description != null && item.description!.isNotEmpty)
                               ? item.description!
                               : (item.productName != null && item.productName!.isNotEmpty ? item.productName! : null);
                           return SearchableSelectorField(
-                            hint: 'Rechercher un article...',
+                            hint: context.tr('Rechercher un article...'),
                             selectedText: currentDescription,
                             hasError: isArticleMissing,
-                            errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                            errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                             onTap: () async {
-                              final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                              final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente');
                               if (res != null && mounted) {
                                 final selection = products.firstWhere((p) => p.id == res);
                                 setState(() {
@@ -1281,7 +1290,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 onPressed: () =>
                     setState(() => _items.removeAt(index)),
                 splashRadius: 16,
-                tooltip: 'Supprimer',
+                tooltip: context.tr('Supprimer'),
               ),
               Icon(Icons.drag_indicator_rounded,
                   size: 16, color: AppColors.textTertiary),
@@ -1321,13 +1330,14 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products = state is ProductsLoaded ? state.products : <Product>[];
+              final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+              final products = allProducts.where((p) => p.isForSale).toList();
               return SearchableSelectorField(
-                hint: 'Sélectionner un article...',
+                hint: context.tr('Sélectionner un article...'),
                 selectedText: null,
                 isHighlighted: true,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente');
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {
@@ -1352,7 +1362,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         SizedBox(width: 8),
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
+          tooltip: context.tr('Créer un nouvel article'),
           onPressed: () async {
             final newProd = await Navigator.push<dynamic>(
               context,
@@ -1399,7 +1409,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
               });
             },
             icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            label: Text(context.tr('Ajouter une ligne vide'), style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.primary, width: 1.5),
@@ -1437,7 +1447,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Ajouter une remise globale'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -1449,7 +1459,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                   width: 150,
                   child: TextFormField(
                     initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toString() : '',
-                    decoration: _itemInputDecoration('Remise %'),
+                    decoration: _itemInputDecoration(context.tr('Remise %')),
                     keyboardType: TextInputType.number,
                     style: TextStyle(fontSize: 13),
                     onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
@@ -1474,13 +1484,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
+            _buildTotalLine(context.tr('Sous-total HT:'), formatCurrencyDT(_totalHTAfterDiscount)),
             SizedBox(height: 6),
             // TVA breakdown
             ..._tvaBreakdown.entries.map((entry) =>
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
-                child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+                child: _buildTotalLine('${context.tr('TVA')} ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
               ),
             ),
             InkWell(
@@ -1503,7 +1513,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(context.tr('Timbre fiscal:'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                     Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -1513,7 +1523,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             ),
             SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
-              _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
+              _buildTotalLine(context.tr('Remise:'), '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               SizedBox(height: 6),
             ],
             Divider(),
@@ -1521,7 +1531,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Total TTC:'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
@@ -1550,13 +1560,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Visible sur le document final',
+                  hintText: context.tr('Visible sur le document final'),
                   hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -1575,13 +1585,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions generales pour ce document',
+                  hintText: context.tr('Conditions generales pour ce document'),
                   hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,

@@ -31,14 +31,17 @@ import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
-import '../models/document_wrapper.dart';
 import '../services/document_share_service.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
+import '../l10n/app_localizations.dart';
+
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key});
   @override
@@ -53,7 +56,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  CustomerOrderStatus? _statusFilter;
+  String? _statusFilter;
 
   // Pagination state
   int _rowsPerPage = 20;
@@ -99,7 +102,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       clientId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter != null ? _statusFilter!.name : null,
+      status: _statusFilter,
     ));
     setState(() {
       _currentPage = 0;
@@ -121,11 +124,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Commandes Client',
+                    context.tr('Commandes Client'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 2),
-                  Text('Gérer vos commandes client', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos commandes client'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               Row(
@@ -136,7 +139,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   ],
                   if (PermissionService.instance.canCreate(UserPermissionResources.salesOrders))
                     AppButton(
-                      label: 'Créer une Commande Client',
+                      label: context.tr('Créer une Commande Client'),
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
                         context,
@@ -196,7 +199,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter!.name).toList();
+        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = filteredOrders.length;
     }
@@ -223,7 +226,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Client', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Client'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 SizedBox(
                   height: 32,
@@ -233,7 +236,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       if (state is CustomersLoaded) {
                         customers = state.customers;
                       }
-                      String selectedCustomerName = 'Tous les clients';
+                      String selectedCustomerName = context.tr('Tous les clients');
                       if (_selectedClientId != null && _selectedClientId != 'all') {
                         final found = customers.firstWhere(
                           (c) => c.id == _selectedClientId,
@@ -268,7 +271,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                               Expanded(
                                 child: Text(
                                   _selectedClientId == null || _selectedClientId == 'all'
-                                      ? 'Tous les clients'
+                                      ? context.tr('Tous les clients')
                                       : selectedCustomerName,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -298,7 +301,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -307,7 +310,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       initialDate: _dateFrom ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateFrom = date);
@@ -327,7 +330,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -347,7 +350,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -356,7 +359,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       initialDate: _dateTo ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateTo = date);
@@ -376,7 +379,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -396,118 +399,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: PopupMenuButton<CustomerOrderStatus?>(
-                    tooltip: 'Filtrer par statut',
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                    ),
-                    color: AppColors.surface,
-                    elevation: 4,
-                    offset: const Offset(0, 36),
-                    initialValue: _statusFilter,
-                    onSelected: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<CustomerOrderStatus?>(
-                        value: null,
-                        height: 34,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (_statusFilter == null)
-                              Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                      ...CustomerOrderStatus.values.map(
-                        (s) => PopupMenuItem<CustomerOrderStatus?>(
-                          value: s,
-                          height: 34,
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  s.label,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: s.color,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_statusFilter == s)
-                                Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _statusFilter == null
-                                ? Text(
-                                    'Tous',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      _statusFilter!.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: _statusFilter!.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
+                DocumentStatusFilterDropdown(
+                  documentType: 'customer_order',
+                  currentStatusFilter: _statusFilter,
+                  onStatusSelected: (val) {
+                    setState(() => _statusFilter = val);
+                    _applyFilters();
+                  },
                 ),
               ],
             ),
@@ -528,7 +428,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -582,7 +482,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -602,7 +502,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -634,7 +534,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
@@ -652,7 +552,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -726,11 +626,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -745,7 +645,21 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
             return AppErrorWidget(message: state.message);
           }
         if (state is CustomerOrdersLoaded) {
-          final orders = state.orders;
+          List<CustomerOrder> filteredOrders = state.orders;
+          if (_selectedClientId != null && _selectedClientId != 'all') {
+            filteredOrders = filteredOrders.where((q) => q.customerId == _selectedClientId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredOrders = filteredOrders.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
+          }
+
+          final orders = filteredOrders;
 
           // Pagination logic
           final totalItems = orders.length;
@@ -802,11 +716,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                 ),
                               ),
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                              Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -819,7 +733,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text("Aucune commande trouvée", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                      Text(context.tr("Aucune commande trouvée"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -880,7 +794,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                 const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
-                                                    order.customerCompany ?? order.customerName ?? 'Client Inconnu',
+                                                    order.customerCompany ?? order.customerName ?? context.tr('Client Inconnu'),
                                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
@@ -894,17 +808,25 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                               alignment: Alignment.centerLeft,
                                               child: (!order.isSynced || order.number.startsWith('BROUILLON-'))
                                                   ? const PendingSyncBadge()
-                                                  : Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: statusEnum.color.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        statusEnum.label,
-                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                      ),
-                                                    ),
+                                                  : () {
+                                                      final sInfo = CustomStatusService.instance.getStatusInfo(
+                                                        'customer_order',
+                                                        order.status,
+                                                        fallbackLabel: statusEnum.label,
+                                                        fallbackColor: statusEnum.color,
+                                                      );
+                                                      return Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: sInfo.color.withValues(alpha: 0.1),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          context.tr(sInfo.label),
+                                                          style: TextStyle(color: sInfo.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                        ),
+                                                      );
+                                                    }(),
                                             ),
                                           ),
                                           Expanded(
@@ -1003,7 +925,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -1028,10 +950,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} ${context.tr('à')} $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -1112,9 +1034,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Color(0xFF64748B)),
-          SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          const SizedBox(width: 12),
+          Text(context.tr(text), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -1214,81 +1136,17 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, CustomerOrder order) {
-    CustomerOrderStatus selectedStatus = CustomerOrderStatus.values.firstWhere(
-      (e) => e.name == order.status,
-      orElse: () => CustomerOrderStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: CustomerOrderStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              AppButton(
-                label: 'Enregistrer',
-                onPressed: () {
-                  context.read<CustomerOrdersBloc>().add(
-                    UpdateCustomerOrder(order.copyWith(status: selectedStatus.name))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'customer_order',
+      currentStatus: order.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedOrder = order.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${order.notes ?? ''}\n$notes' : order.notes,
+        );
+        context.read<CustomerOrdersBloc>().add(UpdateCustomerOrder(updatedOrder));
+      },
     );
   }
 
@@ -1338,10 +1196,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: 'FA',
+      prefix: DocPrefix.invoice,
     );
     if (seq == null) return;
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1475,7 +1333,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       prefix: DocPrefix.deliveryNote,
     );
     if (seq == null) return;
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(),
@@ -1572,17 +1430,17 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1597,7 +1455,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

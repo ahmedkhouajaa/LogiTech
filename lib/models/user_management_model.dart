@@ -77,7 +77,7 @@ class UserResourcePermission {
   );
 }
 
-/// Predefined list of 35 menu resources for user permissions in the app.
+/// Predefined list of menu resources for user permissions in the app.
 class UserPermissionResources {
   // 1. Dashboard
   static const String dashboard = 'dashboard';
@@ -131,12 +131,17 @@ class UserPermissionResources {
   // 32. Projects
   static const String projects = 'projects';
 
-  // 33-35. Settings (Paramètres)
+  // 33-40. Settings (Paramètres)
+  static const String settingsAppModules = 'settings_app_modules';
+  static const String settingsPersonalInfo = 'settings_personal_info';
   static const String settingsCompanyInfo = 'settings_company_info';
+  static const String settingsDocNumbering = 'settings_doc_numbering';
   static const String settingsDocTemplates = 'settings_doc_templates';
+  static const String settingsCustomFields = 'settings_custom_fields';
+  static const String settingsCustomStatuses = 'settings_custom_statuses';
   static const String importExport = 'import_export';
 
-  // 36. User Management (Admin Only)
+  // 39. User Management (Admin Only)
   static const String userManagement = 'user_management';
 
   static const List<Map<String, dynamic>> allResources = [
@@ -406,12 +411,36 @@ class UserPermissionResources {
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
     },
-    // 33-34. Paramètres
+    // 33-38. Paramètres
+    {
+      'key': settingsAppModules,
+      'label': 'Paramètres - Modules de l\'application',
+      'category': 'Paramètres',
+      'icon': Icons.widgets_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    {
+      'key': settingsPersonalInfo,
+      'label': 'Paramètres - Informations personnelles',
+      'category': 'Paramètres',
+      'icon': Icons.badge_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
     {
       'key': settingsCompanyInfo,
       'label': 'Paramètres - Informations de la société',
       'category': 'Paramètres',
       'icon': Icons.business_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    {
+      'key': settingsDocNumbering,
+      'label': 'Paramètres - Numérotation des documents',
+      'category': 'Paramètres',
+      'icon': Icons.format_list_numbered_rounded,
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
     },
@@ -424,6 +453,22 @@ class UserPermissionResources {
       'defaultCollab': UserResourcePermission.empty,
     },
     {
+      'key': settingsCustomFields,
+      'label': 'Paramètres - Champs personnalisés',
+      'category': 'Paramètres',
+      'icon': Icons.tune_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    {
+      'key': settingsCustomStatuses,
+      'label': 'Paramètres - Statuts personnalisés',
+      'category': 'Paramètres',
+      'icon': Icons.bookmarks_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    {
       'key': importExport,
       'label': 'Import / Export des données',
       'category': 'Paramètres',
@@ -431,7 +476,7 @@ class UserPermissionResources {
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
     },
-    // 36. Gestion des utilisateurs
+    // 41. Gestion des utilisateurs
     {
       'key': userManagement,
       'label': 'Gestion des utilisateurs',

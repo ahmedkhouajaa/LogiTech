@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../mobile/utils/mobile_status_colors.dart';
+import '../l10n/app_localizations.dart';
 
 /// Action button item for the top action bar
 class PremiumDetailAction {
@@ -303,7 +304,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      widget.documentType.toUpperCase(),
+                      context.tr(widget.documentType).toUpperCase(),
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 1.2,
@@ -353,7 +354,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        label,
+        context.tr(label),
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w500,
@@ -419,7 +420,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                 const SizedBox(width: 8),
               ],
               Text(
-                section.title,
+                context.tr(section.title),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -452,7 +453,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                         ],
                         Flexible(
                           child: Text(
-                            f.label,
+                            context.tr(f.label),
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
@@ -519,7 +520,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                         size: 18, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Text(
-                      'Articles (${widget.articles.length})',
+                      '${context.tr('Articles')} (${widget.articles.length})',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -563,21 +564,21 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
               Expanded(
                 flex: 2,
                 child: Text(
-                  'Référence',
+                  context.tr('Référence'),
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
               ),
               Expanded(
                 flex: 4,
                 child: Text(
-                  'Désignation',
+                  context.tr('Désignation'),
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
               ),
               Expanded(
                 flex: 2,
                 child: Text(
-                  'Qté',
+                  context.tr('Qté'),
                   textAlign: TextAlign.right,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
@@ -585,7 +586,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
               Expanded(
                 flex: 2,
                 child: Text(
-                  'Prix Unit. (HT)',
+                  context.tr('Prix Unit. (HT)'),
                   textAlign: TextAlign.right,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
@@ -593,7 +594,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
               Expanded(
                 flex: 2,
                 child: Text(
-                  'TVA',
+                  context.tr('TVA'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
@@ -609,7 +610,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
               Expanded(
                 flex: 2,
                 child: Text(
-                  'Total HT',
+                  context.tr('Total HT'),
                   textAlign: TextAlign.right,
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
                 ),
@@ -781,7 +782,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
                         ),
                         if (item.reference != null && item.reference!.isNotEmpty)
-                          Text('Réf: ${item.reference}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('${context.tr('Réf')}: ${item.reference}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -815,7 +816,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                             color: AppColors.primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('TVA ${item.tvaRate}%', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                          child: Text('${context.tr('TVA')} ${item.tvaRate}%', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
                         ),
                         const SizedBox(width: 6),
                       ],
@@ -826,7 +827,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                             color: AppColors.warning.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text('Remise -${item.discountPercent}%', style: TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.w600)),
+                          child: Text('${context.tr('Remise')} -${item.discountPercent}%', style: TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.w600)),
                         ),
                     ],
                   ),
@@ -893,7 +894,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
               Icon(Icons.calculate_outlined, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
-                'Récapitulatif des Totaux',
+                context.tr('Récapitulatif des Totaux'),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -921,7 +922,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      row.label,
+                      context.tr(row.label),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -947,7 +948,7 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    row.label,
+                    context.tr(row.label),
                     style: TextStyle(
                       color: row.isBold ? AppColors.textPrimary : AppColors.textSecondary,
                       fontWeight: row.isBold ? FontWeight.w600 : FontWeight.normal,

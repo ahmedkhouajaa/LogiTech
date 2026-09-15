@@ -18,6 +18,7 @@ import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../services/article_import_export_service.dart';
 import '../widgets/import_export/article_import_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -85,7 +86,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Articles', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          Text(context.tr('Articles'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           if (totalCount != null) ...[
                             const SizedBox(width: 10),
                             Container(
@@ -113,7 +114,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             ? (matchingCount != null
                                 ? '$matchingCount article${matchingCount > 1 ? 's' : ''} trouvé${matchingCount > 1 ? 's' : ''} sur $totalCount au total'
                                 : '$totalCount article${totalCount > 1 ? 's' : ''} au total')
-                            : 'Gérer vos articles',
+                            : context.tr('Gérer vos articles'),
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                       ),
                     ],
@@ -153,7 +154,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
                       const SizedBox(width: 6),
                       Text(
-                        'Actions',
+                        context.tr('Actions'),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 13,
@@ -169,17 +170,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   final items = <PopupMenuEntry<String>>[];
                   if (canExport) {
                     items.addAll([
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'export_excel',
-                        child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+                        child: Text(ctx.tr('Exporter Excel'), style: const TextStyle(fontSize: 13)),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'export_csv',
-                        child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+                        child: Text(ctx.tr('Exporter CSV'), style: const TextStyle(fontSize: 13)),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'export_json',
-                        child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+                        child: Text(ctx.tr('Exporter JSON'), style: const TextStyle(fontSize: 13)),
                       ),
                     ]);
                   }
@@ -188,11 +189,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   }
                   if (canImport) {
                     items.add(
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'import_excel',
                         child: Text(
-                          'Importer depuis Excel',
-                          style: TextStyle(fontSize: 13),
+                          ctx.tr('Importer depuis Excel'),
+                          style: const TextStyle(fontSize: 13),
                         ),
                       ),
                     );
@@ -238,7 +239,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigateToCreate(context, null),
                   icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                  label: const Text('Nouvel Article', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  label: Text(context.tr('Nouvel Article'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -319,7 +320,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       children: [
                         Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                         const SizedBox(height: 12),
-                        Text('Aucun article trouvé', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                        Text(context.tr('Aucun article trouvé'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                       ],
                     ),
                   );
@@ -484,7 +485,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text('Prix Achat (HT)', style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      Text(context.tr('Prix Achat (HT)'), style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
                                       const SizedBox(height: 2),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -509,7 +510,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text('Prix Vente (TTC)', style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      Text(context.tr('Prix Vente (TTC)'), style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
                                       const SizedBox(height: 2),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -561,7 +562,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                             children: [
                                               Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
                                               const SizedBox(width: 8),
-                                              const Text('Voir', style: TextStyle(fontSize: 13)),
+                                              Text(context.tr('Voir'), style: const TextStyle(fontSize: 13)),
                                             ],
                                           ),
                                         ),
@@ -578,7 +579,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                             children: [
                                               Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
                                               const SizedBox(width: 8),
-                                              const Text('Modifier', style: TextStyle(fontSize: 13)),
+                                              Text(context.tr('Modifier'), style: const TextStyle(fontSize: 13)),
                                             ],
                                           ),
                                         ),
@@ -595,7 +596,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                             children: [
                                               Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
                                               const SizedBox(width: 8),
-                                              Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13)),
+                                              Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error, fontSize: 13)),
                                             ],
                                           ),
                                         ),
@@ -659,11 +660,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       itemBuilder: (ctx) => [
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -678,7 +679,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

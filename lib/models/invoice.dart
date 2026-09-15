@@ -14,6 +14,7 @@ class Invoice {
   final DateTime date;
   final DateTime dueDate;
   final InvoiceStatus status;
+  final String? customStatus;
   final double totalHT;
   final double totalTva;
   final double totalTTC;
@@ -35,12 +36,14 @@ class Invoice {
   final DateTime updatedAt;
 
   final String? enterpriseId;
+  final Map<String, dynamic> customFields;
 
   Invoice({
     required this.id,
     required this.number,
     required this.customerId,
     this.customerName,
+    this.customFields = const {},
     this.orderId,
     this.deliveryNoteId,
     this.projectId,
@@ -50,6 +53,7 @@ class Invoice {
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.unpaid,
+    this.customStatus,
     this.totalHT = 0,
     this.totalTva = 0,
     this.totalTTC = 0,
@@ -74,6 +78,7 @@ class Invoice {
 
   double get amountRemaining => totalTTC + stampTax - amountPaid;
   bool get isOverdue => dueDate.isBefore(DateTime.now()) && status != InvoiceStatus.paid;
+  String get effectiveStatus => (customStatus != null && customStatus!.isNotEmpty) ? customStatus! : status.name;
 
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId,
@@ -82,7 +87,9 @@ class Invoice {
         'project_id': projectId, 'project_name': projectName,
         'devis_id': devisId, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
-        'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
+        'status': effectiveStatus,
+        'custom_status': customStatus,
+        'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
         'timbre_fiscal': timbreFiscal,
         'global_discount_percent': globalDiscountPercent,
@@ -97,6 +104,8 @@ class Invoice {
         'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'custom_fields': customFields,
+        'custom_fields_json': jsonEncode(customFields),
         'items': items.map((i) => i.toMap()).toList(),
       };
 
@@ -106,6 +115,10 @@ class Invoice {
       parsedItems = (map['items'] as List).map((i) => InvoiceItem.fromMap(Map<String, dynamic>.from(i))).toList();
     }
     
+    final rawStatus = map['status']?.toString() ?? 'unpaid';
+    final enumMatch = InvoiceStatus.values.where((e) => e.name == rawStatus).firstOrNull;
+    final cStatus = enumMatch == null ? rawStatus : (map['custom_status']?.toString() ?? map['customStatus']?.toString());
+
     return Invoice(
         id: map['id']?.toString() ?? '', number: map['number']?.toString() ?? '',
         customerId: map['customer_id']?.toString() ?? '',
@@ -118,9 +131,8 @@ class Invoice {
         warehouseId: map['warehouse_id']?.toString(),
         date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
         dueDate: map['due_date'] != null ? DateTime.tryParse(map['due_date'].toString()) ?? DateTime.now() : DateTime.now(),
-        status: InvoiceStatus.values.firstWhere(
-          (e) => e.name == map['status'], orElse: () => InvoiceStatus.unpaid,
-        ),
+        status: enumMatch ?? InvoiceStatus.unpaid,
+        customStatus: cStatus,
         totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
         totalTva: double.tryParse(map['total_tva']?.toString() ?? '0') ?? 0.0,
         totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
@@ -139,6 +151,17 @@ class Invoice {
         isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
         createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
         updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+        customFields: map['custom_fields'] is Map
+            ? Map<String, dynamic>.from(map['custom_fields'] as Map)
+            : (map['custom_fields_json'] != null
+                ? (() {
+                    try {
+                      return (jsonDecode(map['custom_fields_json'].toString()) as Map? ?? {}).cast<String, dynamic>();
+                    } catch (_) {
+                      return <String, dynamic>{};
+                    }
+                  })()
+                : (map['customFields'] is Map ? Map<String, dynamic>.from(map['customFields'] as Map) : const {})),
         items: parsedItems,
       );
   }
@@ -148,16 +171,18 @@ class Invoice {
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
     String? devisId, String? warehouseId,
     DateTime? date, DateTime? dueDate,
-    InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
+    InvoiceStatus? status, String? customStatus, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
     double? globalDiscountPercent, double? globalDiscountAmount,
     String? pricingMode, String? notes, String? conditionsGenerales,
     List<InvoiceItem>? items,
+    Map<String, dynamic>? customFields,
     String? firebaseUid, String? enterpriseId, String? creditNoteId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Invoice(
         id: id ?? this.id, number: number ?? this.number,
         customerId: customerId ?? this.customerId,
         customerName: customerName ?? this.customerName,
+        customFields: customFields ?? this.customFields,
         orderId: orderId ?? this.orderId,
         deliveryNoteId: deliveryNoteId ?? this.deliveryNoteId,
         projectId: projectId ?? this.projectId,
@@ -165,7 +190,9 @@ class Invoice {
         devisId: devisId ?? this.devisId,
         warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
-        status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
+        status: status ?? this.status,
+        customStatus: customStatus ?? this.customStatus,
+        totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,
         amountPaid: amountPaid ?? this.amountPaid, stampTax: stampTax ?? this.stampTax,
         timbreFiscal: timbreFiscal ?? this.timbreFiscal,

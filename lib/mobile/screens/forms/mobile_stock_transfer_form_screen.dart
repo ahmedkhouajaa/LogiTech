@@ -10,6 +10,7 @@ import '../../../../models/product.dart';
 import '../../../../models/stock_movement.dart';
 import '../../../../database/database_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -18,8 +19,6 @@ import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
-import '../../../../services/enterprise_service.dart';
-import '../../../../widgets/searchable_dropdown_field.dart';
 
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -126,7 +125,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -136,7 +135,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       setState(() => _hasAttemptedSubmit = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -198,7 +197,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Bon mis à jour' : 'Bon créé avec succès'),
+          content: Text(_isEditing ? context.tr('Bon mis à jour') : context.tr('Bon créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -291,16 +290,16 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
         final destWhName = currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt destination...';
 
         return MobileFormScreen(
-          title: _isEditing ? 'Modifier le transfert' : 'Nouveau transfert',
-          statusLabel: 'Validé',
+          title: _isEditing ? context.tr('Modifier le transfert') : context.tr('Nouveau transfert'),
+          statusLabel: context.tr('Validé'),
           statusColor: AppColors.success,
           isLoading: _isLoading,
-          saveLabel: 'Valider',
+          saveLabel: context.tr('Valider'),
           onCancel: () => Navigator.pop(context),
           onSave: _save,
           children: [
         MobileFormSection(
-          title: 'Informations',
+          title: context.tr('Informations'),
           icon: Icons.info_outline_rounded,
           child: Padding(
             padding: EdgeInsets.all(16),
@@ -308,20 +307,20 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SmartDatePicker(
-                  label: 'Date',
+                  label: context.tr('Date'),
                   value: _date,
                   onChanged: (v) => setState(() => _date = v),
                 ),
                 SizedBox(height: 16),
                 SmartSearchableSelector(
-                  label: 'Entrepôt Source',
-                  hint: 'Sélectionner l\'entrepôt source...',
+                  label: context.tr('Entrepôt Source'),
+                  hint: context.tr('Sélectionner l\'entrepôt source...'),
                   selectedText: sourceWhName,
                   onTap: () async {
                     final available = currentWarehouses.where((w) => w.id != _destWarehouseId).toList();
                     if (available.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Aucun autre entrepôt disponible')),
+                        SnackBar(content: Text(context.tr('Aucun autre entrepôt disponible'))),
                       );
                       return;
                     }
@@ -333,14 +332,14 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                 ),
                 SizedBox(height: 16),
                 SmartSearchableSelector(
-                  label: 'Entrepôt Destination',
-                  hint: 'Sélectionner l\'entrepôt destination...',
+                  label: context.tr('Entrepôt Destination'),
+                  hint: context.tr('Sélectionner l\'entrepôt destination...'),
                   selectedText: destWhName,
                   onTap: () async {
                     final available = currentWarehouses.where((w) => w.id != _sourceWarehouseId).toList();
                     if (available.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
+                        SnackBar(content: Text(context.tr('Aucun autre entrepôt disponible pour la destination'))),
                       );
                       return;
                     }
@@ -352,13 +351,13 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                 ),
                 SizedBox(height: 16),
                 SmartTextInput(
-                  label: 'Raison',
+                  label: context.tr('Raison'),
                   initialValue: _reason,
                   onChanged: (v) => setState(() => _reason = v),
                 ),
                 SizedBox(height: 16),
                 SmartTextInput(
-                  label: 'Notes',
+                  label: context.tr('Notes'),
                   initialValue: _notes,
                   maxLines: 2,
                   onChanged: (v) => setState(() => _notes = v),
@@ -369,7 +368,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
         ),
         
         MobileFormSection(
-          title: 'Articles',
+          title: context.tr('Articles'),
           icon: Icons.inventory_2_outlined,
           child: Padding(
             padding: EdgeInsets.all(16),
@@ -383,7 +382,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                         padding: EdgeInsets.symmetric(vertical: 32),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                        child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                        child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                       )
                     else
                       ..._items.asMap().entries.map((e) {
@@ -452,10 +451,10 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                                 ),
                                 SizedBox(height: 8),
                                 SearchableSelectorField(
-                                  hint: 'Sélectionner un article',
-                                  selectedText: item.productId.isNotEmpty ? (item.productName ?? 'Article') : null,
+                                  hint: context.tr('Sélectionner un article'),
+                                  selectedText: item.productId.isNotEmpty ? (item.productName ?? context.tr('Article')) : null,
                                   hasError: _hasAttemptedSubmit && item.productId.isEmpty,
-                                  errorText: (_hasAttemptedSubmit && item.productId.isEmpty) ? 'Veuillez sélectionner un article' : null,
+                                  errorText: (_hasAttemptedSubmit && item.productId.isEmpty) ? context.tr('Veuillez sélectionner un article') : null,
                                   onTap: () async {
                                     final productsState = context.read<ProductsBloc>().state;
                                     List<Product> products = [];
@@ -556,7 +555,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                             });
                           },
                           icon: Icon(Icons.add, size: 18),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
                             side: BorderSide(color: AppColors.textPrimary, width: 1.5),

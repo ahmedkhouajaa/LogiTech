@@ -8,6 +8,7 @@ import '../../blocs/products/products_bloc.dart';
 import '../../models/inventory_sheet.dart';
 import '../../models/product.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
@@ -95,17 +96,17 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
 
     final infoSections = [
       PremiumInfoSection(
-        title: 'Informations Générales',
+        title: context.tr('Informations Générales'),
         icon: Icons.info_outline,
         fields: [
           PremiumInfoField(
-            label: 'Entrepôt',
+            label: context.tr('Entrepôt'),
             value: warehouseName,
             icon: Icons.warehouse_outlined,
             isHighlight: true,
           ),
           PremiumInfoField(
-            label: 'Date de la fiche',
+            label: context.tr('Date de la fiche'),
             value: formatDateTimeLong(currentSheet.date),
             icon: Icons.calendar_today_outlined,
           ),
@@ -117,7 +118,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
             ),
           if (totalSurplus > 0 || totalMissing > 0)
             PremiumInfoField(
-              label: 'Écarts détectés',
+              label: context.tr('Écarts détectés'),
               value: '${totalSurplus > 0 ? "+$totalSurplus surplus " : ""}${totalMissing > 0 ? "-$totalMissing manquant" : ""}',
               icon: Icons.compare_arrows_outlined,
               isHighlight: true,
@@ -183,19 +184,19 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                 }
 
                 if (canRead) {
-                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, context.tr('Voir'));
                 }
                 if (canUpdate) {
-                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, context.tr('Modifier'));
                 }
                 if (canDelete) {
-                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  addItem('delete', Icons.delete_outline, AppColors.error, context.tr('Supprimer'));
                 }
                 if (canRead) {
-                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
-                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  addItem('print', Icons.print_outlined, AppColors.primary, context.tr('Imprimer'));
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, context.tr('Télécharger PDF'));
+                  addItem('email', Icons.email_outlined, AppColors.primary, context.tr('Envoyer par email'));
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, context.tr('Envoyer par WhatsApp'));
                 }
 
                 return entries;
@@ -204,7 +205,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
           ],
         ),
         body: PremiumDetailShell(
-          documentType: 'Fiche d\'Inventaire',
+          documentType: context.tr('Fiche d\'Inventaire'),
           referenceNumber: currentSheet.number,
           statusLabel: currentSheet.status == 'validated' ? 'Validé' : (currentSheet.status == 'cancelled' ? 'Annulé' : 'Brouillon'),
           statusColor: currentSheet.status == 'validated' ? AppColors.success : (currentSheet.status == 'cancelled' ? AppColors.error : AppColors.warning),
@@ -255,7 +256,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Action non implémentée'))));
     }
   }
 
@@ -285,15 +286,5 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
         }
         break;
     }
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-      ],
-    );
   }
 }

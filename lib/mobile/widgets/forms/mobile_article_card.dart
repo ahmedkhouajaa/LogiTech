@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class MobileArticleCard extends StatelessWidget {
   final int index;
@@ -38,9 +39,9 @@ class MobileArticleCard extends StatelessWidget {
         boxShadow: AppShadows.sm,
       ),
       child: Dismissible(
-        key: ValueKey('article_$index\_$designation'),
-        background: _buildSwipeAction(Icons.edit_rounded, Colors.blue, 'Modifier', Alignment.centerLeft),
-        secondaryBackground: _buildSwipeAction(Icons.delete_outline_rounded, AppColors.error, 'Supprimer', Alignment.centerRight),
+        key: ValueKey('article_${index}_$designation'),
+        background: _buildSwipeAction(Icons.edit_rounded, Colors.blue, context.tr('Modifier'), Alignment.centerLeft),
+        secondaryBackground: _buildSwipeAction(Icons.delete_outline_rounded, AppColors.error, context.tr('Supprimer'), Alignment.centerRight),
         confirmDismiss: (direction) async {
           if (direction == DismissDirection.startToEnd) {
             onEdit();
@@ -76,7 +77,7 @@ class MobileArticleCard extends StatelessWidget {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        designation,
+                        context.tr(designation),
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                       ),
                     ),
@@ -112,10 +113,10 @@ class MobileArticleCard extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildDetailItem('Qté', formatQuantity(quantity)),
-                      _buildDetailItem('P.U', formatCurrencyDT(unitPrice)),
-                      _buildDetailItem('Remise', '${discountPercent.toStringAsFixed(0)}%'),
-                      _buildDetailItem('TVA', '${tvaRate.toInt()}%'),
+                      _buildDetailItem(context.tr('Qté'), formatQuantity(quantity)),
+                      _buildDetailItem(context.tr('P.U'), formatCurrencyDT(unitPrice)),
+                      _buildDetailItem(context.tr('Remise'), '${discountPercent.toStringAsFixed(0)}%'),
+                      _buildDetailItem(context.tr('TVA'), '${tvaRate.toInt()}%'),
                     ],
                   ),
                 ),
@@ -123,7 +124,8 @@ class MobileArticleCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text('Total HT: ', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    Text(context.tr('Total HT:'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    const SizedBox(width: 6),
                     Text(
                       formatCurrencyDT(totalHT),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),

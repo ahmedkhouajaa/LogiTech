@@ -5,7 +5,8 @@ class Product {
   final String? reference;
   final String? description;
   final String? category;
-  final String productType; // produit, service, consommable
+  final String productType; // produit, service, consommable, immobilisation
+  final String destination; // Vente, Achat, Vente et Achat
   final String? familyId;
   final String? subFamilyId;
   final String? brandId;
@@ -40,6 +41,7 @@ class Product {
     this.description,
     this.category,
     this.productType = 'produit',
+    this.destination = 'Vente et Achat',
     this.familyId,
     this.subFamilyId,
     this.brandId,
@@ -69,6 +71,9 @@ class Product {
 
   bool get isLowStock => stockQty <= lowStockThreshold && lowStockAlert;
 
+  bool get isForSale => destination == 'Vente' || destination == 'Vente et Achat';
+  bool get isForPurchase => destination == 'Achat' || destination == 'Vente et Achat';
+
   double get margin => sellingPrice > 0 && purchasePrice > 0
       ? ((sellingPrice - purchasePrice) / purchasePrice) * 100
       : 0;
@@ -76,6 +81,7 @@ class Product {
   Map<String, dynamic> toMap() => {
         'id': id, 'code': code, 'name': name, 'reference': reference,
         'description': description, 'category': category, 'product_type': productType,
+        'destination': destination,
         'family_id': familyId, 'sub_family_id': subFamilyId, 'brand_id': brandId,
         'unit': unit, 'purchase_price': purchasePrice, 'selling_price': sellingPrice,
         'usual_discount': usualDiscount, 'tva_rate': tvaRate,
@@ -123,6 +129,16 @@ class Product {
       description: map['description']?.toString(),
       category: map['category']?.toString(),
       productType: (map['product_type'] ?? map['productType'])?.toString() ?? 'produit',
+      destination: (map['destination'] ?? map['destination_type'])?.toString() ??
+          ((map['product_type'] ?? map['productType']) == 'immobilisation'
+              ? 'Achat'
+              : (parseDouble(map['purchase_price'] ?? map['purchasePrice'], 0.0) > 0 &&
+                      parseDouble(map['selling_price'] ?? map['sellingPrice'], 0.0) == 0
+                  ? 'Achat'
+                  : (parseDouble(map['selling_price'] ?? map['sellingPrice'], 0.0) > 0 &&
+                          parseDouble(map['purchase_price'] ?? map['purchasePrice'], 0.0) == 0
+                      ? 'Vente'
+                      : 'Vente et Achat'))),
       familyId: (map['family_id'] ?? map['familyId'])?.toString(),
       subFamilyId: (map['sub_family_id'] ?? map['subFamilyId'])?.toString(),
       brandId: (map['brand_id'] ?? map['brandId'])?.toString(),
@@ -152,7 +168,7 @@ class Product {
 
   Product copyWith({
     String? id, String? code, String? name, String? reference, String? description,
-    String? category, String? productType, String? familyId, String? subFamilyId,
+    String? category, String? productType, String? destination, String? familyId, String? subFamilyId,
     String? brandId, String? unit, double? purchasePrice, double? sellingPrice,
     double? usualDiscount, double? tvaRate, double? stockQty, double? minStockQty,
     bool? allowNegativeStock, bool? lowStockAlert, double? lowStockThreshold,
@@ -164,6 +180,7 @@ class Product {
         id: id ?? this.id, code: code ?? this.code, name: name ?? this.name,
         reference: reference ?? this.reference, description: description ?? this.description,
         category: category ?? this.category, productType: productType ?? this.productType,
+        destination: destination ?? this.destination,
         familyId: familyId ?? this.familyId, subFamilyId: subFamilyId ?? this.subFamilyId,
         brandId: brandId ?? this.brandId, unit: unit ?? this.unit,
         purchasePrice: purchasePrice ?? this.purchasePrice, sellingPrice: sellingPrice ?? this.sellingPrice,

@@ -20,6 +20,7 @@ import '../../services/permission_service.dart';
 import '../../services/sync_service.dart';
 import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileInvoicesScreen extends StatefulWidget {
   const MobileInvoicesScreen({super.key});
@@ -175,8 +176,17 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLabel = item.status.label.toLowerCase();
               final statusName = item.status.name.toLowerCase();
+              final effStatus = item.effectiveStatus.toLowerCase();
+              final cStatus = (item.customStatus ?? '').toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('invoice', item.effectiveStatus);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower && statusName != filterLower) return false;
+              if (statusLabel != filterLower &&
+                  statusName != filterLower &&
+                  effStatus != filterLower &&
+                  cStatus != filterLower &&
+                  sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -185,9 +195,16 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           isEmpty = filteredItems.isEmpty;
 
           cards = filteredItems.map((item) {
+            final sInfo = CustomStatusService.instance.getStatusInfo(
+              'invoice',
+              item.effectiveStatus,
+              fallbackLabel: item.status.label,
+              fallbackColor: item.status.color,
+            );
             return MobileGenericCard(
               reference: item.number,
-              status: item.status.label,
+              status: sInfo.label,
+              statusColor: sInfo.color,
               name: item.customerName ?? 'Client Inconnu',
               date: item.date,
               amount: item.totalTTC,
@@ -262,7 +279,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
               _fetchFilteredInvoices();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Envoyee', 'Partiellement payee', 'Payee', 'Non paye', 'En retard', 'Annulee'],
+            documentType: 'invoice',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredInvoices();

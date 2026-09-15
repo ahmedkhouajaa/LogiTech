@@ -16,6 +16,7 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 
 class SearchableSelectorField extends StatelessWidget {
   final String hint;
@@ -41,7 +42,8 @@ class SearchableSelectorField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayText = (selectedText != null && selectedText!.isNotEmpty) ? selectedText! : hint;
+    final localizedHint = context.tr(hint);
+    final displayText = (selectedText != null && selectedText!.isNotEmpty) ? context.tr(selectedText!) : localizedHint;
     final isPlaceholder = selectedText == null || selectedText!.isEmpty;
 
     BorderSide borderSide;
@@ -56,44 +58,43 @@ class SearchableSelectorField extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
-      child: AbsorbPointer(
-        child: TextFormField(
-          key: ValueKey('selector_${displayText}_$hasError'),
-          controller: TextEditingController(text: displayText),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: hasError
-                ? AppColors.error.withValues(alpha: 0.04)
-                : (isHighlighted ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surfaceAlt),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            suffixIcon: Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 24,
-              color: hasError ? AppColors.error : AppColors.primary,
-            ),
-            errorText: hasError ? errorText : null,
-            errorStyle: TextStyle(fontSize: 11, color: AppColors.error),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: borderSide,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: borderSide,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: borderSide,
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: AppColors.error, width: 1.5),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: AppColors.error, width: 1.5),
-            ),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: hasError
+              ? AppColors.error.withValues(alpha: 0.04)
+              : (isHighlighted ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surfaceAlt),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          suffixIcon: Icon(
+            Icons.arrow_drop_down_rounded,
+            size: 24,
+            color: hasError ? AppColors.error : AppColors.primary,
           ),
+          errorText: (hasError && errorText != null) ? context.tr(errorText!) : null,
+          errorStyle: TextStyle(fontSize: 11, color: AppColors.error),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: borderSide,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: borderSide,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: borderSide,
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: BorderSide(color: AppColors.error, width: 1.5),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: BorderSide(color: AppColors.error, width: 1.5),
+          ),
+        ),
+        child: Text(
+          displayText,
           style: TextStyle(
             fontSize: 13,
             fontWeight: isPlaceholder ? (hintFontWeight ?? FontWeight.bold) : FontWeight.bold,
@@ -101,6 +102,7 @@ class SearchableSelectorField extends StatelessWidget {
                 ? AppColors.error
                 : (isPlaceholder ? (hintColor ?? AppColors.textPrimary) : AppColors.textPrimary),
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -151,7 +153,7 @@ Future<String?> showCustomerSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un client',
+                        context.tr('Sélectionner un client'),
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -170,7 +172,7 @@ Future<String?> showCustomerSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un client...',
+                        hintText: context.tr('Rechercher un client...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -200,7 +202,7 @@ Future<String?> showCustomerSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun client trouvé',
+                                context.tr('Aucun client trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -306,7 +308,7 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un contact',
+                        context.tr('Sélectionner un contact'),
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -325,7 +327,7 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un client ou fournisseur...',
+                        hintText: context.tr('Rechercher un client ou fournisseur...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -355,7 +357,7 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun contact trouvé',
+                                context.tr('Aucun contact trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -366,7 +368,7 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
                               if (filteredCustomers.isNotEmpty) ...[
                                 Padding(
                                   padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
-                                  child: Text('CLIENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                  child: Text(context.tr('CLIENTS'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
                                 ),
                                 ...filteredCustomers.map((customer) {
                                   final isSelected = customer.id == selectedContactId;
@@ -393,7 +395,7 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
                               if (filteredSuppliers.isNotEmpty) ...[
                                 Padding(
                                   padding: EdgeInsets.fromLTRB(12, 12, 12, 4),
-                                  child: Text('FOURNISSEURS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                                  child: Text(context.tr('FOURNISSEURS'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.warning)),
                                 ),
                                 ...filteredSuppliers.map((supplier) {
                                   final isSelected = supplier.id == selectedContactId;
@@ -480,7 +482,7 @@ Future<String?> showProjectSelectDialog(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Sélectionner un projet',
+                            context.tr('Sélectionner un projet'),
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                           ),
                           IconButton(
@@ -497,7 +499,7 @@ Future<String?> showProjectSelectDialog(
                           onChanged: (val) => setDialogState(() => search = val),
                           style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                           decoration: InputDecoration(
-                            hintText: 'Rechercher un projet...',
+                            hintText: context.tr('Rechercher un projet...'),
                             hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                             prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                             filled: true,
@@ -527,7 +529,7 @@ Future<String?> showProjectSelectDialog(
                                 padding: const EdgeInsets.all(20.0),
                                 child: Center(
                                   child: Text(
-                                    'Aucun projet trouvé',
+                                    context.tr('Aucun projet trouvé'),
                                     style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                   ),
                                 ),
@@ -624,7 +626,7 @@ Future<String?> showSupplierSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un fournisseur',
+                        context.tr('Sélectionner un fournisseur'),
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -643,7 +645,7 @@ Future<String?> showSupplierSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un fournisseur...',
+                        hintText: context.tr('Rechercher un fournisseur...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -673,7 +675,7 @@ Future<String?> showSupplierSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun fournisseur trouvé',
+                                context.tr('Aucun fournisseur trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -738,6 +740,7 @@ Future<String?> showProductSelectDialog(
   String? selectedProductId,
   String? warehouseId,
   Map<String, double>? warehouseStockMap,
+  String? destinationFilter,
 }) async {
   Map<String, double> computedStockMap = warehouseStockMap ?? {};
   if (warehouseStockMap == null) {
@@ -787,7 +790,14 @@ Future<String?> showProductSelectDialog(
           return BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final isLoaded = state is ProductsLoaded;
-              final currentProducts = isLoaded ? state.products : products;
+              final rawProducts = isLoaded ? state.products : products;
+              final currentProducts = destinationFilter == null || destinationFilter.isEmpty
+                  ? rawProducts
+                  : rawProducts.where((p) {
+                      if (destinationFilter == 'Vente') return p.isForSale;
+                      if (destinationFilter == 'Achat') return p.isForPurchase;
+                      return true;
+                    }).toList();
 
               if (!isLoaded) {
                 return Dialog(
@@ -800,7 +810,7 @@ Future<String?> showProductSelectDialog(
                       children: [
                         CircularProgressIndicator(color: AppColors.primary),
                         SizedBox(height: 16),
-                        Text("Chargement des articles...", style: TextStyle(color: AppColors.textPrimary)),
+                        Text(context.tr("Chargement des articles..."), style: TextStyle(color: AppColors.textPrimary)),
                       ],
                     ),
                   ),
@@ -832,7 +842,7 @@ Future<String?> showProductSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un article',
+                        context.tr('Sélectionner un article'),
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -851,7 +861,7 @@ Future<String?> showProductSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher par nom, code, référence...',
+                        hintText: context.tr('Rechercher par nom, code, référence...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -881,7 +891,7 @@ Future<String?> showProductSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun article trouvé',
+                                context.tr('Aucun article trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -1017,7 +1027,7 @@ Future<String?> showTreasuryAccountSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un compte',
+                        context.tr('Sélectionner un compte'),
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -1034,7 +1044,7 @@ Future<String?> showTreasuryAccountSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un compte (nom, banque, IBAN)...',
+                        hintText: context.tr('Rechercher un compte (nom, banque, IBAN)...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -1066,7 +1076,7 @@ Future<String?> showTreasuryAccountSelectDialog(
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       leading: Icon(Icons.account_balance_wallet_rounded, size: 18, color: AppColors.primary),
                       title: Text(
-                        'Tous les Comptes',
+                        context.tr('Tous les Comptes'),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: selectedAccountId == 'all' ? FontWeight.bold : FontWeight.w500,
@@ -1089,7 +1099,7 @@ Future<String?> showTreasuryAccountSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun compte trouvé',
+                                context.tr('Aucun compte trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -1179,7 +1189,7 @@ Future<String?> showCategorySelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner une catégorie',
+                        context.tr('Sélectionner une catégorie'),
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -1196,7 +1206,7 @@ Future<String?> showCategorySelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher une catégorie...',
+                        hintText: context.tr('Rechercher une catégorie...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -1228,7 +1238,7 @@ Future<String?> showCategorySelectDialog(
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       leading: Icon(Icons.category_rounded, size: 18, color: AppColors.primary),
                       title: Text(
-                        'Toutes les Categories',
+                        context.tr('Toutes les Categories'),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: selectedCategoryId == 'all' ? FontWeight.bold : FontWeight.w500,
@@ -1251,7 +1261,7 @@ Future<String?> showCategorySelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucune catégorie trouvée',
+                                context.tr('Aucune catégorie trouvée'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -1348,7 +1358,7 @@ Future<String?> showWarehouseSelectDialog(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sélectionner un entrepôt',
+                        context.tr('Sélectionner un entrepôt'),
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       IconButton(
@@ -1365,7 +1375,7 @@ Future<String?> showWarehouseSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un entrepôt...',
+                        hintText: context.tr('Rechercher un entrepôt...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -1396,7 +1406,7 @@ Future<String?> showWarehouseSelectDialog(
                       selected: selectedWarehouseId == null,
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les Entrepôts',
+                        context.tr('Tous les Entrepôts'),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: selectedWarehouseId == null ? FontWeight.bold : FontWeight.w500,
@@ -1419,7 +1429,7 @@ Future<String?> showWarehouseSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucun entrepôt trouvé',
+                                context.tr('Aucun entrepôt trouvé'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),
@@ -1505,7 +1515,7 @@ Future<String?> showSimpleOptionSelectDialog(
                     children: [
                       Expanded(
                         child: Text(
-                          title,
+                          context.tr(title),
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                       ),
@@ -1523,7 +1533,7 @@ Future<String?> showSimpleOptionSelectDialog(
                       onChanged: (val) => setDialogState(() => search = val),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher...',
+                        hintText: context.tr('Rechercher...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                         filled: true,
@@ -1553,7 +1563,7 @@ Future<String?> showSimpleOptionSelectDialog(
                             padding: EdgeInsets.all(20.0),
                             child: Center(
                               child: Text(
-                                'Aucune option trouvée',
+                                context.tr('Aucune option trouvée'),
                                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                               ),
                             ),

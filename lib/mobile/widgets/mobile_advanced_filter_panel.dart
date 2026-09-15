@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../models/customer.dart';
 import '../../models/supplier.dart';
 import '../utils/mobile_status_colors.dart';
+import '../../l10n/app_localizations.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileAdvancedFilterPanel extends StatefulWidget {
   final String? entityLabel; // 'Client', 'Fournisseur', or null
@@ -21,6 +24,7 @@ class MobileAdvancedFilterPanel extends StatefulWidget {
   final ValueChanged<String?> onStatusChanged;
   final VoidCallback onResetFilters;
   final int itemCount;
+  final String? documentType;
 
   const MobileAdvancedFilterPanel({
     super.key,
@@ -36,10 +40,11 @@ class MobileAdvancedFilterPanel extends StatefulWidget {
     required this.dateTo,
     required this.onDateToChanged,
     required this.selectedStatus,
-    required this.statusOptions,
+    this.statusOptions = const [],
     required this.onStatusChanged,
     required this.onResetFilters,
     required this.itemCount,
+    this.documentType,
   })  : selectedEntityId = selectedEntityId ?? selectedCustomerId,
         onEntityChanged = onEntityChanged ?? onCustomerChanged;
 
@@ -47,8 +52,84 @@ class MobileAdvancedFilterPanel extends StatefulWidget {
   State<MobileAdvancedFilterPanel> createState() => _MobileAdvancedFilterPanelState();
 }
 
+class _MobileStatusOptionItem {
+  final String value;
+  final String label;
+  final Color? color;
+  final bool isCustom;
+
+  const _MobileStatusOptionItem({
+    required this.value,
+    required this.label,
+    this.color,
+    this.isCustom = false,
+  });
+}
+
 class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
   bool _isExpanded = false;
+  StreamSubscription<String>? _statusSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToCustomStatuses();
+  }
+
+  @override
+  void didUpdateWidget(MobileAdvancedFilterPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.documentType != widget.documentType) {
+      _subscribeToCustomStatuses();
+    }
+  }
+
+  void _subscribeToCustomStatuses() {
+    _statusSubscription?.cancel();
+    if (widget.documentType != null && widget.documentType!.isNotEmpty) {
+      _statusSubscription = CustomStatusService.instance.changeStream.listen((docType) {
+        if (docType == widget.documentType && mounted) {
+          setState(() {});
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusSubscription?.cancel();
+    super.dispose();
+  }
+
+  List<_MobileStatusOptionItem> get _effectiveStatusOptions {
+    if (widget.documentType != null && widget.documentType!.isNotEmpty) {
+      final statuses = CustomStatusService.instance.getAllStatusesSync(widget.documentType!);
+      final list = <_MobileStatusOptionItem>[
+        const _MobileStatusOptionItem(value: 'Tous', label: 'Tous', color: null, isCustom: false),
+      ];
+      for (final s in statuses) {
+        list.add(_MobileStatusOptionItem(
+          value: s.name,
+          label: s.name,
+          color: s.color,
+          isCustom: !s.isDefault,
+        ));
+      }
+      return list;
+    }
+
+    return widget.statusOptions.map((opt) {
+      if (opt == 'Tous') {
+        return const _MobileStatusOptionItem(value: 'Tous', label: 'Tous', color: null, isCustom: false);
+      }
+      return _MobileStatusOptionItem(
+        value: opt,
+        label: opt,
+        color: MobileStatusColors.getColorForStatus(opt),
+        isCustom: false,
+      );
+    }).toList();
+  }
 
   int get _activeFilterCount {
     int count = 0;
@@ -348,7 +429,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Filtres',
+                        context.tr('Filtres'),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -388,7 +469,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '${widget.itemCount} résultat${widget.itemCount > 1 ? 's' : ''}',
+                  '${widget.itemCount} ${context.tr(widget.itemCount > 1 ? 'résultats' : 'résultat')}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -466,7 +547,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Date de début'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 6),
                             InkWell(
                               onTap: () async {
@@ -475,7 +556,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                   initialDate: widget.dateFrom ?? DateTime.now(),
                                   firstDate: DateTime(2000),
                                   lastDate: DateTime(2100),
-                                  locale: const Locale('fr', 'FR'),
+                                  locale: Localizations.localeOf(context),
                                 );
                                 if (picked != null) widget.onDateFromChanged(picked);
                               },
@@ -493,7 +574,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        widget.dateFrom != null ? formatDate(widget.dateFrom!) : 'Sélectionner une date',
+                                        widget.dateFrom != null ? formatDate(widget.dateFrom!) : context.tr('Sélectionner une date'),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: widget.dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary,
@@ -515,7 +596,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Date de fin'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 6),
                             InkWell(
                               onTap: () async {
@@ -524,7 +605,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                   initialDate: widget.dateTo ?? DateTime.now(),
                                   firstDate: DateTime(2000),
                                   lastDate: DateTime(2100),
-                                  locale: const Locale('fr', 'FR'),
+                                  locale: Localizations.localeOf(context),
                                 );
                                 if (picked != null) widget.onDateToChanged(picked);
                               },
@@ -542,7 +623,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        widget.dateTo != null ? formatDate(widget.dateTo!) : 'Sélectionner une date',
+                                        widget.dateTo != null ? formatDate(widget.dateTo!) : context.tr('Sélectionner une date'),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: widget.dateTo != null ? AppColors.textPrimary : AppColors.textSecondary,
@@ -562,10 +643,10 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                   const SizedBox(height: 12),
 
                   // 3. Statut Popup Menu
-                  Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text(context.tr('Statut'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
                   PopupMenuButton<String>(
-                    tooltip: 'Filtrer par statut',
+                    tooltip: context.tr('Filtrer par statut'),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -581,18 +662,18 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                         widget.onStatusChanged(val);
                       }
                     },
-                    itemBuilder: (context) => widget.statusOptions.map((opt) {
-                      final isSelected = (widget.selectedStatus ?? 'Tous') == opt;
+                    itemBuilder: (context) => _effectiveStatusOptions.map((opt) {
+                      final isSelected = (widget.selectedStatus ?? 'Tous').toLowerCase() == opt.value.toLowerCase();
 
                       return PopupMenuItem<String>(
-                        value: opt,
+                        value: opt.value,
                         height: 44,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (opt == 'Tous')
+                            if (opt.value == 'Tous')
                               Text(
-                                'Tous',
+                                context.tr('Tous'),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -602,7 +683,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                             else
                               Builder(
                                 builder: (_) {
-                                  final statusColor = MobileStatusColors.getColorForStatus(opt);
+                                  final statusColor = opt.color ?? MobileStatusColors.getColorForStatus(opt.label);
                                   return Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
@@ -610,13 +691,29 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1),
                                     ),
-                                    child: Text(
-                                      opt,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: statusColor,
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (opt.isCustom) ...[
+                                          Container(
+                                            width: 6,
+                                            height: 6,
+                                            margin: const EdgeInsets.only(right: 6),
+                                            decoration: BoxDecoration(
+                                              color: statusColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ],
+                                        Text(
+                                          context.tr(opt.label),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
@@ -640,7 +737,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                         children: [
                           if (widget.selectedStatus == null || widget.selectedStatus == 'Tous')
                             Text(
-                              'Tous',
+                              context.tr('Tous'),
                               style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textPrimary,
@@ -649,7 +746,13 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                           else
                             Builder(
                               builder: (_) {
-                                final statusColor = MobileStatusColors.getColorForStatus(widget.selectedStatus!);
+                                final sInfo = widget.documentType != null
+                                    ? CustomStatusService.instance.getStatusInfo(widget.documentType!, widget.selectedStatus!)
+                                    : null;
+                                final statusColor = sInfo?.color ?? MobileStatusColors.getColorForStatus(widget.selectedStatus!);
+                                final statusLabel = sInfo?.label ?? widget.selectedStatus!;
+                                final isCustom = sInfo?.isCustom ?? false;
+
                                 return Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
@@ -657,13 +760,29 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1),
                                   ),
-                                  child: Text(
-                                    widget.selectedStatus!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: statusColor,
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isCustom) ...[
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          margin: const EdgeInsets.only(right: 6),
+                                          decoration: BoxDecoration(
+                                            color: statusColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                      Text(
+                                        context.tr(statusLabel),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 );
                               },
@@ -683,9 +802,9 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                         widget.onResetFilters();
                       },
                       icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: const Text(
-                        'Réinitialiser les filtres',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      label: Text(
+                        context.tr('Réinitialiser les filtres'),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
@@ -743,13 +862,23 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                   if (widget.selectedStatus != null && widget.selectedStatus != 'Tous')
                     Padding(
                       padding: const EdgeInsets.only(right: 6.0),
-                      child: Chip(
-                        label: Text('Statut: ${widget.selectedStatus}', style: const TextStyle(fontSize: 11)),
-                        onDeleted: () => widget.onStatusChanged(null),
-                        deleteIcon: const Icon(Icons.close, size: 14),
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        padding: const EdgeInsets.all(4),
+                      child: Builder(
+                        builder: (_) {
+                          final sInfo = widget.documentType != null
+                              ? CustomStatusService.instance.getStatusInfo(widget.documentType!, widget.selectedStatus!)
+                              : null;
+                          final statusLabel = sInfo?.label ?? widget.selectedStatus!;
+                          final statusColor = sInfo?.color ?? AppColors.primary;
+                          return Chip(
+                            label: Text('Statut: $statusLabel', style: const TextStyle(fontSize: 11)),
+                            onDeleted: () => widget.onStatusChanged(null),
+                            deleteIcon: const Icon(Icons.close, size: 14),
+                            backgroundColor: statusColor.withValues(alpha: 0.12),
+                            side: BorderSide(color: statusColor.withValues(alpha: 0.35)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            padding: const EdgeInsets.all(4),
+                          );
+                        },
                       ),
                     ),
                 ],

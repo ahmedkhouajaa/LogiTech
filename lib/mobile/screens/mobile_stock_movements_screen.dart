@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
-import '../../widgets/sidebar_menu.dart';
+import '../../l10n/app_localizations.dart';
 import '../../blocs/stock/stock_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../models/stock_movement.dart';
 import '../../models/product.dart';
-import '../widgets/mobile_generic_list_screen.dart';
-import '../utils/mobile_module_config.dart';
 import 'forms/mobile_stock_adjustment_form.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/custom_date_range_picker.dart';
@@ -116,7 +114,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                   Padding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Text(
-                      'Mouvements de Stock',
+                      context.tr('Mouvements de Stock'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -132,7 +130,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                     child: TextField(
                       onChanged: (v) => setState(() => _searchQuery = v),
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un produit...',
+                        hintText: context.tr('Rechercher un produit...'),
                         hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
                         prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
                         filled: true,
@@ -203,7 +201,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${filteredItems.length} résultat${filteredItems.length > 1 ? 's' : ''}',
+                              '${filteredItems.length} ${context.tr(filteredItems.length > 1 ? 'résultats' : 'résultat')}',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                             ),
                           ),
@@ -227,7 +225,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 children: [
                                   Icon(Icons.clear_all, size: 14, color: AppColors.error),
                                   SizedBox(width: 4),
-                                  Text('Réinitialiser', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+                                  Text(context.tr('Réinitialiser'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
                                 ],
                               ),
                             ),
@@ -260,7 +258,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
@@ -279,7 +277,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         ),
                                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
-                                          const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
+                                          DropdownMenuItem<String?>(value: null, child: Text(context.tr('Tous'), style: TextStyle(fontSize: 12))),
                                           ...state.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                                         ],
                                         onChanged: (v) => setState(() => _filterWarehouseId = v),
@@ -293,7 +291,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text(context.tr('Type'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
@@ -312,8 +310,8 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         ),
                                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
-                                          DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
-                                          ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                          DropdownMenuItem(value: null, child: Text(context.tr('Tous'), style: TextStyle(fontSize: 12))),
+                                          ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(context.tr(t.label), style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                                         ],
                                         onChanged: (v) => setState(() => _filterType = v),
                                       ),
@@ -331,14 +329,14 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text(context.tr('Référence'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
                                       child: TextField(
                                         onChanged: (v) => setState(() => _filterReference = v),
                                         decoration: InputDecoration(
-                                          hintText: 'Rechercher réf...',
+                                          hintText: context.tr('Rechercher réf...'),
                                           hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                           prefixIcon: Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
                                           prefixIconConstraints: BoxConstraints(minWidth: 32),
@@ -359,7 +357,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Période', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text(context.tr('Période'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
@@ -385,7 +383,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                             Expanded(
                                               child: Text(
                                                 _filterDateRange == null 
-                                                    ? 'Toutes dates' 
+                                                    ? context.tr('Toutes les dates') 
                                                     : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
                                                 style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                                 overflow: TextOverflow.ellipsis,
@@ -415,7 +413,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                           children: [
                             Icon(Icons.swap_horiz_rounded, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                             SizedBox(height: 8),
-                            Text('Aucun mouvement trouvé.', style: TextStyle(color: AppColors.textSecondary)),
+                            Text(context.tr('Aucun mouvement trouvé.'), style: TextStyle(color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
@@ -427,7 +425,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${filteredItems.length} mouvements',
+                            '${filteredItems.length} ${context.tr('mouvements')}',
                             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                           SizedBox(height: 8),
@@ -456,7 +454,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                 });
               },
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              label: Text(context.tr('Nouvel ajustement'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               backgroundColor: AppColors.primary,
             )
           : null,
@@ -571,7 +569,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                     border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    isCancelled ? '${movement.type.label} (Annulé)' : movement.type.label,
+                    isCancelled ? '${context.tr(movement.type.label)} (${context.tr('Annulé')})' : context.tr(movement.type.label),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -646,7 +644,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                   SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Raison: $reasonStr',
+                      '${context.tr('Raison')}: $reasonStr',
                       style: TextStyle(fontSize: 12, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary, fontStyle: FontStyle.italic),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

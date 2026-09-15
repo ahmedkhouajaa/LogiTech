@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,7 +6,6 @@ import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/payments/payments_bloc.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
@@ -24,6 +22,7 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../l10n/app_localizations.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -55,22 +54,22 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     return BlocBuilder<PaymentsBloc, PaymentsState>(
       builder: (context, state) {
         List<Payment> payments = [];
-        List<PaymentAccount> accounts = [];
 
         if (state is PaymentsLoaded) {
           payments = state.payments;
-          accounts = state.accounts;
         }
 
         // Apply filters
         final filtered = payments.where((p) {
           final matchesSearch = _searchQuery.isEmpty ||
-              p.paymentNumber.toLowerCase().contains(_searchQuery.toLowerCase());
+              p.paymentNumber.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              (p.reference ?? '').toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              (p.notes ?? '').toLowerCase().contains(_searchQuery.toLowerCase());
           final matchesContact = _contactSearch.isEmpty ||
               (p.contactName ?? '').toLowerCase().contains(_contactSearch.toLowerCase());
-          final matchesMethod = _methodFilter == 'tous' || p.method == _methodFilter;
-          final matchesStatus = _statusFilter == 'tous' || p.status == _statusFilter;
-          final matchesDirection = _directionFilter == 'tous' || p.direction == _directionFilter;
+          final matchesMethod = _methodFilter == 'tous' || p.method.toLowerCase() == _methodFilter.toLowerCase();
+          final matchesStatus = _statusFilter == 'tous' || p.status.toLowerCase() == _statusFilter.toLowerCase();
+          final matchesDirection = _directionFilter == 'tous' || p.direction.toLowerCase() == _directionFilter.toLowerCase();
           return matchesSearch && matchesContact && matchesMethod && matchesStatus && matchesDirection;
         }).toList();
 
@@ -95,11 +94,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Paiements',
+                        context.tr('Paiements'),
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       const SizedBox(height: 2),
-                      Text('Gérer vos paiements', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(context.tr('Gérer vos paiements'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),
                   const Spacer(),
@@ -122,7 +121,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Actions',
+                          Text(context.tr('Actions'),
                               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                           const SizedBox(width: 6),
                           Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
@@ -135,7 +134,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         child: Row(children: [
                           Icon(Icons.file_download_rounded, size: 16, color: AppColors.primary),
                           const SizedBox(width: 10),
-                          const Text('Exporter CSV'),
+                          Text(context.tr('Exporter CSV')),
                         ]),
                       ),
                       PopupMenuItem(
@@ -143,13 +142,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         child: Row(children: [
                           Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
                           const SizedBox(width: 10),
-                          const Text('Imprimer'),
+                          Text(context.tr('Imprimer')),
                         ]),
                       ),
                     ],
                     onSelected: (val) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${val == 'export' ? 'Export' : 'Impression'} bientôt disponible')),
+                        SnackBar(content: Text('${val == 'export' ? context.tr('Export') : context.tr('Impression')} ${context.tr('bientôt disponible')}')),
                       );
                     },
                   ),
@@ -159,8 +158,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _showCreateDialog(context),
                       icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                      label: const Text('Nouveau paiement',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                      label: Text(context.tr('Nouveau paiement'),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
@@ -192,14 +191,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Référence',
+                          Text(context.tr('Référence'),
                               style: TextStyle(
                                   fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 32,
                             child: _SearchField(
-                              hint: 'Recherche référence...',
+                              hint: context.tr('Recherche référence...'),
                               icon: Icons.search_rounded,
                               value: _searchQuery,
                               onChanged: (v) => setState(() {
@@ -219,14 +218,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Contact',
+                          Text(context.tr('Contact'),
                               style: TextStyle(
                                   fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 32,
                             child: _SearchField(
-                              hint: 'Rechercher contact...',
+                              hint: context.tr('Rechercher contact...'),
                               icon: Icons.person_search_rounded,
                               value: _contactSearch,
                               onChanged: (v) => setState(() {
@@ -243,14 +242,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     Expanded(
                       flex: 2,
                       child: _FilterDropdown(
-                        label: 'Méthode',
+                        label: context.tr('Méthode'),
                         value: _methodFilter,
-                        items: const {
-                          'tous': 'Tous',
-                          'especes': 'Espèces',
-                          'cheque': 'Chèque',
-                          'virement': 'Virement',
-                          'carte': 'Carte',
+                        items: {
+                          'tous': context.tr('Tous'),
+                          'especes': context.tr('Espèces'),
+                          'cheque': context.tr('Chèque'),
+                          'virement': context.tr('Virement'),
+                          'carte': context.tr('Carte'),
+                          'traite': context.tr('Traite'),
+                          'retenue_source': context.tr('Retenue à la source'),
                         },
                         onChanged: (v) => setState(() {
                           _methodFilter = v!;
@@ -263,13 +264,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     Expanded(
                       flex: 2,
                       child: _FilterDropdown(
-                        label: 'Statut',
+                        label: context.tr('Statut'),
                         value: _statusFilter,
-                        items: const {
-                          'tous': 'Tous',
-                          'paid': 'Payé',
-                          'pending': 'En attente',
-                          'cancelled': 'Annulé',
+                        items: {
+                          'tous': context.tr('Tous'),
+                          'paid': context.tr('Payé'),
+                          'pending': context.tr('En attente'),
+                          'cancelled': context.tr('Annulé'),
                         },
                         onChanged: (v) => setState(() {
                           _statusFilter = v!;
@@ -282,12 +283,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     Expanded(
                       flex: 2,
                       child: _FilterDropdown(
-                        label: 'Type',
+                        label: context.tr('Type'),
                         value: _directionFilter,
-                        items: const {
-                          'tous': 'Tous',
-                          'encaissement': 'Encaissement',
-                          'decaissement': 'Décaissement',
+                        items: {
+                          'tous': context.tr('Tous'),
+                          'encaissement': context.tr('Encaissement'),
+                          'decaissement': context.tr('Décaissement'),
                         },
                         onChanged: (v) => setState(() {
                           _directionFilter = v!;
@@ -315,7 +316,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             });
                           },
                           icon: const Icon(Icons.refresh_rounded, size: 18),
-                          tooltip: 'Réinitialiser les filtres',
+                          tooltip: context.tr('Réinitialiser les filtres'),
                           style: IconButton.styleFrom(
                             foregroundColor: AppColors.error,
                             backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -358,12 +359,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Expanded(flex: 3, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                            Expanded(flex: 3, child: Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Méthode', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                            SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text(context.tr('Contact'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text(context.tr('Méthode'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                           ],
                         )
                       : filtered.isEmpty
@@ -411,13 +412,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 size: 32, color: AppColors.primary),
           ),
           const SizedBox(height: 12),
-          Text('Aucun paiement trouvé',
+          Text(context.tr('Aucun paiement trouvé'),
               style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text('Créez votre premier paiement en cliquant sur le bouton ci-dessus.',
+          Text(context.tr('Créez votre premier paiement en cliquant sur le bouton ci-dessus.'),
               style: TextStyle(
                   fontSize: 12.5, color: AppColors.textSecondary)),
         ],
@@ -456,35 +457,35 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           const SizedBox(width: 8),
           Expanded(
               flex: 3,
-              child: Text('Référence',
+              child: Text(context.tr('Référence'),
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 3,
-              child: Text('Contact',
+              child: Text(context.tr('Contact'),
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
-              child: Text('Montant',
+              child: Text(context.tr('Montant'),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary))),
+          Expanded(
+              flex: 3,
+              child: Text(context.tr('Méthode'),
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
-              child: Text('Méthode',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary))),
-          Expanded(
-              flex: 2,
-              child: Text('Statut',
+              child: Text(context.tr('Statut'),
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -496,52 +497,70 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Widget _buildRow(BuildContext context, Payment p, int index) {
-    final isEncaissement = p.direction == 'encaissement';
+    final isEncaissement = p.direction.toLowerCase() == 'encaissement';
     final amountColor =
         isEncaissement ? AppColors.success : AppColors.error;
     final amountPrefix = isEncaissement ? '+' : '-';
 
     Color statusColor;
-    Color statusBg;
     String statusLabel;
-    switch (p.status) {
+    switch (p.status.toLowerCase()) {
       case 'paid':
         statusColor = AppColors.success;
-        statusBg = AppColors.successLight;
-        statusLabel = 'Payé';
+        statusLabel = context.tr('Payé');
         break;
       case 'pending':
         statusColor = AppColors.warning;
-        statusBg = AppColors.warningLight;
-        statusLabel = 'En attente';
+        statusLabel = context.tr('En attente');
         break;
       case 'cancelled':
+      case 'rejected':
         statusColor = AppColors.error;
-        statusBg = AppColors.errorLight;
-        statusLabel = 'Annulé';
+        statusLabel = context.tr('Annulé');
+        break;
+      case 'confirmed':
+        statusColor = Colors.blue;
+        statusLabel = context.tr('Confirmé');
         break;
       default:
         statusColor = AppColors.textSecondary;
-        statusBg = AppColors.surfaceAlt;
-        statusLabel = p.status;
+        statusLabel = context.tr(p.status);
     }
 
     String methodLabel;
-    switch (p.method) {
+    IconData methodIcon;
+    switch (p.method.toLowerCase()) {
       case 'especes':
-        methodLabel = 'Espèces';
+      case 'cash':
+        methodLabel = context.tr('Espèces');
+        methodIcon = Icons.money_rounded;
         break;
       case 'cheque':
-        methodLabel = 'Chèque';
+      case 'check':
+        methodLabel = context.tr('Chèque');
+        methodIcon = Icons.account_balance_wallet_rounded;
         break;
       case 'virement':
-        methodLabel = 'Virement';
+      case 'bank_transfer':
+        methodLabel = context.tr('Virement');
+        methodIcon = Icons.account_balance_rounded;
         break;
       case 'carte':
-        methodLabel = 'Carte';
+      case 'card':
+        methodLabel = context.tr('Carte');
+        methodIcon = Icons.credit_card_rounded;
+        break;
+      case 'traite':
+        methodLabel = context.tr('Traite');
+        methodIcon = Icons.description_rounded;
+        break;
+      case 'retenue_source':
+        methodLabel = context.tr('Retenue à la source');
+        methodIcon = Icons.receipt_long_rounded;
         break;
       default:
-        methodLabel = p.method;
+        methodLabel = context.tr(p.method);
+        methodIcon = Icons.payment_rounded;
     }
 
     final isSelected = _selectedPaymentIds.contains(p.id);
@@ -571,22 +590,53 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          // Reference + date
+          // Reference + date + document link badge
           Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.paymentNumber,
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
-                const SizedBox(height: 2),
                 Text(
-                  formatDateTime(p.paymentDate),
+                  p.paymentNumber,
                   style: TextStyle(
-                      fontSize: 11, color: AppColors.textTertiary),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      formatDateTime(p.paymentDate),
+                      style: TextStyle(
+                          fontSize: 11, color: AppColors.textTertiary),
+                    ),
+                    if (p.reference != null && p.reference!.trim().isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                          ),
+                          child: Text(
+                            p.reference!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -629,11 +679,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 fontWeight: FontWeight.w700,
                 color: amountColor,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           // Method badge
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
@@ -647,21 +699,21 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      p.method == 'especes' ? Icons.money_rounded
-                          : p.method == 'cheque' ? Icons.account_balance_wallet_rounded
-                          : p.method == 'virement' ? Icons.account_balance_rounded
-                          : p.method == 'carte' ? Icons.credit_card_rounded
-                          : Icons.payment_rounded,
+                      methodIcon,
                       size: 13,
                       color: AppColors.textSecondary,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      methodLabel,
-                      style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary),
+                    Flexible(
+                      child: Text(
+                        methodLabel,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -689,7 +741,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   _TableAction(
                     icon: Icons.delete_outline_rounded,
                     color: AppColors.error,
-                    tooltip: 'Supprimer',
+                    tooltip: context.tr('Supprimer'),
                     onTap: () => _confirmDelete(context, p),
                   ),
               ],
@@ -713,7 +765,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       child: Row(
         children: [
           // Rows per page
-          Text('Lignes',
+          Text(context.tr('Lignes'),
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 8),
@@ -742,11 +794,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             ),
           ),
           const SizedBox(width: 20),
-          Text('Page ${_page + 1} sur $totalPages',
+          Text('${context.tr('Page')} ${_page + 1} ${context.tr('sur')} $totalPages',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
-          Text(total == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $start à $end sur $total résultats',
+          Text(total == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} $start ${context.tr('à')} $end ${context.tr('sur')} $total ${context.tr('résultats')}',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 12),
@@ -770,8 +822,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Widget _buildBulkActionsDropdown() {
     final count = _selectedPaymentIds.length;
     final pdfLabel = count > 1
-        ? 'Télécharger $count documents ( pdf )'
-        : 'Télécharger PDF';
+        ? '${context.tr('Télécharger')} $count documents ( pdf )'
+        : context.tr('Télécharger PDF');
 
     return PopupMenuButton<String>(
       onSelected: (action) => _handleBulkAction(action),
@@ -788,11 +840,11 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -807,7 +859,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -908,14 +960,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error),
             const SizedBox(width: 8),
-            const Text('Suppression groupée'),
+            Text(context.tr('Suppression groupée')),
           ],
         ),
-        content: Text('Voulez-vous vraiment supprimer ${selectedPayments.length} paiement(s) sélectionné(s) ?'),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${selectedPayments.length} ${context.tr('paiement(s) sélectionné(s)')} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -925,7 +977,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               }
               setState(() => _selectedPaymentIds.clear());
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${selectedPayments.length} paiement(s) supprimé(s)'),
+                content: Text('${selectedPayments.length} ${context.tr('paiement(s) supprimé(s)')}'),
                 backgroundColor: AppColors.success,
               ));
             },
@@ -933,7 +985,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -944,13 +996,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Supprimer le paiement'),
+        title: Text(context.tr('Supprimer le paiement')),
         content: Text(
-            'Etes-vous sur de vouloir supprimer le paiement ${p.paymentNumber} ?'),
+            '${context.tr('Voulez-vous vraiment supprimer le paiement')} ${p.paymentNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Annuler')),
+              child: Text(context.tr('Annuler'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -958,7 +1010,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text('Supprimer',
+            child: Text(context.tr('Supprimer'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -1009,12 +1061,6 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
   final _contactSearchCtrl = TextEditingController();
   late DateTime _paymentDate;
 
-  List<Customer> _customers = [];
-  List<Supplier> _suppliers = [];
-  List<Map<String, dynamic>> _contactResults = [];
-  bool _showContactDropdown = false;
-  bool _contactsLoaded = false;
-
   @override
   void initState() {
     super.initState();
@@ -1022,48 +1068,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
 
     // Trigger load of treasury accounts
     context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
-
-    // Load contacts directly from database (avoids BLoC timing issues)
-    _loadContactsFromDB();
   }
 
-  Future<void> _loadContactsFromDB() async {
-    final customers = await DatabaseHelper.instance.getCustomers();
-    final suppliers = await DatabaseHelper.instance.getSuppliers();
-    if (mounted) {
-      setState(() {
-        _customers = customers;
-        _suppliers = suppliers;
-        _contactsLoaded = true;
-      });
-    }
-  }
 
-  void _filterContacts(String query) {
-    if (query.isEmpty) {
-      setState(() {
-        _contactResults = [];
-        _showContactDropdown = false;
-      });
-      return;
-    }
-    final q = query.toLowerCase();
-    final results = <Map<String, dynamic>>[];
-    for (final c in _customers) {
-      if (c.name.toLowerCase().contains(q)) {
-        results.add({'id': c.id, 'name': c.name, 'type': 'customer'});
-      }
-    }
-    for (final s in _suppliers) {
-      if (s.name.toLowerCase().contains(q)) {
-        results.add({'id': s.id, 'name': s.name, 'type': 'supplier'});
-      }
-    }
-    setState(() {
-      _contactResults = results.take(8).toList();
-      _showContactDropdown = results.isNotEmpty;
-    });
-  }
 
   @override
   void dispose() {
@@ -1079,7 +1086,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     if (_selectedContactId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez selectionner un contact'),
+            content: Text(context.tr('Veuillez sélectionner un contact')),
             backgroundColor: AppColors.error),
       );
       return;
@@ -1087,10 +1094,6 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
 
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
-    final year = now.year;
-    final prefix =
-        _direction == 'encaissement' ? 'PAI' : 'DEB';
-
     // Generate a unique payment number
     final seq = await DatabaseHelper.instance.getNextPaymentSequence();
     final paymentNumber = _direction == 'encaissement'
@@ -1129,13 +1132,15 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         description: 'Paiement ${payment.paymentNumber}${payment.contactName != null ? ' - ${payment.contactName}' : ''}',
         paymentId: payment.id,
       );
+      if (!mounted) return;
       context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(tx));
     }
 
+    if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Paiement $paymentNumber cree avec succes'),
+        content: Text('${context.tr('Paiement')} $paymentNumber ${context.tr('créé avec succès')}'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -1233,12 +1238,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Nouveau Paiement',
+              Text(context.tr('Nouveau paiement'),
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary)),
-              Text('Enregistrer un encaissement ou decaissement',
+              Text(context.tr('Enregistrer un encaissement ou décaissement'),
                   style: TextStyle(
                       fontSize: 12, color: AppColors.textSecondary)),
             ],
@@ -1248,7 +1253,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             onPressed: () => Navigator.pop(context),
             icon: Icon(Icons.close_rounded,
                 size: 16, color: AppColors.textSecondary),
-            label: Text('Annuler',
+            label: Text(context.tr('Annuler'),
                 style: TextStyle(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600)),
@@ -1265,7 +1270,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             onPressed: _save,
             icon: Icon(Icons.save_rounded,
                 size: 16, color: Colors.white),
-            label: Text('Enregistrer',
+            label: Text(context.tr('Enregistrer'),
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
@@ -1286,7 +1291,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Direction du paiement',
+        Text(context.tr('Direction du paiement'),
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1296,8 +1301,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           children: [
             Expanded(
               child: _DirectionButton(
-                label: 'Encaissement',
-                subtitle: 'Argent entrant',
+                label: context.tr('Encaissement'),
+                subtitle: context.tr('Argent entrant'),
                 icon: Icons.arrow_downward_rounded,
                 color: AppColors.success,
                 isSelected: _direction == 'encaissement',
@@ -1312,8 +1317,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             SizedBox(width: 12),
             Expanded(
               child: _DirectionButton(
-                label: 'Decaissement',
-                subtitle: 'Argent sortant',
+                label: context.tr('Décaissement'),
+                subtitle: context.tr('Argent sortant'),
                 icon: Icons.arrow_upward_rounded,
                 color: AppColors.error,
                 isSelected: _direction == 'decaissement',
@@ -1335,7 +1340,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Type de contact',
+        Text(context.tr('Type de contact'),
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1354,9 +1359,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               value: _selectedContactType ?? 'customer',
               isExpanded: true,
               style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
-              items: const [
-                DropdownMenuItem(value: 'customer', child: Text('Client')),
-                DropdownMenuItem(value: 'supplier', child: Text('Fournisseur')),
+              items: [
+                DropdownMenuItem(value: 'customer', child: Text(context.tr('Client'))),
+                DropdownMenuItem(value: 'supplier', child: Text(context.tr('Fournisseur'))),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -1371,7 +1376,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           ),
         ),
         SizedBox(height: 16),
-        Text(_selectedContactType == 'supplier' ? 'Fournisseur *' : 'Client *',
+        Text(_selectedContactType == 'supplier' ? '${context.tr('Fournisseur')} *' : '${context.tr('Client')} *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1392,7 +1397,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   : _selectedContactName;
 
               return SearchableSelectorField(
-                hint: 'Rechercher un fournisseur...',
+                hint: context.tr('Rechercher un fournisseur...'),
                 selectedText: displayName,
                 onTap: () async {
                   final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
@@ -1423,7 +1428,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   : _selectedContactName;
 
               return SearchableSelectorField(
-                hint: 'Rechercher un client...',
+                hint: context.tr('Rechercher un client...'),
                 selectedText: displayName,
                 onTap: () async {
                   final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
@@ -1447,7 +1452,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Montant *',
+        Text('${context.tr('Montant')} *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1471,10 +1476,10 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 fontWeight: FontWeight.w600),
           ),
           validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Montant requis';
+            if (v == null || v.trim().isEmpty) return context.tr('Montant requis');
             final val =
                 double.tryParse(v.replaceAll(',', '.'));
-            if (val == null || val <= 0) return 'Montant invalide';
+            if (val == null || val <= 0) return context.tr('Veuillez entrer un montant valide');
             return null;
           },
         ),
@@ -1486,7 +1491,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Methode *',
+        Text('${context.tr('Méthode')} *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1506,14 +1511,14 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               isExpanded: true,
               style: TextStyle(
                   fontSize: 14, color: AppColors.textPrimary),
-              items: const [
+              items: [
                 DropdownMenuItem(
-                    value: 'especes', child: Text('Especes')),
+                    value: 'especes', child: Text(context.tr('Espèces'))),
                 DropdownMenuItem(
-                    value: 'cheque', child: Text('Cheque')),
+                    value: 'cheque', child: Text(context.tr('Chèque'))),
                 DropdownMenuItem(
-                    value: 'virement', child: Text('Virement')),
-                DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                    value: 'virement', child: Text(context.tr('Virement'))),
+                DropdownMenuItem(value: 'carte', child: Text(context.tr('Carte'))),
               ],
               onChanged: (v) => setState(() => _method = v!),
             ),
@@ -1527,7 +1532,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Statut',
+        Text(context.tr('Statut'),
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1536,7 +1541,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         Row(
           children: [
             _StatusChip(
-              label: 'Paye',
+              label: context.tr('Payé'),
               value: 'paid',
               selected: _status == 'paid',
               color: AppColors.success,
@@ -1545,7 +1550,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             ),
             SizedBox(width: 8),
             _StatusChip(
-              label: 'En attente',
+              label: context.tr('En attente'),
               value: 'pending',
               selected: _status == 'pending',
               color: AppColors.warning,
@@ -1554,7 +1559,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             ),
             SizedBox(width: 8),
             _StatusChip(
-              label: 'Annule',
+              label: context.tr('Annulé'),
               value: 'cancelled',
               selected: _status == 'cancelled',
               color: AppColors.error,
@@ -1589,7 +1594,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       size: 16, color: AppColors.primary),
                   SizedBox(width: 10),
                   Expanded(
-                    child: Text('Details de la methode de paiement',
+                    child: Text(context.tr('Détails de la méthode de paiement'),
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1617,30 +1622,35 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Compte de tresorerie',
+                      Text(context.tr('Compte de trésorerie'),
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textSecondary)),
                       SizedBox(height: 6),
                       BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                        builder: (context, state) {
-                          List<TreasuryAccount> tAccounts = [];
-                          if (state is TreasuryAccountsLoaded) {
-                            tAccounts = state.accounts;
-                            if (_selectedAccountId == null && tAccounts.isNotEmpty) {
-                              _selectedAccountId = tAccounts.first.id;
-                            }
+                           builder: (context, tState) {
+                          final tAccounts = tState is TreasuryAccountsLoaded
+                              ? tState.accounts
+                              : <TreasuryAccount>[];
+
+                          if (_selectedAccountId == null && tAccounts.isNotEmpty) {
+                            final defaultAcc = tAccounts.firstWhere(
+                              (a) => a.isDefault,
+                              orElse: () => tAccounts.first,
+                            );
+                            _selectedAccountId = defaultAcc.id;
                           }
+
                           final selectedAccount = tAccounts.cast<TreasuryAccount?>().firstWhere(
                             (a) => a?.id == _selectedAccountId,
                             orElse: () => null,
                           );
 
                           return SearchableSelectorField(
-                            hint: 'Selectionner un compte',
+                            hint: context.tr('Sélectionner un compte'),
                             selectedText: selectedAccount != null
-                                ? '${selectedAccount.name} (Solde: ${formatCurrencyDT(selectedAccount.balance)})'
+                                ? '${selectedAccount.name} (${context.tr('Solde')}: ${formatCurrencyDT(selectedAccount.balance)})'
                                 : null,
                             onTap: () async {
                               final res = await showTreasuryAccountSelectDialog(
@@ -1662,7 +1672,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Reference externe (optionnel)',
+                      Text(context.tr('Référence externe (optionnel)'),
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1673,7 +1683,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                         style: TextStyle(fontSize: 14),
                         decoration: InputDecoration(
                           hintText:
-                              'N° de cheque, reference de virement...',
+                              context.tr('N° de chèque, référence de virement...'),
                           hintStyle: TextStyle(
                               color: AppColors.textTertiary, fontSize: 13),
                           prefixIcon: Icon(Icons.tag_rounded,
@@ -1688,7 +1698,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Date de paiement',
+                      Text(context.tr('Date de paiement'),
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1750,7 +1760,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Notes',
+        Text(context.tr('Notes'),
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1761,7 +1771,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           maxLines: 3,
           style: TextStyle(fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'Ajouter des notes sur ce paiement...',
+            hintText: context.tr('Ajouter des notes sur ce paiement...'),
             hintStyle:
                 TextStyle(color: AppColors.textTertiary, fontSize: 13),
             alignLabelWithHint: true,
@@ -1789,32 +1799,32 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 32,
       child: TextField(
-        style: TextStyle(fontSize: 13),
+        style: const TextStyle(fontSize: 12),
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              TextStyle(color: AppColors.textTertiary, fontSize: 13),
+              TextStyle(color: AppColors.textTertiary, fontSize: 12),
           prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textTertiary),
+              Icon(icon, size: 16, color: AppColors.textTertiary),
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           fillColor: AppColors.surfaceAlt,
           filled: true,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(6),
               borderSide:
                   BorderSide(color: AppColors.border)),
           enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(6),
               borderSide:
                   BorderSide(color: AppColors.border)),
           focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(
-                  color: AppColors.primary, width: 2)),
+                  color: AppColors.primary, width: 1.5)),
         ),
       ),
     );
@@ -1836,29 +1846,52 @@ class _FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          hint: Text(label,
-              style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
           style: TextStyle(
-              fontSize: 13, color: AppColors.textPrimary),
-          items: items.entries
-              .map((e) => DropdownMenuItem(
-                  value: e.key, child: Text(e.value)))
-              .toList(),
-          onChanged: onChanged,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Container(
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: value != 'tous' ? AppColors.primary : AppColors.border,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: items.containsKey(value) ? value : null,
+              isExpanded: true,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              items: items.entries
+                  .map((e) => DropdownMenuItem(
+                      value: e.key,
+                      child: Text(
+                        e.value,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      )))
+                  .toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

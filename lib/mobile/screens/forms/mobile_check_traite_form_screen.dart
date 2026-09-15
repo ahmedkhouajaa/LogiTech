@@ -7,6 +7,7 @@ import '../../../../blocs/suppliers/suppliers_bloc.dart';
 import '../../../../models/check_traite.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/supplier.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -139,7 +140,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Document mis à jour' : 'Document créé avec succès'),
+          content: Text(_isEditing ? context.tr('Document mis à jour') : context.tr('Document créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }

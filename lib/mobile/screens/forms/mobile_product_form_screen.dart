@@ -7,6 +7,7 @@ import '../../../../blocs/product_settings/product_settings_state.dart';
 import '../../../../blocs/product_settings/product_settings_event.dart';
 import '../../../../models/product.dart';
 import '../../../../models/product_family.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -39,6 +40,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
   late TextEditingController _notesCtrl;
 
   // Form State
+  String _destination = 'Vente et Achat';
   String _productType = 'produit';
   double _tvaRate = 19.0;
   String _unit = 'Piece';
@@ -153,7 +155,17 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
 
     _notesCtrl = TextEditingController(text: p?.privateNotes ?? '');
 
+    _destination = p?.destination ?? 'Vente et Achat';
     _productType = ['produit', 'service', 'consommable', 'immobilisation'].contains(p?.productType) ? p!.productType : 'produit';
+    if (_productType == 'immobilisation') {
+      _destination = 'Achat';
+    } else if (p != null && (p.destination.isEmpty || p.destination == 'Vente et Achat')) {
+      if (p.purchasePrice > 0 && p.sellingPrice == 0) {
+        _destination = 'Achat';
+      } else if (p.sellingPrice > 0 && p.purchasePrice == 0) {
+        _destination = 'Vente';
+      }
+    }
     _tvaRate = p?.tvaRate ?? 19.0;
 
     // Unit normalize
@@ -223,13 +235,14 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         reference: _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         productType: _productType,
+        destination: _destination,
         familyId: _familyId,
         subFamilyId: _subFamilyId,
         category: _category?.trim().isEmpty == true ? null : _category?.trim(),
         brandId: _brandId?.trim().isEmpty == true ? null : _brandId?.trim(),
         unit: _unit,
-        purchasePrice: _purchasePrice,
-        sellingPrice: _sellingPrice,
+        purchasePrice: _destination == 'Vente' ? 0.0 : _purchasePrice,
+        sellingPrice: _destination == 'Achat' ? 0.0 : _sellingPrice,
         usualDiscount: _usualDiscount,
         tvaRate: _tvaRate,
         stockQty: _stockQty,
@@ -606,7 +619,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          title,
+                          context.tr(title),
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -615,7 +628,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          subtitle,
+                          context.tr(subtitle),
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textTertiary,
@@ -672,6 +685,12 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Destination Selector (Pill / Segmented)
+          _buildFieldLabel('Destination'),
+          const SizedBox(height: 8),
+          _buildDestinationSelector(),
+          const SizedBox(height: 16),
+
           // Type Selector (Pill / Segmented)
           _buildFieldLabel('Type d\'article'),
           const SizedBox(height: 8),
@@ -738,13 +757,89 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
     );
   }
 
+  // ─── DESTINATION PILL SELECTOR ──────────────────────────────────────────
+  Widget _buildDestinationSelector() {
+    final destinations = [
+      {'value': 'Vente', 'label': 'VENTE', 'icon': Icons.attach_money},
+      {'value': 'Achat', 'label': 'ACHAT', 'icon': Icons.shopping_cart_outlined},
+      {'value': 'Vente et Achat', 'label': 'VENTE & ACHAT', 'icon': Icons.swap_horiz_rounded},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: destinations.map((d) {
+          final isSelected = _destination == d['value'];
+          return Expanded(
+            child: GestureDetector(
+              onTap: widget.isReadOnly
+                  ? null
+                  : () => setState(() {
+                        _destination = d['value'] as String;
+                        if (_destination != 'Achat' && _productType == 'immobilisation') {
+                          _productType = 'produit';
+                        }
+                      }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      d['icon'] as IconData,
+                      size: 15,
+                      color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        d['label'] as String,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   // ─── TYPE PILL SELECTOR ──────────────────────────────────────────────────
   Widget _buildTypeSelector() {
     final types = [
       {'value': 'produit', 'label': 'PRODUIT', 'icon': Icons.inventory_2_outlined},
       {'value': 'service', 'label': 'SERVICE', 'icon': Icons.handyman_outlined},
       {'value': 'consommable', 'label': 'CONSOMMABLE', 'icon': Icons.label_outline_rounded},
-      {'value': 'immobilisation', 'label': 'IMMOBILISATION', 'icon': Icons.account_balance_outlined},
+      if (_destination == 'Achat')
+        {'value': 'immobilisation', 'label': 'IMMOBILISATION', 'icon': Icons.account_balance_outlined},
     ];
 
     return Container(
@@ -827,45 +922,48 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
           // Pricing Inputs: Prix d'Achat & Prix de Vente
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel('Prix d\'Achat (HT)'),
-                    const SizedBox(height: 6),
-                    _buildTextField(
-                      controller: _purchasePriceCtrl,
-                      hintText: '0,000',
-                      suffixText: 'DT',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (v) {
-                        final val = double.tryParse(v.replaceAll(',', '.')) ?? 0.0;
-                        setState(() => _purchasePrice = val);
-                      },
-                    ),
-                  ],
+              if (_destination == 'Achat' || _destination == 'Vente et Achat')
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFieldLabel('Prix d\'Achat (HT)'),
+                      const SizedBox(height: 6),
+                      _buildTextField(
+                        controller: _purchasePriceCtrl,
+                        hintText: '0,000',
+                        suffixText: 'DT',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) {
+                          final val = double.tryParse(v.replaceAll(',', '.')) ?? 0.0;
+                          setState(() => _purchasePrice = val);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel('Prix de Vente (HT)'),
-                    const SizedBox(height: 6),
-                    _buildTextField(
-                      controller: _sellingPriceCtrl,
-                      hintText: '0,000',
-                      suffixText: 'DT',
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (v) {
-                        final val = double.tryParse(v.replaceAll(',', '.')) ?? 0.0;
-                        setState(() => _sellingPrice = val);
-                      },
-                    ),
-                  ],
+              if (_destination == 'Vente et Achat')
+                const SizedBox(width: 12),
+              if (_destination == 'Vente' || _destination == 'Vente et Achat')
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFieldLabel('Prix de Vente (HT)'),
+                      const SizedBox(height: 6),
+                      _buildTextField(
+                        controller: _sellingPriceCtrl,
+                        hintText: '0,000',
+                        suffixText: 'DT',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) {
+                          final val = double.tryParse(v.replaceAll(',', '.')) ?? 0.0;
+                          setState(() => _sellingPrice = val);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -887,8 +985,10 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
           const SizedBox(height: 14),
 
           // Computed Pricing Insights Card
-          _buildPricingInsightCard(),
-          const SizedBox(height: 16),
+          if (_destination == 'Vente et Achat' || _sellingPrice > 0) ...[
+            _buildPricingInsightCard(),
+            const SizedBox(height: 16),
+          ],
 
           // TVA Rate Selector
           _buildFieldLabel('Taux de TVA (%)'),
@@ -1478,7 +1578,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 Switch.adaptive(
                   value: value,
                   onChanged: onChanged,
-                  activeColor: AppColors.primary,
+                  activeTrackColor: AppColors.primary,
                 ),
               ],
             ),

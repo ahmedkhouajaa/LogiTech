@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../services/sync_service.dart';
 import '../services/connectivity_service.dart';
+import '../l10n/app_localizations.dart';
 
 class SyncIndicator extends StatefulWidget {
   const SyncIndicator({super.key});
@@ -60,7 +61,7 @@ class _SyncIndicatorState extends State<SyncIndicator> with SingleTickerProvider
     } else if (status == SyncStatus.success) {
       color = AppColors.success;
       icon = Icons.cloud_done_rounded;
-      label = 'Synchronise';
+      label = 'Synchronisé';
     } else if (status == SyncStatus.error) {
       color = AppColors.error;
       icon = Icons.cloud_off_rounded;
@@ -88,7 +89,7 @@ class _SyncIndicatorState extends State<SyncIndicator> with SingleTickerProvider
                 )
               : Icon(icon, color: color, size: 14),
           SizedBox(width: 6),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(context.tr(label), style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );

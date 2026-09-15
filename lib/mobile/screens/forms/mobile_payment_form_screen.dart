@@ -11,6 +11,7 @@ import '../../../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../../../models/treasury_account.dart';
 import '../../../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../../../../models/treasury_transaction.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -176,7 +177,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Paiement mis à jour' : 'Paiement créé avec succès'),
+          content: Text(_isEditing ? context.tr('Paiement mis à jour') : context.tr('Paiement créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }

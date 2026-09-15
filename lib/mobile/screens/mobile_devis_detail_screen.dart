@@ -28,6 +28,8 @@ import 'forms/mobile_quote_form_screen.dart';
 import 'mobile_customer_order_detail_screen.dart';
 import 'mobile_delivery_note_detail_screen.dart';
 import '../../widgets/premium_detail_shell.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -80,8 +82,9 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = currentQuote.status.label;
-    final statusColor = currentQuote.status.color;
+    final statusInfo = CustomStatusService.instance.getStatusInfo('quote', currentQuote.effectiveStatus);
+    final statusLabel = statusInfo.label;
+    final statusColor = statusInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -359,63 +362,22 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, Quote quote) {
-    DocumentStatus selectedStatus = quote.status;
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: DocumentStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final userId = AuthService.instance.currentUserUid ?? 'System';
-                  context.read<QuotesBloc>().add(UpdateQuoteStatus(
-                    quote.id, quote.status, selectedStatus, userId, notesController.text.isEmpty ? null : notesController.text,
-                  ));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'quote',
+      currentStatus: quote.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final userId = AuthService.instance.currentUserUid ?? 'System';
+        final enumMatch = DocumentStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        context.read<QuotesBloc>().add(UpdateQuoteStatus(
+          quote.id,
+          quote.status,
+          enumMatch ?? DocumentStatus.draft,
+          userId,
+          notes,
+          enumMatch == null ? newStatusKey : null,
+        ));
+      },
     );
   }
 
@@ -453,7 +415,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(), invoiceId: invoiceId, productId: qi.productId, productName: qi.productName,
       description: qi.description, quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate,
@@ -474,7 +436,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq);
+    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq, docCollection: 'customer_orders');
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
       id: const Uuid().v4(), orderId: orderId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,
@@ -492,7 +454,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(), deliveryNoteId: deliveryId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,

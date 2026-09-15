@@ -21,12 +21,26 @@ class DocumentWrapper {
   final DateTime? validityDate;
   final double? subtotalHT;
   final double? totalDiscountAmount;
+  final String? documentType; // e.g. 'invoice', 'purchase_invoice', 'quote', etc.
   final Map<String, dynamic> customData;
+  final Map<String, dynamic>? _customFields;
+
+  Map<String, dynamic> get customFields {
+    final cf = _customFields;
+    if (cf != null && cf.isNotEmpty) {
+      return Map<String, dynamic>.from(cf);
+    }
+    if (customData['customFields'] is Map) {
+      return Map<String, dynamic>.from(customData['customFields'] as Map);
+    }
+    return const {};
+  }
 
   DocumentWrapper({
     required this.id,
     required this.number,
     required this.documentTitle,
+    this.documentType,
     this.customerName,
     this.customerId,
     this.customerAddress,
@@ -47,7 +61,8 @@ class DocumentWrapper {
     this.conditionsGenerales,
     required this.items,
     this.customData = const {},
-  });
+    Map<String, dynamic>? customFields,
+  }) : _customFields = customFields;
 
   /// Creates a copy of this wrapper with optional field overrides.
   /// Used by PdfService to enrich with customer/supplier details from the database.
@@ -58,11 +73,14 @@ class DocumentWrapper {
     String? customerEmail,
     String? customerCode,
     String? customerTaxId,
+    String? documentType,
+    Map<String, dynamic>? customFields,
   }) {
     return DocumentWrapper(
       id: id,
       number: number,
       documentTitle: documentTitle,
+      documentType: documentType ?? this.documentType,
       customerName: customerName ?? this.customerName,
       customerId: customerId,
       customerAddress: customerAddress ?? this.customerAddress,
@@ -83,7 +101,31 @@ class DocumentWrapper {
       conditionsGenerales: conditionsGenerales,
       items: items,
       customData: customData,
+      customFields: customFields ?? _customFields,
     );
+  }
+
+  /// Resolves the canonical document type key for template matching.
+  String get resolvedDocumentType {
+    if (documentType != null && documentType!.isNotEmpty) return documentType!;
+    final title = documentTitle.toUpperCase().trim();
+    if (title.contains('FACTURE D\'ACHAT') || title.contains('FACTURE ACHAT')) return 'purchase_invoice';
+    if (title.contains('COMMANDE FOURNISSEUR')) return 'supplier_order';
+    if (title.contains('RECEPTION') || title.contains('RÉCEPTION')) return 'receiving_voucher';
+    if (title.contains('AVOIR FOURNISSEUR')) return 'supplier_credit_note';
+    if (title.contains('RETOUR FOURNISSEUR')) return 'supplier_return';
+    if (title.contains("ENTRÉE") || title.contains("ENTREE")) return 'stock_entry';
+    if (title.contains('PRÉLÈVEMENT') || title.contains('PRELEVEMENT')) return 'stock_withdrawal';
+    if (title.contains('SORTIE')) return 'exit_voucher';
+    if (title.contains('TRANSFERT')) return 'stock_transfer';
+    if (title.contains('INVENTAIRE')) return 'inventory_sheet';
+    if (title.contains('DEVIS')) return 'quote';
+    if (title.contains('COMMANDE')) return 'customer_order';
+    if (title.contains('LIVRAISON')) return 'delivery_note';
+    if (title.contains('AVOIR')) return 'credit_note';
+    if (title.contains('RETOUR')) return 'return_voucher';
+    if (title.contains('FACTURE')) return 'invoice';
+    return 'invoice';
   }
 
   double get totalDiscount {
@@ -143,6 +185,7 @@ class DocumentWrapper {
       id: inv.id,
       number: inv.number,
       documentTitle: 'FACTURE',
+      documentType: 'invoice',
       customerName: inv.customerName,
       customerId: inv.customerId,
       date: inv.date,
@@ -156,6 +199,7 @@ class DocumentWrapper {
       customData: {
         'projectName': inv.projectName,
         'contactType': 'customer',
+        if (inv.customFields is Map) 'customFields': Map<String, dynamic>.from(inv.customFields as Map),
       },
       items: (inv.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -175,6 +219,7 @@ class DocumentWrapper {
       id: quote.id,
       number: quote.number,
       documentTitle: 'DEVIS',
+      documentType: 'quote',
       customerName: quote.customerName,
       customerId: quote.customerId,
       date: quote.date,
@@ -188,6 +233,7 @@ class DocumentWrapper {
       customData: {
         'projectName': quote.projectName,
         'contactType': 'customer',
+        if (quote.customFields is Map) 'customFields': Map<String, dynamic>.from(quote.customFields as Map),
       },
       items: (quote.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -207,6 +253,7 @@ class DocumentWrapper {
       id: order.id,
       number: order.number,
       documentTitle: 'COMMANDE CLIENT',
+      documentType: 'customer_order',
       customerName: order.customerName,
       customerId: order.customerId,
       date: order.date,
@@ -220,6 +267,7 @@ class DocumentWrapper {
       customData: {
         'projectName': order.projectName,
         'contactType': 'customer',
+        if (order.customFields is Map) 'customFields': Map<String, dynamic>.from(order.customFields as Map),
       },
       items: (order.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -239,6 +287,7 @@ class DocumentWrapper {
       id: doc.id,
       number: doc.number,
       documentTitle: 'BON DE LIVRAISON',
+      documentType: 'delivery_note',
       customerName: doc.customerName,
       customerId: doc.customerId,
       date: doc.date,
@@ -251,6 +300,7 @@ class DocumentWrapper {
       customData: {
         'projectName': doc.projectName,
         'contactType': 'customer',
+        if (doc.customFields is Map) 'customFields': Map<String, dynamic>.from(doc.customFields as Map),
       },
       items: (doc.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -265,12 +315,17 @@ class DocumentWrapper {
     );
   }
 
-  static DocumentWrapper fromStockWithdrawal(dynamic doc) {
+  static DocumentWrapper fromExitVoucher(dynamic doc) {
+    final client = (doc.customerCompany != null && doc.customerCompany.toString().trim().isNotEmpty)
+        ? doc.customerCompany.toString().trim()
+        : (doc.customerName != null && doc.customerName.toString().trim().isNotEmpty ? doc.customerName.toString().trim() : 'Client divers');
     return DocumentWrapper(
       id: doc.id,
       number: doc.number,
       documentTitle: 'BON DE SORTIE',
-      customerName: doc.customerName,
+      documentType: 'exit_voucher',
+      customerName: client,
+      customerId: doc.customerId,
       date: doc.date,
       totalHT: doc.subTotalHT,
       totalTva: doc.totalTVA,
@@ -278,8 +333,12 @@ class DocumentWrapper {
       stampTax: doc.timbreFiscal ?? 0.0,
       notes: doc.notes,
       conditionsGenerales: doc.conditionsGenerales,
+      customFields: doc.customFields is Map ? Map<String, dynamic>.from(doc.customFields as Map) : null,
       customData: {
         'projectName': doc.projectName,
+        'driverName': doc.driverName,
+        'vehicleRegistration': doc.vehicleRegistration,
+        if (doc.customFields is Map) 'customFields': Map<String, dynamic>.from(doc.customFields as Map),
       },
       items: (doc.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -290,6 +349,44 @@ class DocumentWrapper {
         tvaRate: i.tvaRate,
         discountPercent: i.discountPercent,
         totalHT: i.totalHT,
+      )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromStockWithdrawal(dynamic doc, [String? warehouseName]) {
+    return DocumentWrapper(
+      id: doc.id,
+      number: doc.number,
+      documentTitle: 'BON DE PRÉLÈVEMENT',
+      documentType: 'stock_withdrawal',
+      customerName: null,
+      date: doc.date,
+      totalHT: doc.subTotalHT,
+      totalTva: doc.totalTVA,
+      totalTTC: doc.subTotalTTC,
+      notes: doc.notes,
+      conditionsGenerales: doc.conditionsGenerales,
+      customFields: doc.customFields is Map ? Map<String, dynamic>.from(doc.customFields as Map) : null,
+      customData: {
+        'warehouseId': doc.warehouseId,
+        'warehouseName': warehouseName ?? doc.warehouseId ?? 'Entrepôt par défaut',
+        'createdBy': doc.createdBy ?? 'Admin',
+        if (doc.customFields is Map) 'customFields': Map<String, dynamic>.from(doc.customFields as Map),
+      },
+      items: (doc.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+        totalHT: i.totalHT,
+        customFields: {
+          'code': _extractItemReference(i),
+          'unit': 'pièce',
+          'purchasePrice': i.unitPrice,
+        },
       )).toList(),
     );
   }
@@ -299,6 +396,7 @@ class DocumentWrapper {
       id: inv.id,
       number: inv.number,
       documentTitle: 'FACTURE D\'ACHAT',
+      documentType: 'purchase_invoice',
       customerName: inv.supplierName,
       customerId: inv.supplierId,
       date: inv.date,
@@ -311,6 +409,7 @@ class DocumentWrapper {
       conditionsGenerales: inv.conditionsGenerales,
       customData: {
         'contactType': 'supplier',
+        if (inv.customFields is Map) 'customFields': Map<String, dynamic>.from(inv.customFields as Map),
       },
       items: (inv.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -330,6 +429,7 @@ class DocumentWrapper {
       id: order.id,
       number: order.number,
       documentTitle: 'COMMANDE FOURNISSEUR',
+      documentType: 'supplier_order',
       customerName: order.supplierName,
       customerId: order.supplierId,
       date: order.date,
@@ -341,6 +441,7 @@ class DocumentWrapper {
       conditionsGenerales: order.conditionsGenerales,
       customData: {
         'contactType': 'supplier',
+        if (order.customFields is Map) 'customFields': Map<String, dynamic>.from(order.customFields as Map),
       },
       items: (order.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -363,6 +464,7 @@ class DocumentWrapper {
       id: note.id,
       number: note.returnNumber ?? note.number,
       documentTitle: 'BON DE RETOUR',
+      documentType: 'return_voucher',
       customerName: note.customerName ?? note.customerCompany ?? 'Client',
       customerId: cId,
       date: note.dateEmission ?? note.date ?? DateTime.now(),
@@ -373,6 +475,7 @@ class DocumentWrapper {
       conditionsGenerales: note.conditions,
       customData: {
         'contactType': 'customer',
+        if (note.customFields is Map) 'customFields': Map<String, dynamic>.from(note.customFields as Map),
       },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -394,6 +497,7 @@ class DocumentWrapper {
       id: voucher.id,
       number: voucher.number,
       documentTitle: 'BON DE RECEPTION',
+      documentType: 'receiving_voucher',
       customerName: voucher.supplierName,
       customerId: sId,
       date: voucher.date,
@@ -405,6 +509,7 @@ class DocumentWrapper {
       conditionsGenerales: voucher.conditionsGenerales,
       customData: {
         'contactType': 'supplier',
+        if (voucher.customFields is Map) 'customFields': Map<String, dynamic>.from(voucher.customFields as Map),
       },
       items: (voucher.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -426,6 +531,7 @@ class DocumentWrapper {
       id: note.id,
       number: note.number,
       documentTitle: 'AVOIR FOURNISSEUR',
+      documentType: 'supplier_credit_note',
       customerName: supplierName ?? 'Fournisseur',
       customerId: sId,
       date: note.date,
@@ -435,6 +541,7 @@ class DocumentWrapper {
       notes: note.reason,
       customData: {
         'contactType': 'supplier',
+        if (note.customFields is Map) 'customFields': Map<String, dynamic>.from(note.customFields as Map),
       },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -456,6 +563,7 @@ class DocumentWrapper {
       id: note.id,
       number: note.number,
       documentTitle: 'RETOUR FOURNISSEUR',
+      documentType: 'supplier_return',
       customerName: note.supplierName ?? 'Fournisseur Inconnu',
       customerId: sId,
       date: note.date,
@@ -465,6 +573,7 @@ class DocumentWrapper {
       notes: note.reason,
       customData: {
         'contactType': 'supplier',
+        if (note.customFields is Map) 'customFields': Map<String, dynamic>.from(note.customFields as Map),
       },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -486,6 +595,7 @@ class DocumentWrapper {
       id: note.id,
       number: note.number,
       documentTitle: 'AVOIR',
+      documentType: 'credit_note',
       customerName: note.customerName ?? 'Client Inconnu',
       customerId: cId,
       date: note.date,
@@ -495,6 +605,7 @@ class DocumentWrapper {
       notes: note.notes,
       customData: {
         'contactType': 'customer',
+        if (note.customFields is Map) 'customFields': Map<String, dynamic>.from(note.customFields as Map),
       },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -538,6 +649,7 @@ class DocumentWrapper {
       id: transfer.id,
       number: transfer.number,
       documentTitle: 'BON DE TRANSFERT',
+      documentType: 'stock_transfer',
       customerName: 'Inter-Entrepôts',
       date: transfer.date,
       totalHT: 0,
@@ -560,6 +672,7 @@ class DocumentWrapper {
       id: sheet.id,
       number: sheet.number,
       documentTitle: 'FICHE D\'INVENTAIRE',
+      documentType: 'inventory_sheet',
       customerName: 'Ajustement de stock',
       date: sheet.date,
       totalHT: 0,
@@ -574,6 +687,41 @@ class DocumentWrapper {
         discountPercent: 0,
         totalHT: 0,
       )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromStockEntry(dynamic entry, [String? warehouseName]) {
+    return DocumentWrapper(
+      id: entry.id,
+      number: entry.number,
+      documentTitle: "BON D'ENTRÉE",
+      documentType: 'stock_entry',
+      date: entry.date,
+      totalHT: (entry.items as List).fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
+      totalTva: 0.0,
+      totalTTC: (entry.items as List).fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
+      notes: entry.notes,
+      customFields: (() {
+        try {
+          if (entry.customFields is Map) return Map<String, dynamic>.from(entry.customFields as Map);
+        } catch (_) {}
+        return null;
+      })(),
+      items: (entry.items as List).map((item) {
+        return DocumentItemWrapper(
+          productId: item.productId,
+          productName: 'Article',
+          quantity: (item.quantity as num).toDouble(),
+          unitPrice: (item.unitPrice as num).toDouble(),
+          tvaRate: 0.0,
+          discountPercent: 0.0,
+          totalHT: (item.quantity as num).toDouble() * (item.unitPrice as num).toDouble(),
+        );
+      }).toList(),
+      customData: {
+        'warehouseId': entry.warehouseId,
+        if (warehouseName != null) 'warehouseName': warehouseName,
+      },
     );
   }
 }

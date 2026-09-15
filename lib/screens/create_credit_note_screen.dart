@@ -19,9 +19,11 @@ import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/dashboard_card.dart';
 import '../screens/customers_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../widgets/custom_fields_form_section.dart';
 
 class CreateCreditNoteScreen extends StatefulWidget {
   final CreditNote? existing;
@@ -51,6 +53,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
   
   Key _autocompleteKey = UniqueKey();
   CreditNoteStatus _status = CreditNoteStatus.unused;
+  Map<String, dynamic> _customFields = {};
 
   final Map<String, TextEditingController> _qtyControllers = {};
 
@@ -120,12 +123,13 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       _withGlobalDiscount = inv.globalDiscountPercent > 0;
       _globalDiscountPercent = inv.globalDiscountPercent;
       _selectedProjectId = inv.projectId;
+      _customFields = inv.customFields != null ? Map<String, dynamic>.from(inv.customFields!) : {};
       _items = inv.items.toList();
     }
   }
 
   Future<void> _loadTemplate() async {
-    final template = await DatabaseHelper.instance.getDefaultTemplate('creditNote');
+    final template = await DatabaseHelper.instance.getTemplateForDocumentType('credit_note');
     final config = template?.config ?? DocumentTemplate.defaultConfig();
     final cols = (config['tableColumns'] as List?) ?? DocumentTemplate.defaultConfig()['tableColumns'] as List;
     
@@ -160,6 +164,12 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                   children: [
                     _buildFormCard(),
                     SizedBox(height: AppSpacing.lg),
+                    CustomFieldsFormSection(
+                      documentType: 'credit_note',
+                      initialValues: _customFields,
+                      onChanged: (vals) => _customFields = vals,
+                    ),
+                    SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
                     SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
@@ -193,12 +203,12 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       child: Row(
         children: [
           Text(
-            _isEditing ? 'Modifier la avoir' : 'Ajouter une avoir',
+            _isEditing ? context.tr('Modifier la avoir') : context.tr('Ajouter une avoir'),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           SizedBox(width: 12),
           // Status badge
-          StatusBadge(label: _status.label, color: _status == CreditNoteStatus.unused ? AppColors.warning : AppColors.success),
+          StatusBadge(label: context.tr(_status.label), color: _status == CreditNoteStatus.unused ? AppColors.warning : AppColors.success),
           const Spacer(),
           // Action buttons
           _buildHeaderButton(Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
@@ -216,7 +226,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             child: ElevatedButton.icon(
               onPressed: _save,
               icon: Icon(Icons.check_rounded, size: 16),
-              label: Text('Valider', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              label: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -231,13 +241,14 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     );
   }
 
-  Widget _buildHeaderButton(IconData icon, String label, VoidCallback onPressed) {
+  Widget _buildHeaderButton(
+      IconData icon, String label, VoidCallback onPressed) {
     return SizedBox(
       height: 36,
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 14),
-        label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        label: Text(context.tr(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
           side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -262,20 +273,20 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date d'emission
-          Text("Date d'emission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          Text(context.tr("Date d'emission"), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
                 context: context, initialDate: _date,
                 firstDate: DateTime(2020), lastDate: DateTime(2030),
-                locale: const Locale('fr', 'FR'),
+                locale: Localizations.localeOf(context),
               );
               if (picked != null) setState(() => _date = picked);
             },
             child: AbsorbPointer(
               child: TextFormField(
-                controller: TextEditingController(text: formatDateLong(_date)),
+                controller: TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -297,7 +308,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Client'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     Row(
                       children: [
@@ -316,13 +327,13 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
 
                               return FormField<String>(
                                 initialValue: _selectedCustomer?.id,
-                                validator: (v) => _selectedCustomer == null ? 'Requis' : null,
+                                validator: (v) => _selectedCustomer == null ? context.tr('Requis') : null,
                                 builder: (field) {
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher un client...',
+                                        hint: context.tr('Rechercher un client...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -352,7 +363,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                         SizedBox(
                           height: 48,
                           child: Tooltip(
-                            message: 'Créer un nouveau client',
+                            message: context.tr('Créer un nouveau client'),
                             child: ElevatedButton(
                               onPressed: () async {
                                 final res = await showDialog(
@@ -400,7 +411,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Projet'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
@@ -425,7 +436,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                         );
 
                         return SearchableSelectorField(
-                          hint: 'Sélectionner un projet',
+                          hint: context.tr('Sélectionner un projet'),
                           selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
@@ -450,7 +461,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
               BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
@@ -470,7 +481,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                   final warehouseName = selectedWh?.name;
 
                   return SearchableSelectorField(
-                    hint: 'Sélectionner un entrepôt',
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: warehouseName,
                     onTap: () async {
                       final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -485,7 +496,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           ),
           SizedBox(height: 20),
           // Pricing mode radio
-          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(context.tr('Les prix des articles sont en'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           SizedBox(height: 8),
           Row(
             children: [
@@ -495,7 +506,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Hors taxes'), style: TextStyle(fontSize: 13)),
               SizedBox(width: 24),
               Radio<bool>(
                 value: false,
@@ -503,7 +514,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Taxe incluse'), style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -537,7 +548,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           // Section title
           Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Text('Articles', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Text(context.tr('Articles'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           // Table header
           Container(
@@ -551,11 +562,11 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('Designation', style: _tableHeaderStyle())),
-                SizedBox(width: 140, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                Expanded(flex: 3, child: Text(context.tr('Designation'), style: _tableHeaderStyle())),
+                SizedBox(width: 140, child: Text(context.tr('Quantite'), style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
-                SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
-                SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
+                SizedBox(width: 100, child: Text(context.tr('TVA'), style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                SizedBox(width: 140, child: Text(context.tr('Total HT'), style: _tableHeaderStyle(), textAlign: TextAlign.right)),
                 SizedBox(width: 60),
               ],
             ),
@@ -565,7 +576,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              child: Text(context.tr('Aucun article'), textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -599,7 +610,8 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 flex: 3,
                 child: BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, state) {
-                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+                    final products = allProducts.where((p) => p.isForSale).toList();
                     return Autocomplete<Product>(
                       initialValue: TextEditingValue(text: item.productName ?? ''),
                       optionsBuilder: (TextEditingValue textEditingValue) {
@@ -617,7 +629,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                           decoration: _itemInputDecoration(
                             'Rechercher un article...',
                             hasError: isArticleMissing,
-                            errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                            errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                           ),
                           style: TextStyle(fontSize: 13),
                           onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
@@ -782,7 +794,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                 icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
                 onPressed: () => setState(() => _items.removeAt(index)),
                 splashRadius: 16,
-                tooltip: 'Supprimer',
+                tooltip: context.tr('Supprimer'),
               ),
               // Drag handle
               Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
@@ -923,13 +935,14 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products = state is ProductsLoaded ? state.products : <Product>[];
+              final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+              final products = allProducts.where((p) => p.isForSale).toList();
               return SearchableSelectorField(
-                hint: 'Sélectionner un article...',
+                hint: context.tr('Sélectionner un article...'),
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente');
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     _addProductItem(product);
@@ -942,7 +955,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
         SizedBox(width: 8),
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
+          tooltip: context.tr('Créer un nouvel article'),
           onPressed: () async {
             final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
             if (res != null && res is Product && mounted) {
@@ -957,7 +970,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           child: OutlinedButton.icon(
             onPressed: _addEmptyItem,
             icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            label: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            label: Text(context.tr('Ajouter une Ligne Vide'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.primary, width: 1.5),
@@ -995,7 +1008,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Ajouter une remise globale'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -1061,7 +1074,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(context.tr('Timbre fiscal:'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                     Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -1079,7 +1092,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Total TTC:'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
@@ -1108,13 +1121,13 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Visible sur le document final',
+                  hintText: context.tr('Visible sur le document final'),
                   hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -1133,13 +1146,13 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions generales pour ce document',
+                  hintText: context.tr('Conditions generales pour ce document'),
                   hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -1191,7 +1204,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -1203,14 +1216,14 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez selectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -1227,7 +1240,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       if (seq == null) {
         return;
       }
-      number = generateDocNumber('AV', seq);
+      number = generateDocNumber('AV', seq, docCollection: 'credit_notes');
     }
 
     final creditNote = CreditNote(
@@ -1250,6 +1263,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+      customFields: _customFields,
       items: _items,
       createdAt: _isEditing ? widget.existing!.createdAt : null,
     );

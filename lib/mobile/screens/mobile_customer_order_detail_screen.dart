@@ -28,6 +28,8 @@ import 'forms/mobile_delivery_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileCustomerOrderDetailScreen extends StatefulWidget {
   final CustomerOrder order;
@@ -86,8 +88,9 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentCustomerOrder.status);
-    final statusColor = MobileStatusColors.getColorForStatus(statusLabel);
+    final statusInfo = CustomStatusService.instance.getStatusInfo('customer_order', currentCustomerOrder.status);
+    final statusLabel = statusInfo.label;
+    final statusColor = statusInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -372,64 +375,17 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
   }
 
   void _showChangeStatusDialog(BuildContext context, CustomerOrder order) {
-    CustomerOrderStatus selectedStatus = CustomerOrderStatus.values.firstWhere((s) => s.name == order.status, orElse: () => CustomerOrderStatus.draft);
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: CustomerOrderStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedOrder = order.copyWith(
-                    status: selectedStatus.name,
-                    notes: notesController.text.isNotEmpty ? '${order.notes ?? ''}\n${notesController.text}' : order.notes,
-                  );
-                  context.read<CustomerOrdersBloc>().add(UpdateCustomerOrder(updatedOrder));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'customer_order',
+      currentStatus: order.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedOrder = order.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${order.notes ?? ''}\n$notes' : order.notes,
+        );
+        context.read<CustomerOrdersBloc>().add(UpdateCustomerOrder(updatedOrder));
+      },
     );
   }
 
@@ -476,7 +432,7 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
   Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
     final invoiceId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -601,7 +557,7 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
   Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
     final deliveryId = const Uuid().v4();
     final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(),

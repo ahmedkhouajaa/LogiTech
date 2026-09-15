@@ -6,6 +6,7 @@ import '../models/document_template.dart';
 import '../database/database_helper.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_template_editor_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -78,7 +79,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
                       children: [
                         if (!isMobile) ...[
                           Text(
-                            'Modèles de documents',
+                            context.tr('Modèles de documents'),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -122,11 +123,11 @@ class _DocumentTemplatesBody extends StatelessWidget {
           child: templates.isEmpty
               ? EmptyState(
                   icon: Icons.description_outlined,
-                  title: 'Aucun modèle de document',
-                  subtitle: 'Créez votre premier modèle pour personnaliser vos factures',
+                  title: context.tr('Aucun modèle de document'),
+                  subtitle: context.tr('Créez votre premier modèle pour personnaliser vos factures'),
                   action: PermissionService.instance.canCreate(UserPermissionResources.settingsDocTemplates)
                       ? AppButton(
-                          label: 'Créer un modèle',
+                          label: context.tr('Créer un modèle'),
                           icon: Icons.add_rounded,
                           onPressed: () => _createTemplate(context),
                         )
@@ -153,89 +154,158 @@ class _DocumentTemplatesBody extends StatelessWidget {
   }
 
   void _createTemplate(BuildContext context) {
-    final nameController = TextEditingController(text: 'Nouveau modèle');
-    String selectedPreset = 'classic';
-    String selectedType = 'invoice';
+    final assignedTypes = templates
+        .where((t) => !t.isDefault)
+        .map((t) => t.documentType)
+        .toSet();
+    final availableTypes = DocumentTemplate.supportedDocumentTypes
+        .where((d) => !assignedTypes.contains(d['key']))
+        .toList();
+
+    if (availableTypes.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 24),
+              const SizedBox(width: 10),
+              const Text('Tous les types sont assignés', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: const Text(
+            'Tous les 16 types de documents (Ventes, Achats et Stock) possèdent déjà un modèle personnalisé dédié.\n\nPour créer un nouveau modèle pour un document spécifique, vous devez d\'abord supprimer le modèle existant correspondant.',
+            style: TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: Text(context.tr('Compris')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    String selectedType = availableTypes.first['key'] as String;
+    final nameController = TextEditingController(
+      text: 'Modèle ${availableTypes.first['label']}',
+    );
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: const Text('Nouveau modèle de document', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(context.tr('Nouveau modèle de document'), style: TextStyle(fontWeight: FontWeight.bold)),
           content: SizedBox(
-            width: 480,
+            width: 500,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AppTextField(
-                    label: 'Nom du modèle',
-                    hint: 'Ex: Facture standard 2026',
+                    label: context.tr('Nom du modèle'),
+                    hint: 'Ex: Modèle Facture Standard',
                     controller: nameController,
                   ),
                   const SizedBox(height: 16),
-                  const Text('Type de document', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(context.tr('Type de document'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${availableTypes.length} disponible${availableTypes.length > 1 ? 's' : ''}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: selectedType,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'invoice', child: Text('Facture')),
-                      DropdownMenuItem(value: 'quote', child: Text('Devis')),
-                      DropdownMenuItem(value: 'delivery_note', child: Text('Bon de livraison')),
-                      DropdownMenuItem(value: 'customer_order', child: Text('Bon de commande')),
-                    ],
+                    items: availableTypes.map((d) {
+                      final cat = d['category'] as String;
+                      final catColor = _getCategoryColor(cat);
+                      return DropdownMenuItem<String>(
+                        value: d['key'] as String,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: catColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(d['icon'] as IconData, size: 15, color: catColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                d['label'] as String,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: catColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                cat,
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                     onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedType = val);
+                      if (val != null) {
+                        setDialogState(() {
+                          selectedType = val;
+                          final doc = availableTypes.firstWhere((d) => d['key'] == val);
+                          nameController.text = 'Modèle ${doc['label']}';
+                        });
+                      }
                     },
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Modèle de base (Style)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  _buildPresetOption('classic', 'Classique', 'Bleu standard, mise en page éprouvée', const Color(0xFF1A56DB), selectedPreset, (v) => setDialogState(() => selectedPreset = v)),
-                  const SizedBox(height: 6),
-                  _buildPresetOption('modern', 'Moderne', 'Indigo vif, lignes alternées zébrées', const Color(0xFF2563EB), selectedPreset, (v) => setDialogState(() => selectedPreset = v)),
-                  const SizedBox(height: 6),
-                  _buildPresetOption('minimalist', 'Minimaliste', 'Épuré, sans bordures, blanc et gris', const Color(0xFF111827), selectedPreset, (v) => setDialogState(() => selectedPreset = v)),
-                  const SizedBox(height: 6),
-                  _buildPresetOption('professional', 'Professionnel', 'Bleu nuit corporate, double signature', const Color(0xFF0F2942), selectedPreset, (v) => setDialogState(() => selectedPreset = v)),
-                  const SizedBox(height: 6),
-                  _buildPresetOption('colorful', 'Coloré', 'Émeraude / Sarcelle dynamique', const Color(0xFF0D9488), selectedPreset, (v) => setDialogState(() => selectedPreset = v)),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Annuler'))),
             ElevatedButton(
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
 
-                Map<String, dynamic> config;
-                switch (selectedPreset) {
-                  case 'modern':
-                    config = DocumentTemplate.modernConfig();
-                    break;
-                  case 'minimalist':
-                    config = DocumentTemplate.minimalistConfig();
-                    break;
-                  case 'professional':
-                    config = DocumentTemplate.professionalConfig();
-                    break;
-                  case 'colorful':
-                    config = DocumentTemplate.colorfulConfig();
-                    break;
-                  case 'classic':
-                  default:
-                    config = DocumentTemplate.classicConfig();
-                    break;
-                }
+                final defaultTpl = templates.where((t) => t.isDefault).firstOrNull;
+                final config = defaultTpl != null
+                    ? Map<String, dynamic>.from(defaultTpl.config)
+                    : DocumentTemplate.classicConfig();
 
                 final eid = EnterpriseService.instance.currentEnterpriseId ?? '';
                 final template = DocumentTemplate(
@@ -254,7 +324,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: const Text('Créer et Personnaliser'),
+              child: Text(context.tr('Créer et Personnaliser')),
             ),
           ],
         ),
@@ -262,48 +332,20 @@ class _DocumentTemplatesBody extends StatelessWidget {
     );
   }
 
-  Widget _buildPresetOption(String code, String title, String subtitle, Color color, String currentSelected, ValueChanged<String> onSelect) {
-    final isSelected = currentSelected == code;
-    return InkWell(
-      onTap: () => onSelect(code),
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.08) : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: isSelected ? color : AppColors.border,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, color: isSelected ? color : AppColors.textPrimary)),
-                  Text(subtitle, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(Icons.check_circle_rounded, color: color, size: 18),
-          ],
-        ),
-      ),
-    );
+  static Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'Ventes':
+        return const Color(0xFF1A56DB);
+      case 'Achats':
+        return const Color(0xFFD97706);
+      case 'Stock':
+        return const Color(0xFF0D9488);
+      default:
+        return AppColors.primary;
+    }
   }
+
+
 
   void _openEditor(BuildContext context, DocumentTemplate template) {
     Navigator.of(context).push(
@@ -333,6 +375,8 @@ class _TemplateCardState extends State<_TemplateCard> {
   Widget build(BuildContext context) {
     final t = widget.template;
     final primaryColor = Color(t.headerBgColor);
+    final docLabel = DocumentTemplate.getDocumentTypeLabel(t.documentType);
+    final docIcon = DocumentTemplate.getDocumentTypeIcon(t.documentType);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -372,7 +416,11 @@ class _TemplateCardState extends State<_TemplateCard> {
                           ),
                         ],
                       ),
-                      child: Icon(Icons.description_rounded, color: Color(t.headerTextColor), size: 20),
+                      child: Icon(
+                        t.isDefault ? Icons.star_rounded : docIcon,
+                        color: Color(t.headerTextColor),
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -385,20 +433,41 @@ class _TemplateCardState extends State<_TemplateCard> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _documentTypeLabel(t.documentType),
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(
+                                t.isDefault ? Icons.all_inclusive_rounded : docIcon,
+                                size: 13,
+                                color: t.isDefault ? AppColors.success : primaryColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  t.isDefault
+                                      ? 'Par défaut (Tous autres documents)'
+                                      : 'Appliqué à : $docLabel',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: t.isDefault ? AppColors.textSecondary : primaryColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                     if (t.isDefault)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.successLight,
                           borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -406,8 +475,28 @@ class _TemplateCardState extends State<_TemplateCard> {
                             Icon(Icons.star_rounded, size: 13, color: AppColors.success),
                             const SizedBox(width: 3),
                             Text(
-                              'Par défaut',
+                              context.tr('Global'),
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded, size: 12, color: primaryColor),
+                            const SizedBox(width: 3),
+                            Text(
+                              context.tr('Dédié'),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
                             ),
                           ],
                         ),
@@ -435,39 +524,24 @@ class _TemplateCardState extends State<_TemplateCard> {
                 // Actions
                 Row(
                   children: [
-                    _actionBtn(Icons.edit_rounded, 'Modifier (Config)', () => _openEditor(context, t)),
+                    _actionBtn(Icons.edit_rounded, context.tr('Modifier (Config)'), () => _openEditor(context, t)),
                     const SizedBox(width: 8),
-                    _actionBtn(Icons.copy_rounded, 'Dupliquer', () {
-                      context.read<DocumentTemplatesBloc>().add(DuplicateDocumentTemplate(t));
-                    }),
+                    _actionBtn(Icons.copy_rounded, context.tr('Dupliquer'), () => _duplicateTemplate(context, t)),
                     const SizedBox(width: 8),
                     _actionBtn(
                       Icons.restart_alt_rounded,
-                      'Remettre à zéro (Réinitialiser)',
+                      context.tr('Remettre à zéro (Réinitialiser)'),
                       () => _confirmReset(context, t),
                       color: AppColors.warning,
                     ),
-                    const SizedBox(width: 8),
-                    if (!t.isDefault)
-                      _actionBtn(
-                        Icons.star_outline_rounded,
-                        'Définir par défaut',
-                        () {
-                          context.read<DocumentTemplatesBloc>().add(SetDefaultDocumentTemplate(t.id, t.documentType));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Modèle "${t.name}" défini par défaut'),
-                              backgroundColor: AppColors.success,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                        color: AppColors.primary,
-                      ),
                     const Spacer(),
                     if (!t.isDefault)
-                      _actionBtn(Icons.delete_outline_rounded, 'Supprimer', () => _confirmDelete(context, t),
-                          color: AppColors.error),
+                      _actionBtn(
+                        Icons.delete_outline_rounded,
+                        context.tr('Supprimer'),
+                        () => _confirmDelete(context, t),
+                        color: AppColors.error,
+                      ),
                   ],
                 ),
               ],
@@ -518,6 +592,161 @@ class _TemplateCardState extends State<_TemplateCard> {
     );
   }
 
+  void _duplicateTemplate(BuildContext context, DocumentTemplate template) {
+    final state = context.read<DocumentTemplatesBloc>().state;
+    final allTemplates = state is DocumentTemplatesLoaded ? state.templates : <DocumentTemplate>[];
+    final assignedTypes = allTemplates
+        .where((t) => !t.isDefault)
+        .map((t) => t.documentType)
+        .toSet();
+    final availableTypes = DocumentTemplate.supportedDocumentTypes
+        .where((d) => !assignedTypes.contains(d['key']))
+        .toList();
+
+    if (availableTypes.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 24),
+              const SizedBox(width: 10),
+              Text(context.tr('Aucun document disponible'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: Text(
+            context.tr('Tous les 16 types de documents possèdent déjà un modèle personnalisé dédié.\n\nPour dupliquer ce modèle, vous devez d\'abord supprimer un modèle existant pour libérer son type de document.'),
+            style: const TextStyle(fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: Text(context.tr('Compris')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final nameController = TextEditingController(text: '${template.name} (copie)');
+    String targetType = availableTypes.first['key'] as String;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: Text(context.tr('Dupliquer le modèle'), style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: SizedBox(
+            width: 480,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppTextField(
+                  label: context.tr('Nom de la copie'),
+                  controller: nameController,
+                ),
+                const SizedBox(height: 16),
+                Text(context.tr('Assigner au type de document :'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: targetType,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  items: availableTypes.map((d) {
+                    final cat = d['category'] as String;
+                    final catColor = _DocumentTemplatesBody._getCategoryColor(cat);
+                    return DropdownMenuItem<String>(
+                      value: d['key'] as String,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: catColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(d['icon'] as IconData, size: 14, color: catColor),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              context.tr(d['label'] as String),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: catColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              context.tr(cat),
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => targetType = val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Annuler'))),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                if (name.isEmpty) return;
+
+                final duplicate = template.copyWith(
+                  id: DatabaseHelper.instance.newId,
+                  name: name,
+                  documentType: targetType,
+                  isDefault: false,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                context.read<DocumentTemplatesBloc>().add(AddDocumentTemplate(duplicate));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${context.tr('Modèle dupliqué pour')} « ${context.tr(DocumentTemplate.getDocumentTypeLabel(targetType))} »'),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: Text(context.tr('Dupliquer')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmReset(BuildContext context, DocumentTemplate template) {
     showDialog(
       context: context,
@@ -527,17 +756,17 @@ class _TemplateCardState extends State<_TemplateCard> {
           children: [
             Icon(Icons.restart_alt_rounded, color: AppColors.warning, size: 24),
             const SizedBox(width: 10),
-            const Text('Remettre à zéro le modèle ?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(context.tr('Remettre à zéro le modèle ?'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ],
         ),
         content: Text(
-          'Voulez-vous réinitialiser le modèle « ${template.name} » à ses paramètres d\'origine (${template.styleName}) ?\n\nToutes les personnalisations et modifications apportées à ce modèle seront annulées.',
+          '${context.tr('Voulez-vous réinitialiser le modèle')} « ${template.name} » ${context.tr('à ses paramètres d\'origine')} (${template.styleName}) ?\n\n${context.tr('Toutes les personnalisations et modifications apportées à ce modèle seront annulées.')}',
           style: const TextStyle(fontSize: 14, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -550,7 +779,7 @@ class _TemplateCardState extends State<_TemplateCard> {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Modèle « ${template.name} » remis à zéro avec succès'),
+                  content: Text('${context.tr('Modèle')} « ${template.name} » ${context.tr('remis à zéro avec succès')}'),
                   backgroundColor: AppColors.success,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -558,7 +787,7 @@ class _TemplateCardState extends State<_TemplateCard> {
               );
             },
             icon: const Icon(Icons.restart_alt_rounded, size: 18),
-            label: const Text('Remettre à zéro'),
+            label: Text(context.tr('Remettre à zéro')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.warning,
               foregroundColor: Colors.white,
@@ -574,47 +803,82 @@ class _TemplateCardState extends State<_TemplateCard> {
     if (template.isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Le modèle par défaut ne peut pas être supprimé.'),
+          content: Text(context.tr('Le modèle par défaut ne peut pas être supprimé.')),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
+    final docLabel = DocumentTemplate.getDocumentTypeLabel(template.documentType);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le modèle ?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Voulez-vous vraiment supprimer le modèle "${template.name}" ? Cette action est irréversible.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 24),
+            const SizedBox(width: 10),
+            Text(context.tr('Supprimer le modèle ?'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${context.tr('Voulez-vous vraiment supprimer le modèle')} « ${template.name} » ?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${context.tr('Les documents')} « ${context.tr(docLabel)} » ${context.tr('réutiliseront automatiquement le modèle par défaut de l\'application.')}',
+                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Annuler'))),
           ElevatedButton(
             onPressed: () {
               context.read<DocumentTemplatesBloc>().add(DeleteDocumentTemplate(template.id));
               Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${context.tr('Modèle supprimé. Les documents')} « ${context.tr(docLabel)} » ${context.tr('utilisent le modèle par défaut.')}'),
+                  backgroundColor: AppColors.info,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
     );
   }
 
-  String _documentTypeLabel(String type) {
-    switch (type) {
-      case 'invoice':
-        return 'Facture';
-      case 'quote':
-        return 'Devis';
-      case 'delivery_note':
-        return 'Bon de livraison';
-      case 'customer_order':
-        return 'Bon de commande';
-      default:
-        return 'Document';
-    }
-  }
 
   String _tableStyleLabel(String style) {
     switch (style) {

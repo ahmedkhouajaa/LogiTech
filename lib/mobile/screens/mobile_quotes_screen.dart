@@ -11,6 +11,7 @@ import '../../blocs/quotes/quotes_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
 import '../../models/customer.dart';
 import '../../services/sync_service.dart';
+import '../../services/custom_status_service.dart';
 import '../../utils/constants.dart';
 import 'forms/mobile_quote_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -150,8 +151,17 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLabel = quote.status.label.toLowerCase();
               final statusName = quote.status.name.toLowerCase();
+              final effStatus = quote.effectiveStatus.toLowerCase();
+              final cStatus = (quote.customStatus ?? '').toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('quote', quote.effectiveStatus);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower && statusName != filterLower) return false;
+              if (statusLabel != filterLower &&
+                  statusName != filterLower &&
+                  effStatus != filterLower &&
+                  cStatus != filterLower &&
+                  sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -213,7 +223,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
               _fetchFilteredDevis();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Envoyé', 'Accepté', 'Rejeté', 'Facturé'],
+            documentType: 'quote',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredDevis();

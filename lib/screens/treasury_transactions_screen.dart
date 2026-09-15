@@ -253,7 +253,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                           const SizedBox(height: 4),
                           InkWell(
                             onTap: () async {
-                              final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: const Locale('fr', 'FR'));
+                              final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: Localizations.localeOf(context));
                               if (picked != null) {
                                 setState(() => _startDate = picked);
                                 _loadData();
@@ -295,7 +295,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                           const SizedBox(height: 4),
                           InkWell(
                             onTap: () async {
-                              final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: const Locale('fr', 'FR'));
+                              final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: Localizations.localeOf(context));
                               if (picked != null) {
                                 setState(() => _endDate = picked);
                                 _loadData();

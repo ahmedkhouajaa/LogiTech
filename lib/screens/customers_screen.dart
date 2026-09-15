@@ -19,6 +19,7 @@ import '../services/contact_import_export_service.dart';
 import '../widgets/import_export/contact_import_dialog.dart';
 import 'customer_detail_screen.dart';
 import '../widgets/customer_history_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -65,7 +66,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Clients', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          Text(context.tr('Clients'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           if (totalCount != null) ...[
                             const SizedBox(width: 10),
                             Container(
@@ -131,7 +132,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
                       const SizedBox(width: 6),
                       Text(
-                        'Actions',
+                        context.tr('Actions'),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 13,
@@ -219,7 +220,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _showDialog(context, null),
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 18, color: Colors.white),
-                  label: const Text('Nouveau Client', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  label: Text(context.tr('Nouveau Client'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1045,7 +1046,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      widget.existing == null ? 'Créer un Nouveau Client' : 'Modifier le Client',
+                      context.tr(widget.existing == null ? 'Nouveau Client' : 'Modifier le Client'),
                       style: TextStyle(
                         fontSize: isMobile ? 16 : 20,
                         fontWeight: FontWeight.bold,
@@ -1059,13 +1060,13 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                      tooltip: 'Fermer',
+                      tooltip: context.tr('Fermer'),
                     ),
                   ] else ...[
                     OutlinedButton.icon(
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                      label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                      label: Text(context.tr('Retour'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -1076,7 +1077,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     ElevatedButton.icon(
                       onPressed: _save,
                       icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                      label: Text(widget.existing == null ? 'Créer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      label: Text(context.tr(widget.existing == null ? 'Créer' : 'Enregistrer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
@@ -1105,10 +1106,10 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                 indicatorWeight: 3,
                 labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13),
                 unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: isMobile ? 12 : 13),
-                tabs: const [
-                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 18)),
-                  Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 18)),
-                  Tab(text: 'Financier', icon: Icon(Icons.account_balance_wallet_outlined, size: 18)),
+                tabs: [
+                  Tab(text: context.tr('Informations'), icon: Icon(Icons.info_outline_rounded, size: 18)),
+                  Tab(text: context.tr('Adresses'), icon: Icon(Icons.location_on_outlined, size: 18)),
+                  Tab(text: context.tr('Financier'), icon: Icon(Icons.account_balance_wallet_outlined, size: 18)),
                 ],
               ),
             ),
@@ -1149,7 +1150,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         OutlinedButton.icon(
                           onPressed: () => _tabController.animateTo(_tabController.index - 1),
                           icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                          label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          label: Text(context.tr('Précédent'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 12),
@@ -1177,7 +1178,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              Text(context.tr('Suivant'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                               SizedBox(width: 8),
                               Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
                             ],
@@ -1187,7 +1188,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         ElevatedButton.icon(
                           onPressed: _save,
                           icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                          label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          label: Text(context.tr('Terminer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
                             padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: 12),
@@ -1246,7 +1247,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    title,
+                    context.tr(title),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -2148,7 +2149,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -2194,7 +2195,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       initialDate: DateTime.now().subtract(const Duration(days: 365 * 30)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      locale: const Locale('fr'),
+      locale: Localizations.localeOf(context),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -2225,7 +2226,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2050),
-      locale: const Locale('fr'),
+      locale: Localizations.localeOf(context),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -2376,7 +2377,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
-                      child: Text('Valider'),
+                      child: Text(context.tr('Valider')),
                     ),
                   ],
                 ),

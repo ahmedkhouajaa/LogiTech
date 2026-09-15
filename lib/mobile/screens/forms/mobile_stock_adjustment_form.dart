@@ -5,6 +5,7 @@ import '../../../blocs/stock/stock_bloc.dart';
 import '../../../blocs/products/products_bloc.dart';
 import '../../../models/stock_movement.dart';
 import '../../../models/product.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -75,20 +76,20 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
   void _save() {
     if (_selectedProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article')), backgroundColor: AppColors.error),
       );
       return;
     }
     if (_selectedWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un entrepôt')), backgroundColor: AppColors.error),
       );
       return;
     }
     final qtyText = _quantityCtrl.text.trim();
     if (qtyText.isEmpty || double.tryParse(qtyText) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez entrer une quantité valide'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez entrer une quantité valide')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -118,7 +119,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
       if (qtyToRegister == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('La quantité d\'ajustement ne peut pas être nulle.'), backgroundColor: AppColors.warning),
+          SnackBar(content: Text(context.tr('La quantité d\'ajustement ne peut pas être nulle.')), backgroundColor: AppColors.warning),
         );
         setState(() => _isLoading = false);
         return;
@@ -144,7 +145,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success),
+        SnackBar(content: Text(context.tr('Ajustement de stock enregistré avec succès')), backgroundColor: AppColors.success),
       );
     } catch (e) {
       ErrorHandler.showErrorSnackBar(context, e);
@@ -158,15 +159,15 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: 'Nouvel ajustement de stock',
+      title: context.tr('Nouvel ajustement de stock'),
       isLoading: _isLoading,
-      saveLabel: 'Enregistrer',
+      saveLabel: context.tr('Enregistrer'),
       onCancel: () => Navigator.pop(context),
       onSave: _save,
       children: [
         // ── Section 1: Article ──
         MobileFormSection(
-          title: 'Article',
+          title: context.tr('Article'),
           icon: Icons.inventory_2_outlined,
           child: Padding(
             padding: EdgeInsets.all(16),
@@ -181,8 +182,8 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           return Center(child: CircularProgressIndicator());
                         }
                         return SmartSearchableSelector(
-                          label: 'Désignation',
-                          hint: 'Rechercher un article...',
+                          label: context.tr('Désignation'),
+                          hint: context.tr('Rechercher un article...'),
                           selectedText: _selectedProduct?.name,
                           onTap: () async {
                             final res = await showProductSelectDialog(context, pState.products, warehouseId: _selectedWarehouseId);
@@ -235,7 +236,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                                   ),
                                   SizedBox(height: 2),
                                   Text(
-                                    'Stock actuel: ${formatQuantity(_getWarehouseStockForProduct(_selectedProduct!, stockState))} ${_selectedProduct!.unit}',
+                                    '${context.tr('Stock actuel')}: ${formatQuantity(_getWarehouseStockForProduct(_selectedProduct!, stockState))} ${_selectedProduct!.unit}',
                                     style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
                                   ),
                                 ],
@@ -254,7 +255,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
         // ── Section 2: Entrepôt & Action ──
         MobileFormSection(
-          title: 'Entrepôt & Action',
+          title: context.tr('Entrepôt & Action'),
           icon: Icons.warehouse_rounded,
           isInitiallyExpanded: true,
           child: Padding(
@@ -292,8 +293,8 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SmartSearchableSelector(
-                      label: 'Entrepôt',
-                      hint: 'Sélectionner un entrepôt',
+                      label: context.tr('Entrepôt'),
+                      hint: context.tr('Sélectionner un entrepôt'),
                       selectedText: warehouseName,
                       onTap: () async {
                         final res = await showWarehouseSelectDialog(context, stockState.warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -311,7 +312,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Type d'action", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              Text(context.tr("Type d'action"), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               SizedBox(height: 6),
                               Container(
                                 decoration: BoxDecoration(
@@ -337,7 +338,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                                         children: [
                                           Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.success),
                                           SizedBox(width: 8),
-                                          Expanded(child: Text('Ajouter au stock', style: TextStyle(fontSize: 13, color: AppColors.success, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                          Expanded(child: Text(context.tr('Ajouter au stock'), style: TextStyle(fontSize: 13, color: AppColors.success, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                                         ],
                                       ),
                                     ),
@@ -347,7 +348,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                                         children: [
                                           Icon(Icons.remove_circle_outline_rounded, size: 18, color: AppColors.error),
                                           SizedBox(width: 8),
-                                          Expanded(child: Text('Retirer du stock', style: TextStyle(fontSize: 13, color: AppColors.error, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                          Expanded(child: Text(context.tr('Retirer du stock'), style: TextStyle(fontSize: 13, color: AppColors.error, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                                         ],
                                       ),
                                     ),
@@ -357,7 +358,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                                         children: [
                                           Icon(Icons.edit_note_rounded, size: 18, color: AppColors.warning),
                                           SizedBox(width: 8),
-                                          Expanded(child: Text('Corriger (Remplacer)', style: TextStyle(fontSize: 13, color: AppColors.warning, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                          Expanded(child: Text(context.tr('Corriger (Remplacer)'), style: TextStyle(fontSize: 13, color: AppColors.warning, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
                                         ],
                                       ),
                                     ),
@@ -386,7 +387,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _adjustmentAction == 'correct' ? 'Nouveau stock' : 'Quantité',
+                                context.tr(_adjustmentAction == 'correct' ? 'Nouveau stock' : 'Quantité'),
                                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                               SizedBox(height: 6),
@@ -429,7 +430,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
         // ── Section 3: Notes / Motif ──
         MobileFormSection(
-          title: 'Notes / Motif d\'ajustement',
+          title: context.tr('Notes / Motif d\'ajustement'),
           icon: Icons.notes_rounded,
           isInitiallyExpanded: true,
           child: Padding(

@@ -33,6 +33,8 @@ import 'forms/mobile_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileInvoiceDetailScreen extends StatefulWidget {
   final Invoice invoice;
@@ -91,8 +93,14 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentInvoice.status.name);
-    final statusColor = currentInvoice.status.color;
+    final statusInfo = CustomStatusService.instance.getStatusInfo(
+      'invoice',
+      currentInvoice.effectiveStatus,
+      fallbackLabel: currentInvoice.status.label,
+      fallbackColor: currentInvoice.status.color,
+    );
+    final statusLabel = statusInfo.label;
+    final statusColor = statusInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -363,64 +371,19 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, Invoice invoice) {
-    InvoiceStatus selectedStatus = invoice.status;
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: InvoiceStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedInvoice = invoice.copyWith(
-                    status: selectedStatus,
-                    notes: notesController.text.isNotEmpty ? '${invoice.notes ?? ''}\n${notesController.text}' : invoice.notes,
-                  );
-                  context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'invoice',
+      currentStatus: invoice.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final enumMatch = InvoiceStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        final updatedInvoice = invoice.copyWith(
+          status: enumMatch ?? InvoiceStatus.unpaid,
+          customStatus: enumMatch == null ? newStatusKey : null,
+          notes: notes != null && notes.isNotEmpty ? '${invoice.notes ?? ''}\n$notes' : invoice.notes,
+        );
+        context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
+      },
     );
   }
 
@@ -482,7 +445,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
               final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
-              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq);
+              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq, docCollection: 'credit_notes');
               
               final creditNoteItems = inv.items.map((i) => CreditNoteItem(
                 id: const Uuid().v4(),

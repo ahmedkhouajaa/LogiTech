@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
@@ -18,7 +17,6 @@ import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
-import '../blocs/invoices/invoices_bloc.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -27,6 +25,10 @@ import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
+import '../l10n/app_localizations.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
 
 enum SupplierCreditNoteStatus {
   draft('Non Utilisé'),
@@ -56,7 +58,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  SupplierCreditNoteStatus? _statusFilter;
+  String? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -73,7 +75,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() => _currentPage = 0);
   }
@@ -93,7 +95,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Avoirs Fournisseur',
+                    context.tr('Avoirs Fournisseur'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -102,7 +104,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Gérer vos avoirs fournisseur',
+                    context.tr('Gérer vos avoirs fournisseur'),
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
@@ -111,7 +113,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context, null),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Créer un Avoir'),
+                  label: Text(context.tr('Créer un Avoir')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -178,7 +180,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         filteredNotes = filteredNotes.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredNotes = filteredNotes.where((q) => q.status == _statusFilter!.name).toList();
+        filteredNotes = filteredNotes.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = filteredNotes.length;
     }
@@ -201,15 +203,15 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           Expanded(
             flex: 3,
             child: _filterSection(
-              label: 'Fournisseur',
+              label: context.tr('Fournisseur'),
               child: BlocBuilder<SuppliersBloc, SuppliersState>(
                 builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                  String selectedSupplierName = 'Tous les fournisseurs';
+                  String selectedSupplierName = context.tr('Tous les fournisseurs');
                   if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
                     final found = suppliers.firstWhere(
                       (s) => s.id == _selectedSupplierId,
-                      orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                      orElse: () => Supplier(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                     );
                     selectedSupplierName = found.companyName?.isNotEmpty == true
                         ? found.companyName!
@@ -240,7 +242,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                           Expanded(
                             child: Text(
                               _selectedSupplierId == null || _selectedSupplierId == 'all'
-                                  ? 'Tous les fournisseurs'
+                                  ? context.tr('Tous les fournisseurs')
                                   : selectedSupplierName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -266,10 +268,10 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de début',
+              label: context.tr('Date de début'),
               child: _datePicker(
                 value: _dateFrom,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onPicked: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -283,10 +285,10 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de fin',
+              label: context.tr('Date de fin'),
               child: _datePicker(
                 value: _dateTo,
-                hint: 'Sélectionner date',
+                hint: context.tr('Sélectionner date'),
                 onPicked: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -300,114 +302,14 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Statut',
-              child: PopupMenuButton<SupplierCreditNoteStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (val) {
+              label: context.tr('Statut'),
+              child: DocumentStatusFilterDropdown(
+                documentType: 'supplier_credit_note',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (val) {
                   setState(() => _statusFilter = val);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<SupplierCreditNoteStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...SupplierCreditNoteStatus.values.map(
-                    (s) => PopupMenuItem<SupplierCreditNoteStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -426,7 +328,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -492,7 +394,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un fournisseur',
+                          context.tr('Sélectionner un fournisseur'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -512,7 +414,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un fournisseur...',
+                          hintText: context.tr('Rechercher un fournisseur...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -544,14 +446,14 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                       selected: selectedSupplierId == null || selectedSupplierId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les fournisseurs',
+                        context.tr('Tous les fournisseurs'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
                           ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
                           : null,
                       onTap: () {
-                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: 'Tous les fournisseurs', country: ''));
+                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: context.tr('Tous les fournisseurs'), country: ''));
                       },
                     ),
 
@@ -562,7 +464,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun fournisseur trouvé',
+                                  context.tr('Aucun fournisseur trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -633,7 +535,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (d != null) onPicked(d);
       },
@@ -669,11 +571,11 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     return ShimmerTable(
       headerColumns: [
         const SizedBox(width: 28),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -690,7 +592,20 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   style: TextStyle(color: AppColors.error)));
         }
         if (state is SupplierCreditNotesLoaded) {
-          final notes = state.creditNotes;
+          List<SupplierCreditNote> filteredNotes = state.creditNotes;
+          if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+            filteredNotes = filteredNotes.where((q) => q.supplierId == _selectedSupplierId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredNotes = filteredNotes.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredNotes = filteredNotes.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredNotes = filteredNotes.where((q) => q.status == _statusFilter).toList();
+          }
+          final notes = filteredNotes;
           final total = notes.length;
           final totalPages = total == 0 ? 1 : ((total / _rowsPerPage).ceil().toInt());
           final page = _currentPage.clamp(0, totalPages - 1);
@@ -726,35 +641,35 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                               const SizedBox(width: 28),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Reference',
+                                  child: Text(context.tr('Reference'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 3,
-                                  child: Text('Fournisseur',
+                                  child: Text(context.tr('Fournisseur'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Statut',
+                                  child: Text(context.tr('Statut'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Montant',
+                                  child: Text(context.tr('Montant'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               SizedBox(
                                   width: 60,
-                                  child: Text('Actions',
+                                  child: Text(context.tr('Actions'),
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -774,7 +689,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text('Aucun Avoir fournisseur trouvé',
+                                      Text(context.tr('Aucun Avoir fournisseur trouvé'),
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors.textSecondary)),
@@ -801,7 +716,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes',
+                              Text(context.tr('Lignes'),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -840,15 +755,15 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${page + 1} sur $totalPages',
+                              Text('${context.tr('Page')} ${page + 1} ${context.tr('sur')} $totalPages',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}'
+                                    : '${context.tr('Affichage de')} ${start + 1} ${context.tr('à')} $end ${context.tr('sur')} $total ${context.tr('résultats')}',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary),
@@ -962,21 +877,24 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             flex: 2,
             child: Container(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusEnum.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusEnum.label,
-                  style: TextStyle(
-                      color: statusEnum.color,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
+              child: () {
+                final sInfo = CustomStatusService.instance.getStatusInfo('supplier_credit_note', note.status);
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: sInfo.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    context.tr(sInfo.label),
+                    style: TextStyle(
+                        color: sInfo.color,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500),
+                  ),
+                );
+              }(),
             ),
           ),
 
@@ -1025,27 +943,27 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   }
 
                   if (canRead) {
-                    addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                    addItem('view', Icons.visibility_outlined, AppColors.info, context.tr('Voir'));
                   }
                   if (canUpdate) {
-                    addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                    addItem('edit', Icons.edit_outlined, AppColors.primary, context.tr('Modifier'));
                   }
                   if (canDelete) {
-                    addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                    addItem('delete', Icons.delete_outline, AppColors.error, context.tr('Supprimer'));
                   }
 
                   if (canCreatePayment) {
-                    addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
+                    addItem('add_payment', Icons.payment_outlined, AppColors.success, context.tr('Ajouter un paiement'));
                   }
 
                   if (hasAnyAccess) {
-                    addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
-                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                    addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                    addItem('print', Icons.print_outlined, AppColors.textSecondary, context.tr('Imprimer'));
+                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, context.tr('Télécharger PDF'));
+                    addItem('email', Icons.email_outlined, AppColors.primary, context.tr('Envoyer par email'));
+                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, context.tr('Envoyer par WhatsApp'));
                   }
                   if (hasAllAccess) {
-                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, context.tr('Changer le statut'));
                   }
 
                   return entries;
@@ -1087,13 +1005,13 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
+        title: Text(context.tr('Confirmer la suppression')),
         content: Text(
-            'Voulez-vous vraiment supprimer le bon ${note.number} ?'),
+            '${context.tr('Voulez-vous vraiment supprimer le bon')} ${note.number} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler',
+              child: Text(context.tr('Annuler'),
                   style: TextStyle(color: AppColors.textSecondary))),
           ElevatedButton(
             onPressed: () {
@@ -1105,7 +1023,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -1138,18 +1056,15 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
 
     switch (action) {
       case 'view':
-        final statusEnum = SupplierCreditNoteStatus.values.firstWhere(
-          (e) => e.name == note.status,
-          orElse: () => SupplierCreditNoteStatus.draft,
-        );
+        final sInfo = CustomStatusService.instance.getStatusInfo('supplier_credit_note', note.status);
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => DocumentDetailScreen(
               document: doc,
-              status: statusEnum.label,
-              statusColor: statusEnum.color,
+              status: sInfo.label,
+              statusColor: sInfo.color,
             ),
           ),
         );
@@ -1176,7 +1091,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Action non implémentée'))));
     }
   }
 
@@ -1198,85 +1113,17 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, SupplierCreditNote note) {
-    SupplierCreditNoteStatus selectedStatus = SupplierCreditNoteStatus.values.firstWhere(
-      (e) => e.name == note.status,
-      orElse: () => SupplierCreditNoteStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: SupplierCreditNoteStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<SupplierCreditNotesBloc>().add(
-                    UpdateSupplierCreditNote(note.copyWith(status: selectedStatus.name))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'supplier_credit_note',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          reason: notes != null && notes.isNotEmpty ? notes : note.reason,
+        );
+        context.read<SupplierCreditNotesBloc>().add(UpdateSupplierCreditNote(updatedNote));
+      },
     );
   }
 
@@ -1287,7 +1134,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Ajouter un paiement pour BL ${note.number}'),
+        title: Text('${context.tr('Ajouter un paiement pour BL')} ${note.number}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1295,7 +1142,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             TextField(
               controller: amountCtrl,
               decoration: InputDecoration(
-                labelText: 'Montant (DT)',
+                labelText: context.tr('Montant (DT)'),
                 border: OutlineInputBorder(),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1304,19 +1151,19 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             ValueListenableBuilder<String>(
               valueListenable: methodNotifier,
               builder: (context, val, child) => DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                dropdownColor: AppColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                 value: val,
                 decoration: InputDecoration(
-                  labelText: 'Methode de paiement',
+                  labelText: context.tr('Methode de paiement'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'especes', child: Text('Especes')),
-                  DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
-                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                items: [
+                  DropdownMenuItem(value: 'especes', child: Text(context.tr('Espèces'))),
+                  DropdownMenuItem(value: 'cheque', child: Text(context.tr('Chèque'))),
+                  DropdownMenuItem(value: 'virement', child: Text(context.tr('Virement'))),
+                  DropdownMenuItem(value: 'carte', child: Text(context.tr('Carte bancaire'))),
                 ],
                 onChanged: (v) {
                   if (v != null) methodNotifier.value = v;
@@ -1328,7 +1175,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
@@ -1342,7 +1189,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   direction: 'encaissement',
                   contactId: note.supplierId,
                   contactType: 'Supplier',
-                  contactName: note.supplierId ?? note.supplierId,
+                  contactName: note.supplierId,
                   amount: amount,
                   method: methodNotifier.value,
                   reference: note.number,
@@ -1361,18 +1208,18 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Paiement ajoute avec succes'),
+                    content: Text(context.tr('Paiement ajouté avec succès')),
                     backgroundColor: AppColors.success,
                   ));
                 }
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Veuillez entrer un montant valide'),
+                  content: Text(context.tr('Veuillez entrer un montant valide')),
                   backgroundColor: AppColors.error,
                 ));
               }
             },
-            child: Text('Enregistrer'),
+            child: Text(context.tr('Enregistrer')),
           ),
         ],
       ),

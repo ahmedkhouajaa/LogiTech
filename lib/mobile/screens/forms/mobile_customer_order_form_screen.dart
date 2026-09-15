@@ -15,6 +15,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -28,6 +29,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -56,6 +58,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   CustomerOrderStatus _status = CustomerOrderStatus.draft;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -116,6 +119,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
       );
       _notes = n.notes ?? '';
       _conditions = n.conditionsGenerales ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => CustomerOrderItem(
         id: i.id,
         orderId: i.orderId,
@@ -136,7 +140,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -148,14 +152,14 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -179,7 +183,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber('CC', seq);
+          number = generateDocNumber('CC', seq, docCollection: 'customer_orders');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -213,6 +217,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
         timbreFiscal: _timbreFiscal,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => CustomerOrderItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           orderId: orderId,
@@ -251,7 +256,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Commande mise à jour' : 'Commande créée avec succès'),
+          content: Text(_isEditing ? context.tr('Commande mise à jour') : context.tr('Commande créée avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -310,7 +315,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: _isEditing ? 'Modifier la commande' : 'Nouvelle commande',
+      title: _isEditing ? 'Modifier la commande client' : 'Nouvelle commande client',
       statusLabel: _status.label,
       statusColor: _status.color,
       isLoading: _isLoading,
@@ -501,7 +506,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -522,7 +527,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
                       child: OutlinedButton.icon(
                         onPressed: () => _showArticleForm(),
                         icon: Icon(Icons.add_rounded),
-                        label: Text('Ajouter une ligne'),
+                        label: Text(context.tr('Ajouter une ligne')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -534,7 +539,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
                     SizedBox(width: 8),
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                      tooltip: 'Créer un nouvel article',
+                      tooltip: context.tr('Créer un nouvel article'),
                       onPressed: () async {
                         final newProd = await Navigator.push<dynamic>(
                           context,
@@ -594,6 +599,13 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
             onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'customer_order',
+          initialValues: _customFields,
+          isMobile: true,
+          onChanged: (values) => setState(() => _customFields = values),
         ),
         
         MobileFormSection(

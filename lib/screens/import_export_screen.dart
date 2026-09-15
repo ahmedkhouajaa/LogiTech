@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 import '../services/enterprise_service.dart';
 import '../services/import_export_service.dart';
 import '../services/permission_service.dart';
@@ -105,7 +106,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Accès Restreint',
+                        context.tr('Accès Restreint'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -114,7 +115,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Vous ne disposez pas des permissions nécessaires pour accéder à l\'Import / Export des données. Veuillez contacter votre administrateur.',
+                        context.tr('Vous ne disposez pas des permissions nécessaires pour accéder à l\'Import / Export des données. Veuillez contacter votre administrateur.'),
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                       ),
@@ -206,7 +207,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Import / Export des Données',
+                      context.tr('Import / Export des Données'),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: isMobile ? 17 : 21,
@@ -216,7 +217,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Sauvegardez ou restaurez l\'ensemble des données de votre entreprise.',
+                      context.tr('Sauvegardez ou restaurez l\'intégralité de vos données d\'entreprise en toute sécurité.'),
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: isMobile ? 11 : 13,
@@ -242,14 +243,14 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                 _buildToggleTab(
                   index: 0,
                   icon: Icons.backup_rounded,
-                  label: 'Sauvegarde (Export .json)',
+                  label: context.tr('Sauvegarde (Export .json)'),
                   isMobile: isMobile,
                 ),
                 const SizedBox(width: 4),
                 _buildToggleTab(
                   index: 1,
                   icon: Icons.restore_page_rounded,
-                  label: 'Restauration LogiTech',
+                  label: context.tr('Restauration LogiTech'),
                   isMobile: isMobile,
                 ),
               ],
@@ -299,7 +300,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  isMobile ? (index == 0 ? 'Sauvegarde' : 'Restauration') : label,
+                  isMobile ? (index == 0 ? context.tr('Sauvegarde') : context.tr('Restauration')) : context.tr(label),
                   style: TextStyle(
                     fontSize: isMobile ? 11 : 13,
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
@@ -355,7 +356,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Sauvegarde complète de toutes vos collections dans un fichier JSON.',
+                        context.tr('Sauvegarde complète de toutes vos collections dans un fichier JSON.'),
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
                     ],
@@ -365,7 +366,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   icon: Icons.refresh_rounded,
                   isLoading: _isLoadingCounts,
                   onTap: _loadCounts,
-                  tooltip: 'Actualiser les compteurs',
+                  tooltip: context.tr('Actualiser les compteurs'),
                 ),
               ],
             ),
@@ -388,7 +389,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Mode consultation active : Vous pouvez visualiser le statut et les volumes des collections, mais la génération d\'exportation est désactivée (Autorisation administrateur requise).',
+                      context.tr('Mode consultation active : Vous pouvez visualiser le statut et les volumes des collections, mais la génération d\'exportation est désactivée (Autorisation administrateur requise).'),
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.35),
                     ),
                   ),
@@ -405,8 +406,8 @@ class _ImportExportScreenState extends State<ImportExportScreen>
               Expanded(
                 child: _buildSectionLabel(
                   isMobile
-                      ? 'COLLECTIONS (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})'
-                      : 'COLLECTIONS À EXPORTER (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})',
+                      ? '${context.tr('COLLECTIONS')} (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})'
+                      : '${context.tr('COLLECTIONS À EXPORTER')} (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})',
                 ),
               ),
               const SizedBox(width: 8),
@@ -628,7 +629,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Restauration Directe LogiTech Pro',
+                        context.tr('Restauration Directe LogiTech Pro'),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 15,
@@ -637,7 +638,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Restaurez directement une sauvegarde (.json) générée par LogiTech Pro.',
+                        context.tr('Restaurez directement une sauvegarde (.json) générée par LogiTech Pro.'),
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
                     ],
@@ -664,7 +665,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Mode consultation active : Vous pouvez inspecter des sauvegardes mais l\'action de restauration et d\'importation des données est désactivée (Autorisation administrateur requise).',
+                      context.tr('Mode consultation active : Vous pouvez inspecter des sauvegardes mais l\'action de restauration et d\'importation des données est désactivée (Autorisation administrateur requise).'),
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.35),
                     ),
                   ),
@@ -727,7 +728,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _nativeFileName ?? 'Sélectionner un fichier de sauvegarde (.json)',
+                    _nativeFileName ?? context.tr('Sélectionner un fichier de sauvegarde (.json)'),
                     style: TextStyle(
                       color: !canUpdate
                           ? AppColors.textTertiary
@@ -742,10 +743,10 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   const SizedBox(height: 6),
                   Text(
                     !canUpdate
-                        ? 'La sélection de fichier est restreinte (Autorisation administrateur requise)'
+                        ? context.tr('La sélection de fichier est restreinte (Autorisation administrateur requise)')
                         : _nativeFileName != null
-                            ? 'Cliquez pour changer de fichier de sauvegarde'
-                            : 'Cliquez ici pour charger votre fichier JSON de sauvegarde LogiTech Pro.',
+                            ? context.tr('Cliquez pour changer de fichier de sauvegarde')
+                            : context.tr('Cliquez ici pour charger votre fichier JSON de sauvegarde LogiTech Pro.'),
                     style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
@@ -859,7 +860,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _buildSectionLabel('CONTENU DU FICHIER ANALYSÉ'),
+                child: _buildSectionLabel(context.tr('CONTENU DU FICHIER ANALYSÉ')),
               ),
               const SizedBox(width: 8),
               Flexible(
@@ -894,7 +895,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                 final label = ImportExportService.backupCollections[e.key] ?? e.key.toString();
 
                 return FilterChip(
-                  label: Text('$label ($count)'),
+                  label: Text('${context.tr(label)} ($count)'),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -1125,7 +1126,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
               const SizedBox(width: 4),
             ],
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -1177,7 +1178,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                label,
+                context.tr(label),
                 style: TextStyle(
                   color: isSelected ? AppColors.primary : AppColors.textPrimary,
                   fontSize: 13,
@@ -1261,7 +1262,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
-            child: const Text('Fermer', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(context.tr('Fermer'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1317,7 +1318,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
-            child: const Text('Fermer', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(context.tr('Fermer'), style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

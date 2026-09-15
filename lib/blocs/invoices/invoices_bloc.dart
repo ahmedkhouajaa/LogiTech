@@ -101,7 +101,7 @@ class MarkInvoicePaid extends InvoicesEvent {
   List<Object?> get props => [id, amountPaid];
 }
 class FilterInvoicesByStatus extends InvoicesEvent {
-  final InvoiceStatus? status;
+  final String? status;
   const FilterInvoicesByStatus(this.status);
   @override
   List<Object?> get props => [status];
@@ -110,7 +110,7 @@ class FilterInvoices extends InvoicesEvent {
   final String? clientId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
-  final InvoiceStatus? status;
+  final String? status;
   const FilterInvoices({this.clientId, this.dateFrom, this.dateTo, this.status});
   @override
   List<Object?> get props => [clientId, dateFrom, dateTo, status];
@@ -129,7 +129,7 @@ class InvoicesLoaded extends InvoicesState {
   final int totalCount;
   final bool hasMore;
   final bool isLoadingMore;
-  final InvoiceStatus? activeFilter;
+  final String? activeFilter;
   final String? clientFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
@@ -152,7 +152,7 @@ class InvoicesLoaded extends InvoicesState {
     int? totalCount,
     bool? hasMore,
     bool? isLoadingMore,
-    InvoiceStatus? activeFilter,
+    String? activeFilter,
     String? clientFilter,
     DateTime? dateFromFilter,
     DateTime? dateToFilter,
@@ -376,7 +376,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       final current = state as InvoicesLoaded;
       final filtered = event.status == null
           ? current.invoices
-          : current.invoices.where((i) => i.status == event.status).toList();
+          : current.invoices.where((i) => i.effectiveStatus == event.status || i.status.name == event.status).toList();
       emit(current.copyWith(filteredInvoices: filtered, activeFilter: event.status));
     }
   }
@@ -386,7 +386,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       final current = state as InvoicesLoaded;
       final filtered = current.invoices.where((invoice) {
         if (event.clientId != null && invoice.customerId != event.clientId) return false;
-        if (event.status != null && invoice.status != event.status) return false;
+        if (event.status != null && invoice.effectiveStatus != event.status && invoice.status.name != event.status) return false;
         if (event.dateFrom != null && invoice.date.isBefore(event.dateFrom!)) return false;
         if (event.dateTo != null && invoice.date.isAfter(event.dateTo!.add(const Duration(days: 1)))) return false;
         return true;

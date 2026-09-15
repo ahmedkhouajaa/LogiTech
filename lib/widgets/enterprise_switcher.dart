@@ -6,6 +6,7 @@ import '../services/enterprise_service.dart';
 import '../services/permission_service.dart';
 import '../utils/constants.dart';
 import 'create_enterprise_wizard.dart';
+import '../l10n/app_localizations.dart';
 
 /// Interactive Enterprise Switcher widget for both Desktop and Mobile.
 class EnterpriseSwitcherWidget extends StatelessWidget {
@@ -89,7 +90,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
     }
 
     return PopupMenuButton<String>(
-      tooltip: 'Changer d\'entreprise',
+      tooltip: context.tr('Changer d\'entreprise'),
       offset: const Offset(0, 45),
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
@@ -101,7 +102,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
           if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Action réservée aux administrateurs'),
+                content: Text(context.tr('Action réservée aux administrateurs')),
                 backgroundColor: AppColors.error,
               ),
             );
@@ -118,7 +119,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
           PopupMenuItem<String>(
             enabled: false,
             child: Text(
-              'MES ENTREPRISES',
+              context.tr('MES ENTREPRISES'),
               style: TextStyle(
                 color: AppColors.textTertiary,
                 fontSize: 10,
@@ -163,7 +164,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                   Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
                   const SizedBox(width: 10),
                   Text(
-                    'Créer une entreprise',
+                    context.tr('Créer une entreprise'),
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
@@ -286,7 +287,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'Gestion d\'entreprise',
+                  context.tr('Gestion d\'entreprise'),
                   style: TextStyle(color: AppColors.sidebarText, fontSize: 11),
                 ),
               ],
@@ -333,7 +334,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Mes Entreprises',
+                      context.tr('Mes Entreprises'),
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 18,
@@ -389,7 +390,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                           child: Icon(Icons.add, color: AppColors.primary),
                         ),
                         title: Text(
-                          'Créer une entreprise',
+                          context.tr('Créer une entreprise'),
                           style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold,
@@ -415,7 +416,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
     if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Action réservée aux administrateurs'),
+          content: Text(context.tr('Action réservée aux administrateurs')),
           backgroundColor: AppColors.error,
         ),
       );

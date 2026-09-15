@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class SupplierCreditNote {
@@ -8,6 +9,7 @@ class SupplierCreditNote {
   final DateTime date;
   final String status; // e.g. 'draft', 'validated', 'canceled'
   final String? reason;
+  final Map<String, dynamic>? customFields;
   final double totalHT;
   final double totalTVA;
   final double totalTTC;
@@ -24,6 +26,7 @@ class SupplierCreditNote {
     required this.date,
     required this.status,
     this.reason,
+    this.customFields,
     required this.items,
     this.isDeleted = false,
     DateTime? createdAt,
@@ -43,6 +46,8 @@ class SupplierCreditNote {
       'date': date.toIso8601String(),
       'status': status,
       'reason': reason,
+      'custom_fields': customFields,
+      'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
       'total_ht': totalHT,
       'total_tva': totalTVA,
       'total_ttc': totalTTC,
@@ -66,6 +71,16 @@ class SupplierCreditNote {
       date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
       status: map['status']?.toString() ?? 'draft',
       reason: map['reason']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
       createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
@@ -81,6 +96,7 @@ class SupplierCreditNote {
     DateTime? date,
     String? status,
     String? reason,
+    Map<String, dynamic>? customFields,
     List<SupplierCreditNoteItem>? items,
     bool? isDeleted,
     DateTime? createdAt,
@@ -94,6 +110,7 @@ class SupplierCreditNote {
       date: date ?? this.date,
       status: status ?? this.status,
       reason: reason ?? this.reason,
+      customFields: customFields ?? this.customFields,
       items: items ?? this.items,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,

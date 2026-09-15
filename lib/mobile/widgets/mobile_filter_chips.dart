@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileFilterChips extends StatelessWidget {
   final List<String> options;
@@ -24,7 +25,7 @@ class MobileFilterChips extends StatelessWidget {
           return Padding(
             padding: EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(option),
+              label: Text(context.tr(option)),
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) {

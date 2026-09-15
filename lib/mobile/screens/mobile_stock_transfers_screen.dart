@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_advanced_filter_panel.dart';
@@ -13,10 +14,9 @@ import 'forms/mobile_stock_transfer_form_screen.dart';
 import 'mobile_stock_transfer_detail_screen.dart';
 import '../../models/stock_transfer.dart';
 import '../../services/firestore_pagination_service.dart';
-import '../../database/database_helper.dart';
-import '../../models/stock_movement.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileStockTransfersScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -49,18 +49,14 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
     });
   }
 
-  Future<void> _loadWarehouses() async {
-    // Left empty, using WarehousesBloc instead
-  }
-
   String _getWarehouseName(WarehousesState wState, String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
     if (wState is WarehousesLoaded) {
       try {
         return wState.warehouses.firstWhere((w) => w.id == id).name;
       } catch (_) {}
     }
-    return 'Entrepôt par défaut';
+    return context.tr('Entrepôt par défaut');
   }
 
   @override
@@ -102,19 +98,19 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text(context.tr('Voulez-vous vraiment supprimer cet élément ?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           TextButton(
             onPressed: () {
               context.read<StockTransfersBloc>().add(DeleteStockTransfer(id));
               Navigator.pop(ctx);
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -166,8 +162,11 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusStr = translateStatus(item.status).toLowerCase();
               final rawStatus = item.status.toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('stock_transfer', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusStr != filterLower && rawStatus != filterLower) return false;
+              if (statusStr != filterLower && rawStatus != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -236,7 +235,7 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
               _fetchFilteredTransfers();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+            documentType: 'stock_transfer',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredTransfers();
@@ -254,7 +253,7 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
           scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun bon de transfert trouvé.',
+          emptyMessage: context.tr('Aucun bon de transfert trouvé.'),
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
@@ -395,7 +394,7 @@ class _MobileStockTransferCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '${transfer.items.length} article${transfer.items.length > 1 ? 's' : ''}',
+                    '${transfer.items.length} ${context.tr(transfer.items.length > 1 ? 'articles' : 'article')}',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

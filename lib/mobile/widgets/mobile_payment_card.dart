@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/payment_model.dart';
-import '../../models/supplier.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobilePaymentCard extends StatefulWidget {
   final Payment payment;
@@ -38,35 +38,24 @@ class _MobilePaymentCardState extends State<MobilePaymentCard> {
   }
 
   Future<void> _loadContactName() async {
-    final rawName = widget.payment.contactName;
-    if (rawName != null && rawName.isNotEmpty && rawName != widget.payment.contactId) {
-      if (mounted) setState(() => _contactName = rawName);
+    if (widget.payment.contactName != null && widget.payment.contactName!.isNotEmpty) {
+      _contactName = widget.payment.contactName;
       return;
     }
 
-    final cid = widget.payment.contactId;
-    if (cid.isEmpty) {
-      if (mounted) setState(() => _contactName = 'Contact non spécifié');
-      return;
-    }
-
-    try {
-      if (widget.payment.contactType == 'customer' || widget.payment.direction == 'encaissement') {
-        final cust = await DatabaseHelper.instance.getCustomer(cid);
-        if (cust != null && mounted) {
-          final resolved = (cust.companyName != null && cust.companyName!.isNotEmpty) ? cust.companyName! : cust.name;
-          setState(() => _contactName = resolved);
-          return;
-        }
-      }
-      final suppliers = await DatabaseHelper.instance.getSuppliers();
-      final supp = suppliers.firstWhere((s) => s.id == cid, orElse: () => Supplier(id: '', code: '', name: '', country: ''));
-      if (supp.id.isNotEmpty && mounted) {
-        final resolved = (supp.companyName != null && supp.companyName!.isNotEmpty) ? supp.companyName! : supp.name;
-        setState(() => _contactName = resolved);
+    if (widget.payment.contactType == 'customer') {
+      final customer = await DatabaseHelper.instance.getCustomer(widget.payment.contactId);
+      if (customer != null && mounted) {
+        setState(() => _contactName = customer.name);
         return;
       }
-    } catch (_) {}
+    } else if (widget.payment.contactType == 'supplier' || widget.payment.contactType == 'Supplier') {
+      final supplier = await DatabaseHelper.instance.getSupplier(widget.payment.contactId);
+      if (supplier != null && mounted) {
+        setState(() => _contactName = supplier.name);
+        return;
+      }
+    }
 
     if (mounted) {
       setState(() => _contactName = widget.payment.contactName ?? widget.payment.contactId);
@@ -76,17 +65,23 @@ class _MobilePaymentCardState extends State<MobilePaymentCard> {
   String _getMethodLabel(String m) {
     switch (m.toLowerCase()) {
       case 'especes':
-        return 'Espèces';
+      case 'cash':
+        return context.tr('Espèces');
       case 'cheque':
-        return 'Chèque';
+      case 'check':
+        return context.tr('Chèque');
       case 'virement':
-        return 'Virement';
+      case 'bank_transfer':
+        return context.tr('Virement');
       case 'carte':
-        return 'Carte';
+      case 'card':
+        return context.tr('Carte');
+      case 'traite':
+        return context.tr('Traite');
       case 'retenue_source':
-        return 'Retenue Source';
+        return context.tr('Retenue à la source');
       default:
-        return m;
+        return context.tr(m);
     }
   }
 
@@ -125,16 +120,17 @@ class _MobilePaymentCardState extends State<MobilePaymentCard> {
   String _getStatusLabel(String s) {
     switch (s.toLowerCase()) {
       case 'paid':
-        return 'Payé';
+        return context.tr('Payé');
       case 'pending':
-        return 'En attente';
+        return context.tr('En attente');
       case 'confirmed':
-        return 'Confirmé';
+        return context.tr('Confirmé');
       case 'cancelled':
+        return context.tr('Annulé');
       case 'rejected':
-        return 'Rejeté';
+        return context.tr('Rejeté');
       default:
-        return s;
+        return context.tr(s);
     }
   }
 
@@ -216,6 +212,25 @@ class _MobilePaymentCardState extends State<MobilePaymentCard> {
                       dateStr,
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
+                    if (payment.reference != null && payment.reference!.trim().isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Text(
+                          payment.reference!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 6),

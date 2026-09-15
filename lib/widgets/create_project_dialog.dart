@@ -6,6 +6,7 @@ import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'custom_app_bar.dart';
+import '../l10n/app_localizations.dart';
 
 class CreateProjectDialog extends StatefulWidget {
   final Project? project;
@@ -79,9 +80,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       initialDate: initialDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      helpText: isStart ? 'SÉLECTIONNER LA DATE DE DÉBUT' : 'SÉLECTIONNER LA DATE DE FIN',
-      cancelText: 'ANNULER',
-      confirmText: 'CONFIRMER',
+      helpText: isStart ? context.tr('Date de Début Prévue') : context.tr('Date de Fin Prévue'),
+      cancelText: context.tr('Annuler'),
+      confirmText: context.tr('Confirmer'),
     );
     if (picked != null) {
       setState(() {
@@ -130,9 +131,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.project != null ? 'Modifier le Projet' : 'Créer un Nouveau Projet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        Text(widget.project != null ? context.tr('Modifier le Projet') : context.tr('Créer un Nouveau Projet'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                         SizedBox(height: 4),
-                        Text(widget.project != null ? 'Modifiez les informations du projet ci-dessous.' : 'Remplissez les informations ci-dessous pour initialiser le projet.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(widget.project != null ? context.tr('Modifiez les informations du projet ci-dessous.') : context.tr('Remplissez les informations ci-dessous pour initialiser le projet.'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -154,24 +155,24 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Informations Générales', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text(context.tr('Informations Générales'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       SizedBox(height: AppSpacing.md),
                       AppTextField(
-                        label: 'Nom du Projet',
+                        label: context.tr('Nom du Projet'),
                         controller: _nameController,
-                        hint: 'Saisissez le nom du projet',
-                        validator: (v) => v == null || v.isEmpty ? 'Ce champ est requis' : null,
+                        hint: context.tr('Saisissez le nom du projet'),
+                        validator: (v) => v == null || v.isEmpty ? context.tr('Ce champ est requis') : null,
                       ),
                       SizedBox(height: AppSpacing.md),
                       AppTextField(
-                        label: 'Description',
+                        label: context.tr('Description'),
                         controller: _descController,
-                        hint: 'Saisissez la description du projet (optionnel)',
+                        hint: context.tr('Saisissez la description du projet (optionnel)'),
                         maxLines: 3,
                       ),
                       
                       SizedBox(height: AppSpacing.xl),
-                      Text('Planification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text(context.tr('Planification'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
@@ -181,7 +182,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                               borderRadius: BorderRadius.circular(AppRadius.md),
                               child: InputDecorator(
                                 decoration: InputDecoration(
-                                  labelText: 'Date de Début Prévue',
+                                  labelText: context.tr('Date de Début Prévue'),
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 ),
@@ -189,7 +190,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                                   children: [
                                     Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.primary),
                                     SizedBox(width: 10),
-                                    Text(_startDate != null ? formatDate(_startDate!) : 'Sélectionner la date', style: TextStyle(color: _startDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
+                                    Text(_startDate != null ? formatDate(_startDate!) : context.tr('Sélectionner la date'), style: TextStyle(color: _startDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
                                   ],
                                 ),
                               ),
@@ -202,7 +203,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                               borderRadius: BorderRadius.circular(AppRadius.md),
                               child: InputDecorator(
                                 decoration: InputDecoration(
-                                  labelText: 'Date de Fin Prévue',
+                                  labelText: context.tr('Date de Fin Prévue'),
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 ),
@@ -210,7 +211,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                                   children: [
                                     Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
                                     SizedBox(width: 10),
-                                    Text(_endDate != null ? formatDate(_endDate!) : 'Sélectionner la date', style: TextStyle(color: _endDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
+                                    Text(_endDate != null ? formatDate(_endDate!) : context.tr('Sélectionner la date'), style: TextStyle(color: _endDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
                                   ],
                                 ),
                               ),
@@ -220,13 +221,13 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                       ),
                       
                       SizedBox(height: AppSpacing.xl),
-                      Text('Détails Financiers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text(context.tr('Détails Financiers'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
                             child: AppTextField(
-                              label: 'Budget Alloué (Coût Estimé)',
+                              label: context.tr('Budget Alloué (Coût Estimé)'),
                               controller: _costController,
                               prefix: Icon(Icons.payments_outlined, size: 18, color: AppColors.textSecondary),
                               suffix: Padding(
@@ -239,7 +240,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                           SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: AppTextField(
-                              label: 'Revenu Estimé',
+                              label: context.tr('Revenu Estimé'),
                               controller: _revenueController,
                               prefix: Icon(Icons.trending_up_rounded, size: 18, color: AppColors.success),
                               suffix: Padding(
@@ -271,7 +272,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                   OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(Icons.close_rounded, size: 18),
-                    label: Text('Annuler'),
+                    label: Text(context.tr('Annuler')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -283,7 +284,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                   ElevatedButton.icon(
                     onPressed: _submit,
                     icon: Icon(Icons.check_rounded, size: 18),
-                    label: Text('Confirmer'),
+                    label: Text(context.tr('Confirmer')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

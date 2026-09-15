@@ -974,7 +974,33 @@ class DatabaseHelper {
       }
     }
   }
-  Future<DocumentTemplate?> getDefaultTemplate(String type) async {
+
+  /// Returns the specific custom template for [documentType] if one exists,
+  /// otherwise returns the global default template.
+  Future<DocumentTemplate?> getTemplateForDocumentType(String documentType) async {
+    try {
+      final templates = await getDocumentTemplates();
+      if (templates.isNotEmpty) {
+        // 1. Check if an active custom template specifically assigned to this documentType exists
+        final custom = templates.where((t) => !t.isDefault && t.documentType == documentType).firstOrNull;
+        if (custom != null) {
+          return custom;
+        }
+
+        // 2. Fall back to the default template
+        final defaultTpl = templates.where((t) => t.isDefault).firstOrNull;
+        if (defaultTpl != null) {
+          return defaultTpl;
+        }
+      }
+    } catch (e) {
+      debugPrint('[DatabaseHelper.getTemplateForDocumentType] Error: $e');
+    }
+
+    return getDefaultTemplate(documentType);
+  }
+
+  Future<DocumentTemplate?> getDefaultTemplate([String type = 'invoice']) async {
     final eid = currentEnterpriseId;
     if (eid == null || eid.isEmpty) {
       return DocumentTemplate.classicTemplate(

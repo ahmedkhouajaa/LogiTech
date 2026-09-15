@@ -15,6 +15,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -30,6 +31,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 
 class MobileSupplierOrderFormScreen extends StatefulWidget {
   final SupplierOrder? existing;
@@ -57,6 +59,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   SupplierOrderStatus _status = SupplierOrderStatus.draft;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -116,6 +119,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
       );
       _notes = n.notes ?? '';
       _conditions = n.conditionsGenerales ?? '';
+      _customFields = Map<String, dynamic>.from(n.customFields);
       _items = n.items.map((i) => SupplierOrderItem(
         id: i.id,
         orderId: i.orderId,
@@ -137,7 +141,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -149,7 +153,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -158,7 +162,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
 
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un fournisseur')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -182,7 +186,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber(DocPrefix.supplierOrder, seq);
+          number = generateDocNumber(DocPrefix.supplierOrder, seq, docCollection: 'supplier_orders');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -226,6 +230,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
         timbreFiscal: _timbreFiscal,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => SupplierOrderItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           orderId: orderId,
@@ -264,7 +269,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Commande mise à jour' : 'Commande créée avec succès'),
+          content: Text(_isEditing ? context.tr('Commande mise à jour') : context.tr('Commande créée avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -325,7 +330,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: widget.isReadOnly ? 'Détails de la commande' : (_isEditing ? 'Modifier la commande' : 'Nouvelle commande'),
+      title: widget.isReadOnly ? 'Détails de la commande fournisseur' : (_isEditing ? 'Modifier la commande fournisseur' : 'Nouvelle commande fournisseur'),
       statusLabel: _status.label,
       statusColor: _status.color,
       isLoading: _isLoading,
@@ -500,7 +505,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                     label: 'Les prix des articles sont en:',
                     value: _pricingModeHT,
                     options: const [true, false],
-                    labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                    labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                     onChanged: (v) => setState(() => _pricingModeHT = v),
                   ),
                 ),
@@ -509,6 +514,14 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
           ),
         ),
         
+        CustomFieldsFormSection(
+          documentType: 'supplier_order',
+          initialValues: _customFields,
+          onChanged: (vals) => _customFields = vals,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+        ),
+
         MobileFormSection(
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
@@ -522,7 +535,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -544,7 +557,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                         child: OutlinedButton.icon(
                           onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
@@ -556,7 +569,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () async {
                           final newProd = await Navigator.push(
                             context,

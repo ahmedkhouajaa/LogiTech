@@ -5,6 +5,7 @@ import '../services/support_service.dart';
 import '../services/permission_service.dart';
 import '../widgets/support_chat_image_viewer.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/anti_spam_guard.dart';
 
 class SupportTicketsScreen extends StatefulWidget {
@@ -138,8 +139,8 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               child: Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 22),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Nouveau ticket de support',
+            Text(
+              context.tr('Nouveau ticket de support'),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
@@ -153,15 +154,15 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Décrivez votre problème ou votre question pour notre équipe d\'assistance.',
+                  context.tr('Besoin d\'aide ? Ouvrez un ticket pour échanger avec notre équipe technique.'),
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: subjectController,
                   decoration: InputDecoration(
-                    labelText: 'Sujet / Objet *',
-                    hintText: 'Ex: Problème d\'impression des factures',
+                    labelText: context.tr('Titre du ticket *'),
+                    hintText: context.tr('Titre du ticket'),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
@@ -172,8 +173,8 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                   controller: initialMsgController,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    labelText: 'Message *',
-                    hintText: 'Expliquez en détail votre demande...',
+                    labelText: context.tr('Message *'),
+                    hintText: context.tr('Expliquez en détail votre demande...'),
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     contentPadding: const EdgeInsets.all(14),
@@ -187,7 +188,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton.icon(
             onPressed: () async {
@@ -234,7 +235,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               }
             },
             icon: const Icon(Icons.send_rounded, size: 18),
-            label: const Text('Créer le ticket'),
+            label: Text(context.tr('Créer le ticket')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -301,12 +302,12 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Support & Aide',
+                      Text(
+                        context.tr('Support client'),
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        'Vos tickets d\'assistance',
+                        context.tr('Vos tickets d\'assistance'),
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
@@ -315,7 +316,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 ElevatedButton.icon(
                   onPressed: _showNewTicketDialog,
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(isMobile ? 'Nouveau' : 'Nouveau ticket'),
+                  label: Text(isMobile ? context.tr('Nouveau') : context.tr('Nouveau ticket')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -356,13 +357,13 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                         children: [
                           Icon(Icons.question_answer_outlined, size: 48, color: AppColors.textTertiary),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Aucun ticket pour le moment',
+                          Text(
+                            context.tr('Aucun ticket pour le moment'),
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Besoin d\'assistance ? Créez un nouveau ticket et notre équipe vous répondra rapidement.',
+                            context.tr('Besoin d\'aide ? Ouvrez un ticket pour échanger avec notre équipe technique.'),
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
@@ -370,7 +371,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                           OutlinedButton.icon(
                             onPressed: _showNewTicketDialog,
                             icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Créer un ticket'),
+                            label: Text(context.tr('Créer un ticket')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -439,7 +440,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                                     borderRadius: BorderRadius.circular(AppRadius.full),
                                   ),
                                   child: Text(
-                                    ticket.statusLabel,
+                                    context.tr(ticket.statusLabel),
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -514,7 +515,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Statut : ${ticket.statusLabel} • Ticket #${ticket.id.substring(0, ticket.id.length > 8 ? 8 : ticket.id.length)}',
+                              '${context.tr('Statut')} : ${context.tr(ticket.statusLabel)} • ${context.tr('Ticket')} #${ticket.id.substring(0, ticket.id.length > 8 ? 8 : ticket.id.length)}',
                               style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
@@ -527,7 +528,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'Actualiser',
+                  tooltip: context.tr('Actualiser'),
                   onPressed: () => setState(() {}),
                 ),
               ],
@@ -543,7 +544,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  return const Center(child: Text('Aucun message. Ecrivez ci-dessous pour discuter.'));
+                  return Center(child: Text(context.tr('Aucun message. Ecrivez ci-dessous pour discuter.')));
                 }
 
                 return ListView.builder(
@@ -590,12 +591,12 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Image jointe prête à l\'envoi',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        Text(
+                          context.tr('Image jointe prête à l\'envoi'),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Envoyez directement ou ajoutez un commentaire',
+                          context.tr('Envoyez directement ou ajoutez un commentaire'),
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
@@ -603,7 +604,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 20),
-                    tooltip: 'Supprimer',
+                    tooltip: context.tr('Supprimer'),
                     onPressed: () => setState(() => _attachedImageBase64 = null),
                   ),
                 ],
@@ -631,7 +632,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                           color: AppColors.primary,
                           size: 24,
                         ),
-                  tooltip: 'Joindre une image / capture',
+                  tooltip: context.tr('Joindre une image / capture'),
                   onPressed: _isUploadingImage ? null : _pickImage,
                 ),
                 const SizedBox(width: 6),
@@ -640,7 +641,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                     controller: _messageController,
                     onSubmitted: (_) => _sendMessage(),
                     decoration: InputDecoration(
-                      hintText: 'Rédigez votre message...',
+                      hintText: context.tr('Rédigez votre message...'),
                       hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                       filled: true,
                       fillColor: AppColors.background,
@@ -868,13 +869,13 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               child: Icon(Icons.support_agent_rounded, size: 54, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Centre de Support & Assistance',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              context.tr('Centre de Support & Assistance'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Sélectionnez un ticket dans la liste à gauche pour voir la discussion ou créez un nouveau ticket.',
+              context.tr('Sélectionnez un ticket dans la liste à gauche pour voir la discussion ou créez un nouveau ticket.'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
@@ -882,7 +883,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             ElevatedButton.icon(
               onPressed: _showNewTicketDialog,
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Nouveau ticket de support'),
+              label: Text(context.tr('Nouveau ticket de support')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,

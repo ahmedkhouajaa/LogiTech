@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileSearchBar extends StatelessWidget {
   final ValueChanged<String> onChanged;
@@ -24,7 +25,7 @@ class MobileSearchBar extends StatelessWidget {
             child: TextField(
               onChanged: onChanged,
               decoration: InputDecoration(
-                hintText: hintText,
+                hintText: context.tr(hintText),
                 prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                 filled: true,
                 fillColor: AppColors.surface,

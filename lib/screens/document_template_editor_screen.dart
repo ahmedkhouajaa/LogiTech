@@ -6,6 +6,8 @@ import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/template_editor_widgets.dart';
 import '../widgets/template_preview_widget.dart';
+import '../models/custom_field_definition.dart';
+import '../services/custom_fields_service.dart';
 
 class DocumentTemplateEditorScreen extends StatefulWidget {
   final DocumentTemplate template;
@@ -25,6 +27,8 @@ class _DocumentTemplateEditorScreenState
   late String _name;
   bool _hasChanges = false;
   bool _showMobilePreview = true;
+  String? _selectedElementKey;
+  List<CustomFieldDefinition> _customFieldsList = [];
 
   @override
   void initState() {
@@ -32,6 +36,7 @@ class _DocumentTemplateEditorScreenState
     _tabController = TabController(length: 5, vsync: this);
     _config = Map<String, dynamic>.from(widget.template.config);
     _name = widget.template.name;
+    _loadCustomFields();
     // Deep-copy nested maps
     for (final key in _config.keys.toList()) {
       if (_config[key] is Map) {
@@ -50,6 +55,11 @@ class _DocumentTemplateEditorScreenState
     );
     _config['footer'] = Map<String, dynamic>.from(_config['footer'] as Map? ?? DocumentTemplate.defaultFooter());
     _config['stamp'] = Map<String, dynamic>.from(_config['stamp'] as Map? ?? widget.template.stampConfig);
+    final cfBox = Map<String, dynamic>.from(_config['customFieldsBox'] as Map? ?? widget.template.customFieldsBoxConfig);
+    if (cfBox['positionY'] == 76.0 || cfBox['positionY'] == null) {
+      cfBox['positionY'] = 150.0;
+    }
+    _config['customFieldsBox'] = cfBox;
   }
 
   @override
@@ -73,6 +83,21 @@ class _DocumentTemplateEditorScreenState
       _config[parent] = map;
       _hasChanges = true;
     });
+  }
+
+  Future<void> _loadCustomFields() async {
+    final fields = await CustomFieldsService.instance.getCustomFields(widget.template.documentType);
+    if (mounted) {
+      setState(() {
+        _customFieldsList = fields;
+        final labels = Map<String, dynamic>.from(_config['customFieldsLabels'] as Map? ?? {});
+        labels.clear();
+        for (final f in fields) {
+          labels[f.key] = f.name;
+        }
+        _config['customFieldsLabels'] = labels;
+      });
+    }
   }
 
   String _getNotesText() {
@@ -353,20 +378,35 @@ class _DocumentTemplateEditorScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: widget.template.isDefault
+                    ? AppColors.success.withValues(alpha: 0.1)
+                    : AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.full),
+                border: Border.all(
+                  color: widget.template.isDefault
+                      ? AppColors.success.withValues(alpha: 0.3)
+                      : AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.description_rounded, size: 14, color: AppColors.primary),
-                  const SizedBox(width: 4),
+                  Icon(
+                    widget.template.isDefault
+                        ? Icons.star_rounded
+                        : DocumentTemplate.getDocumentTypeIcon(widget.template.documentType),
+                    size: 14,
+                    color: widget.template.isDefault ? AppColors.success : AppColors.primary,
+                  ),
+                  const SizedBox(width: 5),
                   Text(
-                    _name,
+                    widget.template.isDefault
+                        ? '$_name • Modèle par défaut'
+                        : '$_name • ${DocumentTemplate.getDocumentTypeLabel(widget.template.documentType)}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
+                      color: widget.template.isDefault ? AppColors.success : AppColors.primary,
                     ),
                   ),
                 ],
@@ -486,8 +526,16 @@ class _DocumentTemplateEditorScreenState
     return TemplatePreviewWidget(
       template: _previewTemplate,
       showHeader: showHeader,
+      selectedItemKey: _selectedElementKey,
+      onItemSelected: (itemKey) {
+        setState(() {
+          _selectedElementKey = itemKey;
+        });
+      },
+      onSizeChanged: _handleSizeChanged,
       onPositionChanged: (itemKey, newX, newY) {
         setState(() {
+          _selectedElementKey = itemKey;
           if (itemKey.startsWith('customText_')) {
             final id = itemKey.substring('customText_'.length);
             final customTexts = List<Map<String, dynamic>>.from(
@@ -507,6 +555,9 @@ class _DocumentTemplateEditorScreenState
               _config[itemKey] as Map<String, dynamic>? ?? {});
           map['positionX'] = newX;
           map['positionY'] = newY;
+          if (itemKey == 'customFieldsBox') {
+            map['_migratedY'] = true;
+          }
           _config[itemKey] = map;
           _hasChanges = true;
         });
@@ -514,11 +565,185 @@ class _DocumentTemplateEditorScreenState
     );
   }
 
+  void _handleSizeChanged(
+    String itemKey, {
+    double? width,
+    double? height,
+    double? sizeDelta,
+    double? widthDelta,
+    double? heightDelta,
+  }) {
+    setState(() {
+      _hasChanges = true;
+
+      if (itemKey.startsWith('customText_')) {
+        final id = itemKey.substring('customText_'.length);
+        final customTexts = List<Map<String, dynamic>>.from(
+          (_config['customTexts'] as List?)?.map((c) => Map<String, dynamic>.from(c as Map)) ?? [],
+        );
+        final idx = customTexts.indexWhere((c) => c['id'] == id);
+        if (idx != -1) {
+          final ct = customTexts[idx];
+          if (sizeDelta != null) {
+            final cur = (ct['fontSize'] as num?)?.toDouble() ?? 9.0;
+            ct['fontSize'] = (cur + sizeDelta).clamp(5.0, 36.0);
+          }
+          if (widthDelta != null || width != null) {
+            final cur = (ct['width'] as num?)?.toDouble() ?? 60.0;
+            ct['width'] = ((width ?? cur) + (widthDelta ?? 0.0)).clamp(20.0, 200.0);
+          }
+          _config['customTexts'] = customTexts;
+        }
+        return;
+      }
+
+      final map = Map<String, dynamic>.from(_config[itemKey] as Map<String, dynamic>? ?? {});
+
+      switch (itemKey) {
+        case 'logo':
+          final curW = (map['width'] as num?)?.toDouble() ?? 20.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 15.0;
+          if (width != null) map['width'] = width.clamp(10.0, 100.0);
+          if (height != null) map['height'] = height.clamp(8.0, 80.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(10.0, 100.0);
+          if (heightDelta != null) map['height'] = (curH + heightDelta).clamp(8.0, 80.0);
+          if (sizeDelta != null) {
+            final ratio = curW / curH;
+            final newW = (curW + sizeDelta * 2).clamp(10.0, 100.0);
+            map['width'] = newW;
+            map['height'] = (newW / ratio).clamp(8.0, 80.0);
+          }
+          break;
+
+        case 'stamp':
+          final curW = (map['width'] as num?)?.toDouble() ?? 35.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 35.0;
+          if (width != null) map['width'] = width.clamp(15.0, 80.0);
+          if (height != null) map['height'] = height.clamp(15.0, 80.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(15.0, 80.0);
+          if (heightDelta != null) map['height'] = (curH + heightDelta).clamp(15.0, 80.0);
+          if (sizeDelta != null) {
+            final newW = (curW + sizeDelta * 2).clamp(15.0, 80.0);
+            map['width'] = newW;
+            map['height'] = newW;
+          }
+          break;
+
+        case 'signature':
+          final curW = (map['width'] as num?)?.toDouble() ?? 60.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 25.0;
+          if (width != null) map['width'] = width.clamp(30.0, 120.0);
+          if (height != null) map['height'] = height.clamp(15.0, 60.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(30.0, 120.0);
+          if (heightDelta != null) map['height'] = (curH + heightDelta).clamp(15.0, 60.0);
+          if (sizeDelta != null) {
+            map['width'] = (curW + sizeDelta * 2).clamp(30.0, 120.0);
+            map['height'] = (curH + sizeDelta).clamp(15.0, 60.0);
+          }
+          break;
+
+        case 'clientDetails':
+          final curW = (map['width'] as num?)?.toDouble() ?? 180.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 30.0;
+          if (width != null) map['width'] = width.clamp(50.0, 190.0);
+          if (height != null) map['height'] = height.clamp(20.0, 80.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(50.0, 190.0);
+          if (heightDelta != null) map['height'] = (curH + heightDelta).clamp(20.0, 80.0);
+          if (sizeDelta != null) {
+            final curFs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+            map['fontSize'] = (curFs + sizeDelta * 0.5).clamp(6.0, 16.0);
+          }
+          break;
+
+        case 'customFieldsBox':
+          final curW = (map['width'] as num?)?.toDouble() ?? 180.0;
+          final curFs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+          if (width != null) map['width'] = width.clamp(30.0, 200.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(30.0, 200.0);
+          if (sizeDelta != null) map['fontSize'] = (curFs + sizeDelta * 0.5).clamp(5.0, 18.0);
+          break;
+
+        case 'table':
+          final curW = (map['width'] as num?)?.toDouble() ?? 180.0;
+          final curRh = (map['rowHeight'] as num?)?.toDouble() ?? (_config['rowHeight'] as num?)?.toDouble() ?? 8.0;
+          if (width != null) map['width'] = width.clamp(80.0, 190.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(80.0, 190.0);
+          if (heightDelta != null || height != null) {
+            final newRh = ((height ?? curRh) + (heightDelta ?? 0.0) * 0.2).clamp(5.0, 18.0);
+            map['rowHeight'] = newRh;
+            _config['rowHeight'] = newRh;
+          }
+          if (sizeDelta != null) {
+            final curFs = (_config['fontSize'] as num?)?.toDouble() ?? 10.0;
+            final newFs = (curFs + sizeDelta * 0.5).clamp(7.0, 16.0);
+            _config['fontSize'] = newFs;
+            map['fontSize'] = newFs;
+          }
+          break;
+
+        case 'totals':
+          final curW = (map['width'] as num?)?.toDouble() ?? 80.0;
+          if (width != null) map['width'] = width.clamp(50.0, 150.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(50.0, 150.0);
+          if (sizeDelta != null) {
+            final curFs = (map['fontSize'] as num?)?.toDouble() ?? 10.0;
+            map['fontSize'] = (curFs + sizeDelta * 0.5).clamp(7.0, 16.0);
+          }
+          break;
+
+        case 'notes':
+          final curW = (map['width'] as num?)?.toDouble() ?? 95.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 30.0;
+          if (width != null) map['width'] = width.clamp(40.0, 180.0);
+          if (height != null) map['height'] = height.clamp(15.0, 80.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(40.0, 180.0);
+          if (heightDelta != null) map['height'] = (curH + heightDelta).clamp(15.0, 80.0);
+          if (sizeDelta != null) {
+            map['width'] = (curW + sizeDelta * 2).clamp(40.0, 180.0);
+            map['height'] = (curH + sizeDelta).clamp(15.0, 80.0);
+          }
+          break;
+
+        case 'companyName':
+          final curFs = (map['fontSize'] as num?)?.toDouble() ?? 16.0;
+          if (sizeDelta != null) map['fontSize'] = (curFs + sizeDelta).clamp(10.0, 32.0);
+          break;
+
+        case 'companyDetails':
+          final curW = (map['width'] as num?)?.toDouble() ?? 75.0;
+          final curFs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+          if (width != null) map['width'] = width.clamp(40.0, 150.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(40.0, 150.0);
+          if (sizeDelta != null) map['fontSize'] = (curFs + sizeDelta * 0.5).clamp(6.0, 14.0);
+          break;
+
+        case 'documentTitle':
+          final curFs = (map['fontSize'] as num?)?.toDouble() ?? 13.0;
+          if (sizeDelta != null) map['fontSize'] = (curFs + sizeDelta).clamp(10.0, 28.0);
+          break;
+
+        case 'legalNotice':
+          final curW = (map['width'] as num?)?.toDouble() ?? 180.0;
+          if (width != null) map['width'] = width.clamp(80.0, 190.0);
+          if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(80.0, 190.0);
+          if (sizeDelta != null) {
+            final curFs = (map['fontSize'] as num?)?.toDouble() ?? 7.5;
+            map['fontSize'] = (curFs + sizeDelta * 0.5).clamp(5.0, 12.0);
+          }
+          break;
+      }
+
+      _config[itemKey] = map;
+    });
+  }
+
   Widget _buildEditorTabs(bool isMobile) {
     return Container(
       color: AppColors.surface,
       child: Column(
         children: [
+          // Inspector / Quick Element Selector
+          _buildElementInspector(isMobile),
           // Tab bar
           Container(
             decoration: BoxDecoration(
@@ -556,6 +781,430 @@ class _DocumentTemplateEditorScreenState
                 _buildTotalsTab(isMobile),
                 _buildEFactureTab(isMobile),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildElementInspector(bool isMobile) {
+    if (_selectedElementKey == null) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.04),
+          border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.6))),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.touch_app_rounded, size: 14, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Cliquez sur un élément ou sélectionnez ci-dessous :',
+                    style: TextStyle(
+                      fontSize: isMobile ? 11 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _buildQuickSelectChip('logo', 'Logo', Icons.image_rounded),
+                  _buildQuickSelectChip('companyName', 'Nom Société', Icons.business_rounded),
+                  _buildQuickSelectChip('companyDetails', 'Coordonnées', Icons.info_outline_rounded),
+                  _buildQuickSelectChip('documentTitle', 'Titre Document', Icons.receipt_long_rounded),
+                  _buildQuickSelectChip('clientDetails', 'Client', Icons.person_pin_rounded),
+                  _buildQuickSelectChip('customFieldsBox', 'Champs Personnalisés', Icons.tune_rounded),
+                  _buildQuickSelectChip('table', 'Tableau', Icons.table_chart_rounded),
+                  _buildQuickSelectChip('totals', 'Totaux', Icons.calculate_rounded),
+                  _buildQuickSelectChip('notes', 'Notes', Icons.notes_rounded),
+                  _buildQuickSelectChip('signature', 'Signature', Icons.draw_rounded),
+                  _buildQuickSelectChip('stamp', 'Cachet', Icons.verified_rounded),
+                  _buildQuickSelectChip('legalNotice', 'Mentions légales', Icons.gavel_rounded),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _buildSelectedElementCard(isMobile);
+  }
+
+  Widget _buildQuickSelectChip(String key, String label, IconData icon) {
+    final isSelected = _selectedElementKey == key;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedElementKey = isSelected ? null : key;
+          });
+        },
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 12,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedElementCard(bool isMobile) {
+    final key = _selectedElementKey!;
+    String title = key;
+    IconData icon = Icons.widgets_rounded;
+    double? w;
+    double? h;
+    double? fs;
+    double x = 15.0;
+    double y = 15.0;
+    bool canW = false;
+    bool canH = false;
+    bool canFs = false;
+
+    if (key.startsWith('customText_')) {
+      final id = key.substring('customText_'.length);
+      final customTexts = (widget.template.customTexts);
+      final match = customTexts.firstWhere((c) => c['id'] == id, orElse: () => {});
+      final txt = match['text'] as String? ?? 'Texte';
+      title = 'Texte : ${txt.length > 15 ? '${txt.substring(0, 15)}...' : txt}';
+      icon = Icons.text_fields_rounded;
+      x = (match['positionX'] as num?)?.toDouble() ?? 15.0;
+      y = (match['positionY'] as num?)?.toDouble() ?? 165.0;
+      w = (match['width'] as num?)?.toDouble() ?? 60.0;
+      fs = (match['fontSize'] as num?)?.toDouble() ?? 9.0;
+      canW = true;
+      canFs = true;
+    } else {
+      final map = Map<String, dynamic>.from(_config[key] as Map<String, dynamic>? ?? {});
+      x = (map['positionX'] as num?)?.toDouble() ?? 15.0;
+      y = (map['positionY'] as num?)?.toDouble() ?? 15.0;
+
+      switch (key) {
+        case 'logo':
+          title = 'Logo de l\'entreprise';
+          icon = Icons.image_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 20.0;
+          h = (map['height'] as num?)?.toDouble() ?? 15.0;
+          canW = true;
+          canH = true;
+          break;
+        case 'companyName':
+          title = 'Nom de l\'entreprise';
+          icon = Icons.business_rounded;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 16.0;
+          canFs = true;
+          break;
+        case 'companyDetails':
+          title = 'Coordonnées de l\'entreprise';
+          icon = Icons.info_outline_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 75.0;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+          canW = true;
+          canFs = true;
+          break;
+        case 'documentTitle':
+          title = 'Titre du document';
+          icon = Icons.receipt_long_rounded;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 13.0;
+          canFs = true;
+          break;
+        case 'clientDetails':
+          title = 'Cadre Client';
+          icon = Icons.person_pin_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 180.0;
+          h = (map['height'] as num?)?.toDouble() ?? 30.0;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+          canW = true;
+          canH = true;
+          canFs = true;
+          break;
+        case 'customFieldsBox':
+          title = 'Cadre Champs Personnalisés';
+          icon = Icons.tune_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 180.0;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 8.5;
+          canW = true;
+          canFs = true;
+          break;
+        case 'table':
+          title = 'Tableau des articles';
+          icon = Icons.table_chart_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 180.0;
+          h = (map['rowHeight'] as num?)?.toDouble() ?? (_config['rowHeight'] as num?)?.toDouble() ?? 8.0;
+          fs = (_config['fontSize'] as num?)?.toDouble() ?? 10.0;
+          canW = true;
+          canH = true;
+          canFs = true;
+          break;
+        case 'totals':
+          title = 'Bloc des totaux';
+          icon = Icons.calculate_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 80.0;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 10.0;
+          canW = true;
+          canFs = true;
+          break;
+        case 'notes':
+          title = 'Notes & Conditions';
+          icon = Icons.notes_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 95.0;
+          h = (map['height'] as num?)?.toDouble() ?? 30.0;
+          canW = true;
+          canH = true;
+          break;
+        case 'signature':
+          title = 'Signature & Cachet';
+          icon = Icons.draw_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 60.0;
+          h = (map['height'] as num?)?.toDouble() ?? 25.0;
+          canW = true;
+          canH = true;
+          break;
+        case 'stamp':
+          title = 'Cachet de l\'entreprise';
+          icon = Icons.verified_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 35.0;
+          h = (map['height'] as num?)?.toDouble() ?? 35.0;
+          canW = true;
+          canH = true;
+          break;
+        case 'legalNotice':
+          title = 'Mentions légales';
+          icon = Icons.gavel_rounded;
+          w = (map['width'] as num?)?.toDouble() ?? 180.0;
+          fs = (map['fontSize'] as num?)?.toDouble() ?? 7.5;
+          canW = true;
+          canFs = true;
+          break;
+      }
+    }
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 10 : 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        border: Border(bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header of Inspector
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(icon, size: 16, color: AppColors.primary),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Position : X: ${x.round()} mm · Y: ${y.round()} mm',
+                      style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                tooltip: 'Fermer la sélection',
+                onPressed: () => setState(() => _selectedElementKey = null),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Action 1: Plus grand / Plus petit buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleSizeChanged(key, sizeDelta: -1.0),
+                  icon: const Icon(Icons.remove_circle_outline_rounded, size: 14),
+                  label: const Text('Plus petit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleSizeChanged(key, sizeDelta: 1.0),
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
+                  label: const Text('Plus grand', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Action 2: Width Slider
+          if (canW && w != null)
+            _buildDimensionRow(
+              label: 'Largeur',
+              value: w,
+              min: 10.0,
+              max: 190.0,
+              unit: 'mm',
+              onChanged: (newW) => _handleSizeChanged(key, width: newW),
+            ),
+
+          // Action 3: Height Slider
+          if (canH && h != null)
+            _buildDimensionRow(
+              label: key == 'table' ? 'Hauteur lignes' : 'Hauteur',
+              value: h,
+              min: key == 'table' ? 5.0 : 8.0,
+              max: key == 'table' ? 20.0 : 80.0,
+              unit: 'mm',
+              onChanged: (newH) => _handleSizeChanged(key, height: newH),
+            ),
+
+          // Action 4: Font Size Slider
+          if (canFs && fs != null) () {
+            final curFs = fs!;
+            return _buildDimensionRow(
+              label: 'Taille Police',
+              value: curFs,
+              min: 6.0,
+              max: 28.0,
+              unit: 'pt',
+              step: 0.5,
+              onChanged: (newFs) {
+                final delta = newFs - curFs;
+                _handleSizeChanged(key, sizeDelta: delta);
+              },
+            );
+          }(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDimensionRow({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required String unit,
+    required ValueChanged<double> onChanged,
+    double step = 2.0,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.remove_rounded, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            onPressed: value > min ? () => onChanged((value - step).clamp(min, max)) : null,
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 2.5,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+              ),
+              child: Slider(
+                value: value.clamp(min, max),
+                min: min,
+                max: max,
+                activeColor: AppColors.primary,
+                inactiveColor: AppColors.border,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_rounded, size: 14),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            onPressed: value < max ? () => onChanged((value + step).clamp(min, max)) : null,
+          ),
+          SizedBox(
+            width: 46,
+            child: Text(
+              '${value.toStringAsFixed(unit == 'pt' ? 1 : 0)} $unit',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -651,6 +1300,39 @@ class _DocumentTemplateEditorScreenState
               _buildToggleItem('Statut du document', documentInfo['showStatus'] != false, (v) => _updateNestedConfig('documentInfo', 'showStatus', v), isMobile: isMobile),
             ],
           ),
+
+          if (_customFieldsList.isNotEmpty) ...[
+            SizedBox(height: isMobile ? 12 : 16),
+            _buildFieldSection(
+              title: 'Champs Personnalisés (${DocumentTemplate.getDocumentTypeLabel(widget.template.documentType)})',
+              icon: Icons.tune_rounded,
+              color: const Color(0xFF0D9488),
+              isMobile: isMobile,
+              children: [
+                ..._customFieldsList.map((f) {
+                  final customMap = Map<String, dynamic>.from(_config['customFields'] as Map? ?? {});
+                  final isChecked = customMap[f.id] != false &&
+                      customMap[f.key] != false &&
+                      customMap[f.name] != false;
+                  return _buildToggleItem(
+                    f.name,
+                    isChecked,
+                    (val) {
+                      setState(() {
+                        final map = Map<String, dynamic>.from(_config['customFields'] as Map? ?? {});
+                        map[f.id] = val;
+                        map[f.key] = val;
+                        map[f.name] = val;
+                        _config['customFields'] = map;
+                        _hasChanges = true;
+                      });
+                    },
+                    isMobile: isMobile,
+                  );
+                }),
+              ],
+            ),
+          ],
 
           SizedBox(height: isMobile ? 12 : 16),
 

@@ -18,10 +18,12 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 import 'create_article_screen.dart';
+import '../widgets/custom_fields_form_section.dart';
 
 class CreateSupplierOrderScreen extends StatefulWidget {
   final SupplierOrder? existing;
@@ -52,6 +54,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   SupplierOrderStatus _status = SupplierOrderStatus.draft;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -111,6 +114,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       );
       _notesCtrl.text = n.notes ?? '';
       _conditionsCtrl.text = n.conditionsGenerales ?? '';
+      _customFields = Map<String, dynamic>.from(n.customFields);
       _items = n.items.map((i) => SupplierOrderItem(
         id: i.id,
         orderId: i.orderId,
@@ -145,7 +149,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez ajouter au moins un article'),
+            content: Text(context.tr('Veuillez ajouter au moins un article')),
             backgroundColor: AppColors.error),
       );
       setState(() => _isSaving = false);
@@ -161,7 +165,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez sélectionner un article pour chaque ligne'),
+            content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
             backgroundColor: AppColors.error),
       );
       return;
@@ -170,7 +174,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez selectionner un fournisseur'),
+            content: Text(context.tr('Veuillez selectionner un fournisseur')),
             backgroundColor: AppColors.error),
       );
       setState(() => _isSaving = false);
@@ -195,7 +199,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           setState(() => _isSaving = false);
           return;
         }
-        number = generateDocNumber(DocPrefix.supplierOrder, seq);
+        number = generateDocNumber(DocPrefix.supplierOrder, seq, docCollection: 'supplier_orders');
       } else {
         number = OfflineDocumentService.generateDraftNumber();
       }
@@ -240,6 +244,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       conditionsGenerales:
           _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,
+      customFields: _customFields,
       items: _items.map((item) => SupplierOrderItem(
         id: item.id,
         orderId: orderId,
@@ -303,6 +308,13 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     children: [
                       _buildFormCard(),
                       SizedBox(height: AppSpacing.lg),
+                      CustomFieldsFormSection(
+                        documentType: 'supplier_order',
+                        initialValues: _customFields,
+                        onChanged: (vals) => _customFields = vals,
+                        readOnly: widget.isReadOnly,
+                      ),
+                      SizedBox(height: AppSpacing.lg),
                       _buildArticlesSection(),
                       if (!widget.isReadOnly) ...[
                         SizedBox(height: AppSpacing.md),
@@ -340,15 +352,15 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         children: [
           Text(
             widget.overrideTitle ?? (widget.isReadOnly 
-                ? 'Détails de la commande fournisseur' 
-                : (_isEditing ? 'Modifier la commande fournisseur' : 'Ajouter une commande fournisseur')),
+                ? context.tr('Détails de la commande fournisseur') 
+                : (_isEditing ? context.tr('Modifier la commande fournisseur') : context.tr('Ajouter une commande fournisseur'))),
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
           SizedBox(width: 12),
-          StatusBadge(label: _status.label, color: _status.color),
+          StatusBadge(label: context.tr(_status.label), color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
@@ -369,7 +381,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             ElevatedButton.icon(
               onPressed: _save,
               icon: Icon(Icons.save_rounded, size: 18),
-              label: Text('Enregistrer'),
+              label: Text(context.tr('Enregistrer')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -390,7 +402,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
-      label: Text(label,
+      label: Text(context.tr(label),
           style: TextStyle(color: color ?? AppColors.textSecondary)),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -423,13 +435,13 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               final picked = await showDatePicker(
                 context: context, initialDate: _date,
                 firstDate: DateTime(2020), lastDate: DateTime(2030),
-                locale: const Locale('fr', 'FR'),
+                locale: Localizations.localeOf(context),
               );
               if (picked != null) setState(() => _date = picked);
             },
             child: AbsorbPointer(
               child: TextFormField(
-                controller: TextEditingController(text: formatDateLong(_date)),
+                controller: TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -451,7 +463,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Fournisseur'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     Row(
                       children: [
@@ -470,13 +482,13 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
                               return FormField<String>(
                                 initialValue: _selectedSupplierId,
-                                validator: (v) => _selectedSupplierId == null ? 'Requis' : null,
+                                validator: (v) => _selectedSupplierId == null ? context.tr('Requis') : null,
                                 builder: (field) {
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher un fournisseur...',
+                                        hint: context.tr('Rechercher un fournisseur...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -506,7 +518,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                           SizedBox(
                             height: 48,
                             child: Tooltip(
-                              message: 'Créer un nouveau fournisseur',
+                              message: context.tr('Créer un nouveau fournisseur'),
                               child: ElevatedButton(
                                 onPressed: () async {
                                   final res = await showDialog(
@@ -548,7 +560,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Projet'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
@@ -573,7 +585,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                         );
 
                         return SearchableSelectorField(
-                          hint: 'Sélectionner un projet',
+                          hint: context.tr('Sélectionner un projet'),
                           selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
@@ -598,7 +610,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
               BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
@@ -618,7 +630,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   final warehouseName = selectedWh?.name;
 
                   return SearchableSelectorField(
-                    hint: 'Sélectionner un entrepôt',
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: warehouseName,
                     onTap: () async {
                       final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -633,7 +645,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           ),
           SizedBox(height: 20),
           // Pricing mode radio
-          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(context.tr('Les prix des articles sont en'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           SizedBox(height: 8),
           Row(
             children: [
@@ -643,7 +655,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
                 activeColor: AppColors.primary,
               ),
-              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Hors taxes'), style: TextStyle(fontSize: 13)),
               SizedBox(width: 24),
               Radio<bool>(
                 value: false,
@@ -651,7 +663,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
                 activeColor: AppColors.primary,
               ),
-              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Taxe incluse'), style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -694,30 +706,30 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Designation', style: _tableHeaderStyle())),
+                    child: Text(context.tr('Designation'), style: _tableHeaderStyle())),
                 SizedBox(
                     width: 140,
-                    child: Text('Quantite',
+                    child: Text(context.tr('Quantite'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 130,
-                    child: Text('P.U HT',
+                    child: Text(context.tr('P.U HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('Remise %',
+                    child: Text(context.tr('Remise %'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('TVA',
+                    child: Text(context.tr('TVA'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 140,
-                    child: Text('Total HT',
+                    child: Text(context.tr('Total HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
                 SizedBox(width: 60),
@@ -728,7 +740,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article',
+              child: Text(context.tr('Aucun article'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
@@ -770,15 +782,16 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 flex: 3,
                 child: BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, state) {
-                    final products = state is ProductsLoaded ? state.products : <Product>[];
-                    final selectedProd = products.cast<Product?>().firstWhere((p) => p?.id == item.productId, orElse: () => null);
+                    final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+                    final selectedProd = allProducts.cast<Product?>().firstWhere((p) => p?.id == item.productId, orElse: () => null);
+                    final products = allProducts.where((p) => p.isForPurchase).toList();
                     return SearchableSelectorField(
-                      hint: 'Rechercher un article...',
+                      hint: context.tr('Rechercher un article...'),
                       selectedText: selectedProd?.name ?? (item.description?.isNotEmpty == true ? item.description : null),
                       hasError: isArticleMissing,
-                      errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                      errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -947,7 +960,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
                   onPressed: () => setState(() => _items.removeAt(index)),
                   splashRadius: 16,
-                  tooltip: 'Supprimer',
+                  tooltip: context.tr('Supprimer'),
                 ),
               Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
             ],
@@ -965,13 +978,14 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products = state is ProductsLoaded ? state.products : <Product>[];
+              final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+              final products = allProducts.where((p) => p.isForPurchase).toList();
               return SearchableSelectorField(
-                hint: 'Sélectionner un article...',
+                hint: context.tr('Sélectionner un article...'),
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {
@@ -994,7 +1008,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         SizedBox(width: 8),
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
+          tooltip: context.tr('Créer un nouvel article'),
           onPressed: () async {
             final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
             if (res != null && res is Product && mounted) {
@@ -1023,7 +1037,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               });
             },
             icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            label: Text('Ajouter une ligne vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            label: Text(context.tr('Ajouter une ligne vide'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.primary, width: 1.5),
@@ -1061,7 +1075,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Ajouter une remise globale'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -1139,7 +1153,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(context.tr('Timbre fiscal:'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                     Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -1157,7 +1171,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Total TTC:'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),

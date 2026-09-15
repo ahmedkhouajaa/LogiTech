@@ -11,6 +11,7 @@ import '../widgets/supplier_order_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../services/sync_service.dart';
 import '../widgets/pending_sync_badge.dart';
+import '../l10n/app_localizations.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/supplier_orders/supplier_orders_bloc.dart';
@@ -42,6 +43,9 @@ import '../services/document_share_service.dart';
 import '../models/receiving_voucher.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
   const SupplierOrdersScreen({super.key});
@@ -56,7 +60,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  SupplierOrderStatus? _statusFilter;
+  String? _statusFilter;
 
   // Pagination state
   int _rowsPerPage = 20;
@@ -102,7 +106,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() {
       _currentPage = 0;
@@ -124,11 +128,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Commandes Fournisseur',
+                    context.tr('Commandes Fournisseur'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 2),
-                  Text('Gérer vos commandes fournisseur', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos commandes fournisseur'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               Row(
@@ -139,7 +143,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   ],
                   if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders))
                     AppButton(
-                      label: 'Créer une Commande',
+                      label: context.tr('Créer une Commande Fournisseur'),
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
                         context,
@@ -199,7 +203,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter!.name).toList();
+        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = filteredOrders.length;
     }
@@ -224,7 +228,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Fournisseur', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Fournisseur'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 SizedBox(
                   height: 32,
@@ -234,11 +238,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       if (state is SuppliersLoaded) {
                         suppliers = state.suppliers;
                       }
-                      String selectedSupplierName = 'Tous les fournisseurs';
+                      String selectedSupplierName = context.tr('Tous les fournisseurs');
                       if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
                         final found = suppliers.firstWhere(
                           (s) => s.id == _selectedSupplierId,
-                          orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                          orElse: () => Supplier(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                         );
                         selectedSupplierName = found.companyName?.isNotEmpty == true
                             ? found.companyName!
@@ -269,7 +273,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                               Expanded(
                                 child: Text(
                                   _selectedSupplierId == null || _selectedSupplierId == 'all'
-                                      ? 'Tous les fournisseurs'
+                                      ? context.tr('Tous les fournisseurs')
                                       : selectedSupplierName,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -299,7 +303,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -308,7 +312,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       initialDate: _dateFrom ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateFrom = date);
@@ -328,7 +332,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -348,7 +352,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -357,7 +361,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       initialDate: _dateTo ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateTo = date);
@@ -377,7 +381,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -397,118 +401,15 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: PopupMenuButton<SupplierOrderStatus?>(
-                    tooltip: 'Filtrer par statut',
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                    ),
-                    color: AppColors.surface,
-                    elevation: 4,
-                    offset: const Offset(0, 36),
-                    initialValue: _statusFilter,
-                    onSelected: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<SupplierOrderStatus?>(
-                        value: null,
-                        height: 34,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (_statusFilter == null)
-                              Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                      ...SupplierOrderStatus.values.map(
-                        (s) => PopupMenuItem<SupplierOrderStatus?>(
-                          value: s,
-                          height: 34,
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  s.label,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: s.color,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_statusFilter == s)
-                                Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _statusFilter == null
-                                ? Text(
-                                    'Tous',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      _statusFilter!.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: _statusFilter!.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
+                DocumentStatusFilterDropdown(
+                  documentType: 'supplier_order',
+                  currentStatusFilter: _statusFilter,
+                  onStatusSelected: (val) {
+                    setState(() => _statusFilter = val);
+                    _applyFilters();
+                  },
                 ),
               ],
             ),
@@ -529,7 +430,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -583,7 +484,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un fournisseur',
+                          context.tr('Sélectionner un fournisseur'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -603,7 +504,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un fournisseur...',
+                          hintText: context.tr('Rechercher un fournisseur...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -635,7 +536,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       selected: selectedSupplierId == null || selectedSupplierId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les fournisseurs',
+                        context.tr('Tous les fournisseurs'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
@@ -653,7 +554,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun fournisseur trouvé',
+                                  context.tr('Aucun fournisseur trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -727,11 +628,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -746,7 +647,21 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             return AppErrorWidget(message: state.message);
           }
         if (state is SupplierOrdersLoaded) {
-          final orders = state.orders;
+          List<SupplierOrder> filteredOrders = state.orders;
+          if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+            filteredOrders = filteredOrders.where((q) => q.supplierId == _selectedSupplierId).toList();
+          }
+          if (_dateFrom != null) {
+            filteredOrders = filteredOrders.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+          }
+          if (_dateTo != null) {
+            filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+          }
+          if (_statusFilter != null) {
+            filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
+          }
+
+          final orders = filteredOrders;
 
           // Pagination logic
           final totalItems = orders.length;
@@ -803,11 +718,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                 ),
                               ),
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                              Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -820,7 +735,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text("Aucune commande trouvée", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                      Text(context.tr('Aucune commande trouvée'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -882,7 +797,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                 const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
-                                                    order.supplierName ?? 'Fournisseur Inconnu',
+                                                    order.supplierName ?? context.tr('Fournisseur Inconnu'),
                                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
@@ -896,131 +811,133 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                               alignment: Alignment.centerLeft,
                                               child: (!order.isSynced || order.number.startsWith('BROUILLON-'))
                                                   ? const PendingSyncBadge()
-                                                  : Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: statusEnum.color.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        statusEnum.label,
-                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                      ),
-                                                    ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              formatCurrencyDT(order.totalTTC),
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 12.5,
-                                                color: statusEnum == SupplierOrderStatus.draft ? AppColors.textSecondary : AppColors.textPrimary,
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 60,
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: PopupMenuButton<String>(
-                                                icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: AppColors.surface,
-                                                elevation: 4,
-                                                itemBuilder: (ctx) => _buildActionMenu(context, order),
-                                                onSelected: (val) {
-                                                   OfflineActionHelper.executeAction(
-                                                     context: context,
-                                                     action: val,
-                                                     onConfirmed: () {
-                                                       if (val == 'view') {
-                                                         final statusEnum = SupplierOrderStatus.values.firstWhere(
-                                                           (e) => e.name == order.status,
-                                                           orElse: () => SupplierOrderStatus.draft,
-                                                         );
-                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                         Navigator.push(
-                                                           context,
-                                                           MaterialPageRoute(
-                                                             builder: (_) => DocumentDetailScreen(
-                                                               document: doc,
-                                                               status: statusEnum.label,
-                                                               statusColor: statusEnum.color,
-                                                             ),
-                                                           ),
-                                                         );
-                                                       } else if (val == 'to_invoice') {
-                                                         _showConversionDialog(context, order, true);
-                                                       } else if (val == 'to_receipt') {
-                                                         _showConversionDialog(context, order, false);
-                                                       } else if (val == 'view_invoice') {
-                                                         _openConvertedInvoice(context, order.convertedToInvoiceId!, order);
-                                                       } else if (val == 'view_receipt') {
-                                                         _openConvertedReceipt(context, order.convertedToReceiptId!, order);
-                                                       } else if (val == 'edit') {
-                                                         Navigator.push(
-                                                           context,
-                                                           MaterialPageRoute(
-                                                             builder: (_) => MultiBlocProvider(
-                                                               providers: [
-                                                                 BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                                 BlocProvider.value(value: context.read<SuppliersBloc>()),
-                                                                 BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                                 BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                               ],
-                                                               child: CreateSupplierOrderScreen(existing: order),
-                                                             ),
-                                                           ),
-                                                         );
-                                                       } else if (val == 'delete') {
-                                                         context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
-                                                       } else if (val == 'pdf') {
-                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                         PdfService.instance.downloadDocument(context, doc);
-                                                       } else if (val == 'payment') {
-                                                         showDialog(
-                                                           context: context,
-                                                           builder: (_) => MultiBlocProvider(
-                                                             providers: [
-                                                               BlocProvider.value(value: context.read<PaymentsBloc>()),
-                                                               BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
-                                                               BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
-                                                               BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                             ],
-                                                             child: SupplierOrderPaymentDialog(supplierOrder: order),
-                                                           ),
-                                                         ).then((created) {
-                                                           if (created == true && context.mounted) {
-                                                             context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
-                                                           }
-                                                         });
-                                                       } else if (val == 'email') {
-                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                         DocumentShareService.shareDocument(doc, isEmail: true);
-                                                       } else if (val == 'whatsapp') {
-                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                         DocumentShareService.shareDocument(doc, isEmail: false);
-                                                       } else if (val == 'print') {
-                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                         Navigator.push(
-                                                           context,
-                                                           MaterialPageRoute(
-                                                             builder: (_) => DocumentPreviewScreen(document: doc),
-                                                           ),
-                                                         );
-                                                       } else if (val == 'credit_note' || val == 'status' || val == 'duplicate' || val == 'attachments') {
-                                                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                                           content: Text('Cette fonctionnalité sera disponible prochainement'),
-                                                           backgroundColor: AppColors.info,
-                                                         ));
-                                                       }
-                                                     },
-                                                   );
-                                                 },
+                                                  : () {
+                                                      final sInfo = CustomStatusService.instance.getStatusInfo('supplier_order', order.status);
+                                                      return Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: sInfo.color.withValues(alpha: 0.1),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          context.tr(sInfo.label),
+                                                          style: TextStyle(color: sInfo.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                        ),
+                                                      );
+                                                    }(),
+                                             ),
+                                           ),
+                                           Expanded(
+                                             flex: 2,
+                                             child: Text(
+                                               formatCurrencyDT(order.totalTTC),
+                                               style: TextStyle(
+                                                 fontWeight: FontWeight.w600,
+                                                 fontSize: 12.5,
+                                                 color: statusEnum == SupplierOrderStatus.draft ? AppColors.textSecondary : AppColors.textPrimary,
+                                               ),
+                                             ),
+                                           ),
+                                           SizedBox(
+                                             width: 60,
+                                             child: Align(
+                                               alignment: Alignment.centerRight,
+                                               child: PopupMenuButton<String>(
+                                                 icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
+                                                 padding: EdgeInsets.zero,
+                                                 constraints: const BoxConstraints(),
+                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                 color: AppColors.surface,
+                                                 elevation: 4,
+                                                 itemBuilder: (ctx) => _buildActionMenu(context, order),
+                                                 onSelected: (val) {
+                                                    OfflineActionHelper.executeAction(
+                                                      context: context,
+                                                      action: val,
+                                                      onConfirmed: () {
+                                                        if (val == 'view') {
+                                                          final sInfo = CustomStatusService.instance.getStatusInfo('supplier_order', order.status);
+                                                          final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => DocumentDetailScreen(
+                                                                document: doc,
+                                                                status: sInfo.label,
+                                                                statusColor: sInfo.color,
+                                                              ),
+                                                            ),
+                                                          );
+                                                        } else if (val == 'to_invoice') {
+                                                          _showConversionDialog(context, order, true);
+                                                        } else if (val == 'to_receipt') {
+                                                          _showConversionDialog(context, order, false);
+                                                        } else if (val == 'view_invoice') {
+                                                          _openConvertedInvoice(context, order.convertedToInvoiceId!, order);
+                                                        } else if (val == 'view_receipt') {
+                                                          _openConvertedReceipt(context, order.convertedToReceiptId!, order);
+                                                        } else if (val == 'edit') {
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => MultiBlocProvider(
+                                                                providers: [
+                                                                  BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                                  BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                                ],
+                                                                child: CreateSupplierOrderScreen(existing: order),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        } else if (val == 'delete') {
+                                                          context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
+                                                        } else if (val == 'pdf') {
+                                                          final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                          PdfService.instance.downloadDocument(context, doc);
+                                                        } else if (val == 'payment') {
+                                                          showDialog(
+                                                            context: context,
+                                                            builder: (_) => MultiBlocProvider(
+                                                              providers: [
+                                                                BlocProvider.value(value: context.read<PaymentsBloc>()),
+                                                                BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                                                                BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+                                                                BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                              ],
+                                                              child: SupplierOrderPaymentDialog(supplierOrder: order),
+                                                            ),
+                                                          ).then((created) {
+                                                            if (created == true && context.mounted) {
+                                                              context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+                                                            }
+                                                          });
+                                                        } else if (val == 'email') {
+                                                          final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                          DocumentShareService.shareDocument(doc, isEmail: true);
+                                                        } else if (val == 'whatsapp') {
+                                                          final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                          DocumentShareService.shareDocument(doc, isEmail: false);
+                                                        } else if (val == 'print') {
+                                                          final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => DocumentPreviewScreen(document: doc),
+                                                            ),
+                                                          );
+                                                        } else if (val == 'status') {
+                                                          _showChangeStatusDialog(context, order);
+                                                        } else if (val == 'credit_note' || val == 'duplicate' || val == 'attachments') {
+                                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                            content: Text(context.tr('Cette fonctionnalité sera disponible prochainement')),
+                                                            backgroundColor: AppColors.info,
+                                                          ));
+                                                        }
+                                                      },
+                                                    );
+                                                  },
                                               ),
                                             ),
                                           ),
@@ -1039,7 +956,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -1064,10 +981,10 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} ${context.tr('à')} $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -1122,12 +1039,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer la commande ${order.number} ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${order.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1135,10 +1052,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
+    );
+  }
+
+  void _showChangeStatusDialog(BuildContext context, SupplierOrder order) {
+    showDocumentChangeStatusDialog(
+      context: context,
+      documentType: 'supplier_order',
+      currentStatus: order.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedOrder = order.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${order.notes ?? ''}\n$notes' : order.notes,
+        );
+        context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
+      },
     );
   }
 
@@ -1159,7 +1091,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                label, 
+                context.tr(label), 
                 style: TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1226,12 +1158,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text(toInvoice ? 'Transformer en facture d\'achat' : 'Transformer en bon de réception'),
-        content: Text('Voulez-vous transformer la commande ${order.number} en ${toInvoice ? 'facture d\'achat' : 'bon de réception'} ?'),
+        title: Text(toInvoice ? context.tr('Transformer en facture d\'achat') : context.tr('Transformer en bon de réception')),
+        content: Text('${context.tr('Voulez-vous transformer la commande')} ${order.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1242,7 +1174,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 _convertToReceipt(context, order);
               }
             },
-            child: Text('Confirmer'),
+            child: Text(context.tr('Confirmer')),
           ),
         ],
       ),
@@ -1260,7 +1192,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     if (seq == null) return;
     final newInvoice = PurchaseInvoice(
       id: invoiceId,
-      number: generateDocNumber(DocPrefix.purchaseInvoice, seq),
+      number: generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices'),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
@@ -1307,7 +1239,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     if (seq == null) return;
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: generateDocNumber(DocPrefix.receivingVoucher, seq),
+      number: generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers'),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
@@ -1404,17 +1336,17 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1429,7 +1361,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

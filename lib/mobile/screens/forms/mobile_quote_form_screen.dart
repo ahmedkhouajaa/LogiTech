@@ -16,10 +16,10 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
-import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -30,6 +30,7 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileQuoteFormScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
   String _notes = '';
   DocumentStatus _status = DocumentStatus.draft;
   bool _withTimbreFiscal = true;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -100,6 +102,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
       _selectedWarehouseId = n.warehouseId;
       _status = n.status;
       _notes = n.notes ?? '';
+      _customFields = Map<String, dynamic>.from(n.customFields);
       _items = n.items.map((i) => QuoteItem(
         id: i.id,
         quoteId: i.quoteId,
@@ -119,7 +122,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -131,14 +134,14 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -156,13 +159,13 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
             context: context,
             docCollection: 'quotes',
             docTypeName: 'Devis',
-            prefix: 'DV',
+            prefix: DocPrefix.quote,
           );
           if (seq == null) {
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber('DV', seq);
+          number = generateDocNumber(DocPrefix.quote, seq, docCollection: 'quotes');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -195,6 +198,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         totalTva: _totalTva,
         totalTTC: _totalTTC,
         notes: _notes.isNotEmpty ? _notes : null,
+        customFields: _customFields,
         items: _items.map((item) => QuoteItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           quoteId: quoteId,
@@ -220,7 +224,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Devis ${quote.number} enregistré hors-ligne (en attente de sync)'),
+            content: Text('${context.tr('Devis')} ${quote.number} ${context.tr('enregistré hors-ligne (en attente de sync)')}'),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 3),
           ));
@@ -237,7 +241,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Devis mis à jour' : 'Devis créé avec succès'),
+          content: Text(_isEditing ? context.tr('Devis mis à jour') : context.tr('Devis créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -484,6 +488,13 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
           ),
         ),
         
+        CustomFieldsFormSection(
+          documentType: 'quote',
+          initialValues: _customFields,
+          onChanged: (vals) => _customFields = vals,
+          isMobile: true,
+        ),
+
         MobileFormSection(
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
@@ -518,7 +529,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => _showArticleForm(),
                         icon: Icon(Icons.add_rounded),
-                        label: Text('Ajouter une ligne'),
+                        label: Text(context.tr('Ajouter une ligne')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -530,7 +541,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                     SizedBox(width: 8),
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                      tooltip: 'Créer un nouvel article',
+                      tooltip: context.tr('Créer un nouvel article'),
                       onPressed: () async {
                         final newProd = await Navigator.push<dynamic>(
                           context,

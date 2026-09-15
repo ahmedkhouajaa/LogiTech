@@ -9,6 +9,7 @@ import '../services/enterprise_service.dart';
 import '../services/permission_service.dart';
 import '../widgets/permissions_matrix_widget.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class AddEditUserScreen extends StatefulWidget {
   final EnterpriseUserModel? userToEdit;
@@ -71,7 +72,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+              content: Text(context.tr('Le propriétaire de l\'entreprise ne peut pas être modifié.')),
               backgroundColor: AppColors.error,
             ),
           );
@@ -85,7 +86,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+              content: Text(context.tr('Seul le propriétaire de l\'entreprise peut gérer un administrateur.')),
               backgroundColor: AppColors.error,
             ),
           );
@@ -211,7 +212,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
     if (widget.isEditing && widget.userToEdit!.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          content: Text(context.tr('Le propriétaire de l\'entreprise ne peut pas être modifié.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -222,7 +223,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
     if (widget.isEditing && widget.userToEdit!.isAdmin && !PermissionService.instance.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          content: Text(context.tr('Seul le propriétaire de l\'entreprise peut gérer un administrateur.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -344,9 +345,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
           elevation: 0,
           scrolledUnderElevation: 1,
           title: Text(
-            widget.isEditing
-                ? 'Modifier l\'utilisateur'
-                : (_currentStep == 1 ? 'Inviter un utilisateur' : 'Créer un nouvel utilisateur'),
+            widget.isEditing ? context.tr('Modifier l\'utilisateur') : (_currentStep == 1 ? context.tr('Inviter un utilisateur') : context.tr('Créer un utilisateur')),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           leading: IconButton(
@@ -416,7 +415,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Inviter un utilisateur',
+                        context.tr('Inviter un utilisateur'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -425,7 +424,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Saisissez l\'adresse email d\'un nouvel utilisateur à créer pour l\'entreprise.',
+                        context.tr('Saisissez l\'adresse email d\'un nouvel utilisateur à créer pour l\'entreprise.'),
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                       ),
                     ],
@@ -439,7 +438,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
 
             // Email Field
             Text(
-              'Adresse Email de l\'utilisateur *',
+              context.tr('Adresse Email de l\'utilisateur *'),
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
@@ -468,10 +467,10 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
               ),
               validator: (val) {
                 if (val == null || val.trim().isEmpty) {
-                  return 'Veuillez saisir une adresse email.';
+                  return context.tr('Veuillez saisir une adresse email.');
                 }
                 if (!val.contains('@') || !val.contains('.')) {
-                  return 'Format d\'adresse email non valide.';
+                  return context.tr('Format d\'adresse email non valide.');
                 }
                 return null;
               },
@@ -491,8 +490,8 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Seuls les nouveaux utilisateurs sans compte existant peuvent être ajoutés ici. Un compte leur sera créé.',
-                      style: TextStyle(fontSize: 12, color: const Color(0xFF1E40AF)),
+                      context.tr('Seuls les nouveaux utilisateurs sans compte existant peuvent être ajoutés ici. Un compte leur sera créé.'),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF1E40AF)),
                     ),
                   ),
                 ],
@@ -511,7 +510,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                     side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
@@ -524,7 +523,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                         )
                       : const Icon(Icons.arrow_forward_rounded, size: 18),
                   label: Text(
-                    isVerifying ? 'Vérification...' : 'Suivant',
+                    isVerifying ? context.tr('Vérification...') : context.tr('Suivant'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -564,7 +563,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.isEditing ? 'Informations de l\'utilisateur' : 'Créer un nouvel utilisateur',
+                  widget.isEditing ? context.tr('Informations de l\'utilisateur') : context.tr('Créer un nouvel utilisateur'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -574,7 +573,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                 const SizedBox(height: 16),
 
                 // Read-only email
-                Text('Adresse Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Adresse Email'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 6),
                 TextFormField(
                   initialValue: _verifiedEmail,
@@ -598,17 +597,17 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                     if (isNarrow) {
                       return Column(
                         children: [
-                          _buildTextInput('Prénom', _firstNameController, 'Saisissez le prénom'),
+                          _buildTextInput(context.tr('Prénom'), _firstNameController, context.tr('Saisissez le prénom')),
                           const SizedBox(height: 16),
-                          _buildTextInput('Nom', _lastNameController, 'Saisissez le nom'),
+                          _buildTextInput(context.tr('Nom'), _lastNameController, context.tr('Saisissez le nom')),
                         ],
                       );
                     }
                     return Row(
                       children: [
-                        Expanded(child: _buildTextInput('Prénom', _firstNameController, 'Saisissez le prénom')),
+                        Expanded(child: _buildTextInput(context.tr('Prénom'), _firstNameController, context.tr('Saisissez le prénom'))),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTextInput('Nom', _lastNameController, 'Saisissez le nom')),
+                        Expanded(child: _buildTextInput(context.tr('Nom'), _lastNameController, context.tr('Saisissez le nom'))),
                       ],
                     );
                   },
@@ -618,7 +617,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                 // Mot de passe (Image 3 style)
                 if (!widget.isEditing) ...[
                   Text(
-                    'Mot de Passe',
+                    context.tr('Mot de Passe'),
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 6),
@@ -627,7 +626,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                     obscureText: _obscurePassword,
                     style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                     decoration: InputDecoration(
-                      hintText: 'Saisissez le mot de passe (optionnel)',
+                      hintText: context.tr('Saisissez le mot de passe (optionnel)'),
                       hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                       filled: true,
                       fillColor: AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF8FAFC),
@@ -647,19 +646,19 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Minimum 8 caractères. Laissez vide pour générer un mot de passe temporaire et envoyer une invitation.',
+                    context.tr('Minimum 8 caractères. Laissez vide pour générer un mot de passe temporaire et envoyer une invitation.'),
                     style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                   ),
                   const SizedBox(height: 12),
 
                   // Option: Send Invitation Email checkbox
                   CheckboxListTile(
-                    title: const Text(
-                      'Envoyer une invitation par email',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    title: Text(
+                      context.tr('Envoyer une invitation par email'),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
-                      'Permet à l\'utilisateur de définir son mot de passe lors de sa première connexion',
+                      context.tr('Permet à l\'utilisateur de définir son mot de passe lors de sa première connexion'),
                       style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                     value: _sendInvitationEmail,
@@ -672,7 +671,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                 ],
 
                 // Numéro de Téléphone
-                Text('Numéro de Téléphone', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Numéro de Téléphone'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -730,7 +729,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Rôle de l\'Utilisateur',
+                  context.tr('Rôle de l\'Utilisateur'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 16),
@@ -745,17 +744,17 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                         children: [
                           _buildRoleCard(
                             roleKey: 'admin',
-                            title: 'Admin',
-                            subtitle: adminLocked ? 'Réservé au propriétaire' : 'Accès complet',
+                            title: context.tr('Admin'),
+                            subtitle: adminLocked ? context.tr('Réservé au propriétaire') : context.tr('Accès complet'),
                             isSelected: _selectedRole == 'admin',
                             isLocked: adminLocked,
-                            lockTooltip: 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.',
+                            lockTooltip: context.tr('Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.'),
                           ),
                           const SizedBox(height: 12),
                           _buildRoleCard(
                             roleKey: 'collaborator',
-                            title: 'Collaborateur',
-                            subtitle: 'Accès standard pour les employés',
+                            title: context.tr('Collaborateur'),
+                            subtitle: context.tr('Accès standard pour les employés'),
                             isSelected: _selectedRole == 'collaborator',
                           ),
                         ],
@@ -766,19 +765,19 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                         Expanded(
                           child: _buildRoleCard(
                             roleKey: 'admin',
-                            title: 'Admin',
-                            subtitle: adminLocked ? 'Réservé au propriétaire' : 'Accès complet',
+                            title: context.tr('Admin'),
+                            subtitle: adminLocked ? context.tr('Réservé au propriétaire') : context.tr('Accès complet'),
                             isSelected: _selectedRole == 'admin',
                             isLocked: adminLocked,
-                            lockTooltip: 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.',
+                            lockTooltip: context.tr('Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.'),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildRoleCard(
                             roleKey: 'collaborator',
-                            title: 'Collaborateur',
-                            subtitle: 'Accès standard pour les employés',
+                            title: context.tr('Collaborateur'),
+                            subtitle: context.tr('Accès standard pour les employés'),
                             isSelected: _selectedRole == 'collaborator',
                           ),
                         ),
@@ -804,12 +803,12 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Accès aux entreprises',
+                  context.tr('Accès aux entreprises'),
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Sélectionnez les entreprises auxquelles cet utilisateur aura accès',
+                  context.tr('Sélectionnez les entreprises auxquelles cet utilisateur aura accès'),
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
@@ -818,12 +817,12 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
 
                 // Master Checkbox: "Accéder à toutes les entreprises"
                 CheckboxListTile(
-                  title: const Text(
-                    'Accéder à toutes les entreprises',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  title: Text(
+                    context.tr('Accéder à toutes les entreprises'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   subtitle: Text(
-                    'Coche automatiquement toutes vos entreprises',
+                    context.tr('Coche automatiquement toutes vos entreprises'),
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                   value: _selectAllEnterprises,
@@ -870,9 +869,9 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                                 color: const Color(0xFF2563EB).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
-                                'Entreprise actuelle',
-                                style: TextStyle(
+                              child: Text(
+                                context.tr('Entreprise actuelle'),
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF2563EB),
@@ -926,7 +925,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                       }
                     },
                     icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                    label: const Text('Retour', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    label: Text(context.tr('Retour'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -949,8 +948,8 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                         : const Icon(Icons.save_rounded, size: 16),
                     label: Text(
                       _isSaving
-                          ? 'Enregistrement...'
-                          : (widget.isEditing ? 'Enregistrer' : 'Créer et ajouter'),
+                          ? context.tr('Enregistrement...')
+                          : (widget.isEditing ? context.tr('Enregistrer') : context.tr('Créer et ajouter')),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       overflow: TextOverflow.ellipsis,
                     ),

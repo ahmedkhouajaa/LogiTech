@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart'; // For formatDateLong
+import '../../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------
 // SMART DATE PICKER
@@ -24,7 +25,7 @@ class SmartDatePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -33,7 +34,7 @@ class SmartDatePicker extends StatelessWidget {
               initialDate: value,
               firstDate: DateTime(2020),
               lastDate: DateTime(2030),
-              locale: Locale('fr', 'FR'),
+              locale: Localizations.localeOf(context),
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
@@ -64,7 +65,7 @@ class SmartDatePicker extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    formatDateLong(value),
+                    formatDateLong(value, Localizations.localeOf(context).languageCode),
                     style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
                   ),
                 ),
@@ -79,13 +80,13 @@ class SmartDatePicker extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildPreset('Aujourd\'hui', DateTime.now()),
+                _buildPreset(context.tr('Aujourd\'hui'), DateTime.now()),
                 SizedBox(width: 8),
-                _buildPreset('Demain', DateTime.now().add(const Duration(days: 1))),
+                _buildPreset(context.tr('Demain'), DateTime.now().add(const Duration(days: 1))),
                 SizedBox(width: 8),
-                _buildPreset('+1 Semaine', DateTime.now().add(const Duration(days: 7))),
+                _buildPreset(context.tr('+1 Semaine'), DateTime.now().add(const Duration(days: 7))),
                 SizedBox(width: 8),
-                _buildPreset('+1 Mois', DateTime.now().add(const Duration(days: 30))),
+                _buildPreset(context.tr('+1 Mois'), DateTime.now().add(const Duration(days: 30))),
               ],
             ),
           ),
@@ -155,7 +156,7 @@ class SmartDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         DropdownButtonFormField(
           key: dropdownKey,
@@ -167,7 +168,7 @@ class SmartDropdown<T> extends StatelessWidget {
           onChanged: onChanged,
           isExpanded: true,
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: context.tr(hint),
             hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
             filled: true,
             fillColor: AppColors.background,
@@ -227,7 +228,7 @@ class SmartSearchableSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label.isNotEmpty) ...[
-          Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 8),
         ],
         Container(
@@ -255,7 +256,7 @@ class SmartSearchableSelector extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      hasSelection ? selectedText! : hint,
+                      hasSelection ? context.tr(selectedText!) : context.tr(hint),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -315,7 +316,7 @@ class SmartNumberInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         Row(
           children: [
@@ -405,7 +406,7 @@ class SmartToggleChips<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         Container(
           padding: EdgeInsets.all(4),
@@ -483,7 +484,7 @@ class SmartTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -494,7 +495,7 @@ class SmartTextInput extends StatelessWidget {
           validator: validator,
           style: TextStyle(fontSize: 16),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: hint.isNotEmpty ? context.tr(hint) : '',
             hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
             filled: true,
             fillColor: AppColors.background,
@@ -557,7 +558,7 @@ class SmartCheckbox extends StatelessWidget {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                label,
+                context.tr(label),
                 style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
               ),
             ),

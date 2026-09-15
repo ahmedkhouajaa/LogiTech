@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/trial_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 import '../screens/subscription_screen.dart';
 
@@ -52,16 +53,16 @@ class TrialBannerWidget extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: RichText(
-                      text: const TextSpan(
-                        style: TextStyle(fontSize: 13, color: Color(0xFF2C3E50)),
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF2C3E50)),
                         children: [
                           TextSpan(
-                            text: 'Essai expiré - ',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                            text: context.tr('Essai expiré - '),
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                           ),
                           TextSpan(
-                            text: 'Cliquez ici pour mettre à niveau votre plan',
-                            style: TextStyle(
+                            text: context.tr('Cliquez ici pour mettre à niveau votre plan'),
+                            style: const TextStyle(
                               color: Color(0xFF1B4F72),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
@@ -106,20 +107,20 @@ class TrialBannerWidget extends StatelessWidget {
                       text: TextSpan(
                         style: const TextStyle(fontSize: 13, color: Colors.black87),
                         children: [
-                          const TextSpan(
-                            text: 'Essai gratuit : ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          TextSpan(
+                            text: context.tr('Essai gratuit : '),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           TextSpan(
-                            text: '$days jour(s) restant(s) - ',
+                            text: '$days ${context.tr('jour(s) restant(s) - ')}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: days <= 2 ? AppColors.warning : AppColors.primary,
                             ),
                           ),
-                          const TextSpan(
-                            text: 'Cliquez ici pour mettre à niveau votre plan',
-                            style: TextStyle(
+                          TextSpan(
+                            text: context.tr('Cliquez ici pour mettre à niveau votre plan'),
+                            style: const TextStyle(
                               color: Color(0xFF1B4F72),
                               fontWeight: FontWeight.w600,
                               decoration: TextDecoration.underline,
@@ -249,17 +250,17 @@ class TrialBannerWidget extends StatelessWidget {
                     text: TextSpan(
                       style: const TextStyle(fontSize: 13, color: Colors.black87),
                       children: [
-                        const TextSpan(
-                          text: 'Abonnement Premium : ',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                        ),
                         TextSpan(
-                          text: '$days jour(s) restant(s) - ',
+                          text: context.tr('Abonnement Premium : '),
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                         ),
-                        const TextSpan(
-                          text: 'Gérer votre plan',
-                          style: TextStyle(
+                        TextSpan(
+                          text: '$days ${context.tr('jour(s) restant(s) - ')}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                        ),
+                        TextSpan(
+                          text: context.tr('Gérer votre plan'),
+                          style: const TextStyle(
                             color: Color(0xFF1B4F72),
                             fontWeight: FontWeight.w600,
                             decoration: TextDecoration.underline,

@@ -19,6 +19,7 @@ import 'mobile_receiving_voucher_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
 import '../../services/sync_service.dart';
+import '../../services/custom_status_service.dart';
 import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
 
@@ -174,9 +175,13 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
             }
 
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
-              final statusLabel = item.status.toLowerCase();
+              final rawStatus = item.status.toLowerCase();
+              final translatedLower = translateStatus(item.status).toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('receiving_voucher', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower) return false;
+              if (rawStatus != filterLower && translatedLower != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -186,7 +191,9 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
 
           cards = filteredItems.map((item) {
             final reference = item.number;
-            final status = item.status;
+            final sInfo = CustomStatusService.instance.getStatusInfo('receiving_voucher', item.status);
+            final status = sInfo.label;
+            final statusColor = sInfo.color;
             final name = item.supplierName ?? 'Fournisseur Inconnu';
             final date = item.date;
             final amount = item.computedTotalTTC;
@@ -194,6 +201,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: statusColor,
               name: name,
               date: date,
               amount: amount,
@@ -278,7 +286,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
               _fetchFilteredVouchers();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Reçu', 'Facturé', 'Annulé'],
+            documentType: 'receiving_voucher',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredVouchers();

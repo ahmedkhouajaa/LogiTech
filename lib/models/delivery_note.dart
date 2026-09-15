@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class DeliveryNote {
@@ -20,6 +21,7 @@ class DeliveryNote {
   final String? driverName;
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic>? customFields;
   final String? warehouseId;
   final bool isConvertedToInvoice;
   final String? convertedToInvoiceId;
@@ -52,6 +54,7 @@ class DeliveryNote {
     this.driverName,
     this.notes,
     this.conditionsGenerales,
+    this.customFields,
     this.warehouseId,
     this.isConvertedToInvoice = false,
     this.convertedToInvoiceId,
@@ -173,6 +176,7 @@ class DeliveryNote {
       driverName: driverName ?? this.driverName,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      customFields: customFields ?? this.customFields,
       warehouseId: warehouseId ?? this.warehouseId,
       isConvertedToInvoice: isConvertedToInvoice ?? this.isConvertedToInvoice,
       convertedToInvoiceId: convertedToInvoiceId ?? this.convertedToInvoiceId,
@@ -207,6 +211,8 @@ class DeliveryNote {
         'warehouse_id': warehouseId,
         'notes': notes,
         'conditions': conditionsGenerales,
+        'custom_fields': customFields,
+        'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
         'total_ht': totalHTAfterDiscount,
         'total_tva': totalTVA,
         'total_ttc': totalTTC,
@@ -248,6 +254,16 @@ class DeliveryNote {
       driverName: map['driver_name']?.toString(),
       notes: map['notes']?.toString(),
       conditionsGenerales: map['conditions']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       warehouseId: map['warehouse_id']?.toString(),
       isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,
       convertedToInvoiceId: map['converted_to_invoice_id']?.toString(),

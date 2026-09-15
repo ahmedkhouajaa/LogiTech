@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/constants.dart';
 import '../../../widgets/dashboard_card.dart'; // For StatusBadge
+import '../../../l10n/app_localizations.dart';
 
 class MobileFormScreen extends StatelessWidget {
   final String title;
@@ -43,7 +44,7 @@ class MobileFormScreen extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                title,
+                context.tr(title),
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -54,7 +55,7 @@ class MobileFormScreen extends StatelessWidget {
             ),
             if (statusLabel != null && statusColor != null) ...[
               SizedBox(width: 8),
-              StatusBadge(label: statusLabel!, color: statusColor!),
+              StatusBadge(label: context.tr(statusLabel!), color: statusColor!),
               SizedBox(width: 16),
             ]
           ],
@@ -98,7 +99,7 @@ class MobileFormScreen extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Annuler',
+                        context.tr('Annuler'),
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 16,
@@ -129,7 +130,7 @@ class MobileFormScreen extends StatelessWidget {
                               ),
                             )
                           : Text(
-                              saveLabel,
+                              context.tr(saveLabel),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

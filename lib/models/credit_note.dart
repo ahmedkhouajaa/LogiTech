@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import '../utils/constants.dart';
@@ -161,6 +162,7 @@ class CreditNote extends Equatable {
   final DateTime dueDate;
   final String? reason;
   final CreditNoteStatus status;
+  final String? customStatus;
   final double totalHT;
   final double totalTva;
   final double totalTTC;
@@ -171,6 +173,7 @@ class CreditNote extends Equatable {
   final String pricingMode; // 'ht' or 'ttc'
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic>? customFields;
   final List<CreditNoteItem> items;
   final String? firebaseUid;
   final bool isDeleted;
@@ -188,6 +191,7 @@ class CreditNote extends Equatable {
     DateTime? dueDate,
     this.reason,
     this.status = CreditNoteStatus.unused,
+    this.customStatus,
     this.totalHT = 0,
     this.totalTva = 0,
     this.totalTTC = 0,
@@ -198,6 +202,7 @@ class CreditNote extends Equatable {
     this.pricingMode = 'ht',
     this.notes,
     this.conditionsGenerales,
+    this.customFields,
     this.items = const [],
     this.firebaseUid,
     this.isDeleted = false,
@@ -206,6 +211,8 @@ class CreditNote extends Equatable {
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
         dueDate = dueDate ?? DateTime.now();
+
+  String get effectiveStatus => (customStatus != null && customStatus!.isNotEmpty) ? customStatus! : status.name;
 
   Map<String, dynamic> toMap() => {
         'id': id,
@@ -216,11 +223,14 @@ class CreditNote extends Equatable {
         'project_id': projectId,
         'date': date.toIso8601String(),
         'reason': reason,
-        'status': status.name,
+        'status': effectiveStatus,
+        'custom_status': customStatus,
         'total_ht': totalHT,
         'total_tva': totalTva,
         'total_ttc': totalTTC,
         'notes': notes,
+        'custom_fields': customFields,
+        'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
         'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
@@ -229,13 +239,9 @@ class CreditNote extends Equatable {
       };
 
   factory CreditNote.fromMap(Map<String, dynamic> map, {List<CreditNoteItem>? items}) {
-    CreditNoteStatus parsedStatus = CreditNoteStatus.unused;
-    if (map['status'] != null) {
-      parsedStatus = CreditNoteStatus.values.firstWhere(
-        (e) => e.name == map['status'],
-        orElse: () => CreditNoteStatus.unused,
-      );
-    }
+    final rawStatus = map['status']?.toString() ?? 'unused';
+    final enumMatch = CreditNoteStatus.values.where((e) => e.name == rawStatus).firstOrNull;
+    final cStatus = enumMatch == null ? rawStatus : (map['custom_status']?.toString() ?? map['customStatus']?.toString());
     
     List<CreditNoteItem> parsedItems = items ?? [];
     if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
@@ -264,11 +270,22 @@ class CreditNote extends Equatable {
       customerName: map['customer_name']?.toString(),
       date: parsedDate,
       reason: map['reason']?.toString(),
-      status: parsedStatus,
+      status: enumMatch ?? CreditNoteStatus.unused,
+      customStatus: cStatus,
       totalHT: rawHT > 0 ? -rawHT : rawHT,
       totalTva: rawTva > 0 ? -rawTva : rawTva,
       totalTTC: rawTTC > 0 ? -rawTTC : rawTTC,
       notes: map['notes']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       items: parsedItems,
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
@@ -288,6 +305,7 @@ class CreditNote extends Equatable {
     DateTime? dueDate,
     String? reason,
     CreditNoteStatus? status,
+    String? customStatus,
     double? totalHT,
     double? totalTva,
     double? totalTTC,
@@ -298,40 +316,42 @@ class CreditNote extends Equatable {
     String? pricingMode,
     String? notes,
     String? conditionsGenerales,
+    Map<String, dynamic>? customFields,
     List<CreditNoteItem>? items,
     String? firebaseUid,
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) {
-    return CreditNote(
-      id: id ?? this.id,
-      number: number ?? this.number,
-      invoiceId: invoiceId ?? this.invoiceId,
-      customerId: customerId ?? this.customerId,
-      customerName: customerName ?? this.customerName,
-      projectId: projectId ?? this.projectId,
-      date: date ?? this.date,
-      dueDate: dueDate ?? this.dueDate,
-      reason: reason ?? this.reason,
-      status: status ?? this.status,
-      totalHT: totalHT ?? this.totalHT,
-      totalTva: totalTva ?? this.totalTva,
-      totalTTC: totalTTC ?? this.totalTTC,
-      stampTax: stampTax ?? this.stampTax,
-      timbreFiscal: timbreFiscal ?? this.timbreFiscal,
-      globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
-      globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
-      pricingMode: pricingMode ?? this.pricingMode,
-      notes: notes ?? this.notes,
-      conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
-      items: items ?? this.items,
-      firebaseUid: firebaseUid ?? this.firebaseUid,
-      isDeleted: isDeleted ?? this.isDeleted,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
+  }) =>
+      CreditNote(
+        id: id ?? this.id,
+        number: number ?? this.number,
+        invoiceId: invoiceId ?? this.invoiceId,
+        customerId: customerId ?? this.customerId,
+        customerName: customerName ?? this.customerName,
+        projectId: projectId ?? this.projectId,
+        date: date ?? this.date,
+        dueDate: dueDate ?? this.dueDate,
+        reason: reason ?? this.reason,
+        status: status ?? this.status,
+        customStatus: customStatus ?? this.customStatus,
+        totalHT: totalHT ?? this.totalHT,
+        totalTva: totalTva ?? this.totalTva,
+        totalTTC: totalTTC ?? this.totalTTC,
+        stampTax: stampTax ?? this.stampTax,
+        timbreFiscal: timbreFiscal ?? this.timbreFiscal,
+        globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
+        globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
+        pricingMode: pricingMode ?? this.pricingMode,
+        notes: notes ?? this.notes,
+        conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+        customFields: customFields ?? this.customFields,
+        items: items ?? this.items,
+        firebaseUid: firebaseUid ?? this.firebaseUid,
+        isDeleted: isDeleted ?? this.isDeleted,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 
   @override
   List<Object?> get props => [

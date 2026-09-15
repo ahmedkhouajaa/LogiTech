@@ -41,6 +41,10 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon'),
   created('Créé'),
@@ -77,7 +81,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  ReceivingVoucherStatus? _statusFilter;
+  String? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -99,7 +103,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               children: [
                 const Icon(Icons.check_circle_outline, color: Colors.white),
                 const SizedBox(width: 8),
-                Text('$count document(s) synchronisé(s) avec succès !'),
+                Text('$count ${context.tr('document(s) synchronisé(s) avec succès !')}'),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -122,7 +126,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() {
       _currentPage = 0;
@@ -143,11 +147,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bons de réception',
+                    context.tr('Bons de réception'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 2),
-                  Text('Gérer vos bons de réception', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos bons de réception'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -157,7 +161,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
               if (PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers))
                 AppButton(
-                  label: 'Nouveau bon',
+                  label: context.tr('Nouveau bon'),
                   icon: Icons.add,
                   onPressed: () {
                     Navigator.push(
@@ -204,7 +208,6 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   Widget _buildFilterBar(ReceivingVouchersState state) {
-    int totalItems = 0;
     if (state is ReceivingVouchersLoaded) {
       List<ReceivingVoucher> filteredVouchers = state.vouchers;
       if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
@@ -217,9 +220,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         filteredVouchers = filteredVouchers.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter!.name).toList();
+        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter).toList();
       }
-      totalItems = filteredVouchers.length;
     }
     final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
@@ -243,18 +245,18 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Fournisseur', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Fournisseur'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 SizedBox(
                   height: 32,
                   child: BlocBuilder<SuppliersBloc, SuppliersState>(
                     builder: (context, state) {
                       final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                      String selectedSupplierName = 'Tous les fournisseurs';
+                      String selectedSupplierName = context.tr('Tous les fournisseurs');
                       if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
                         final found = suppliers.firstWhere(
                           (s) => s.id == _selectedSupplierId,
-                          orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                          orElse: () => Supplier(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                         );
                         selectedSupplierName = found.companyName?.isNotEmpty == true
                             ? found.companyName!
@@ -285,7 +287,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                               Expanded(
                                 child: Text(
                                   _selectedSupplierId == null || _selectedSupplierId == 'all'
-                                      ? 'Tous les fournisseurs'
+                                      ? context.tr('Tous les fournisseurs')
                                       : selectedSupplierName,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -315,7 +317,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -324,7 +326,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       initialDate: _dateFrom ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateFrom = date);
@@ -344,7 +346,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -364,7 +366,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -373,7 +375,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       initialDate: _dateTo ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateTo = date);
@@ -393,7 +395,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -413,118 +415,15 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: PopupMenuButton<ReceivingVoucherStatus?>(
-                    tooltip: 'Filtrer par statut',
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                    ),
-                    color: AppColors.surface,
-                    elevation: 4,
-                    offset: const Offset(0, 36),
-                    initialValue: _statusFilter,
-                    onSelected: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<ReceivingVoucherStatus?>(
-                        value: null,
-                        height: 34,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (_statusFilter == null)
-                              Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                      ...ReceivingVoucherStatus.values.map(
-                        (s) => PopupMenuItem<ReceivingVoucherStatus?>(
-                          value: s,
-                          height: 34,
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  s.label,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: s.color,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_statusFilter == s)
-                                Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _statusFilter == null
-                                ? Text(
-                                    'Tous',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      _statusFilter!.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: _statusFilter!.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
+                DocumentStatusFilterDropdown(
+                  documentType: 'receiving_voucher',
+                  currentStatusFilter: _statusFilter,
+                  onStatusSelected: (val) {
+                    setState(() => _statusFilter = val);
+                    _applyFilters();
+                  },
                 ),
               ],
             ),
@@ -545,7 +444,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -599,7 +498,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un fournisseur',
+                          context.tr('Sélectionner un fournisseur'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -619,7 +518,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un fournisseur...',
+                          hintText: context.tr('Rechercher un fournisseur...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -651,14 +550,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       selected: selectedSupplierId == null || selectedSupplierId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les fournisseurs',
+                        context.tr('Tous les fournisseurs'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
                           ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
                           : null,
                       onTap: () {
-                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: 'Tous les fournisseurs', country: ''));
+                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: context.tr('Tous les fournisseurs'), country: ''));
                       },
                     ),
 
@@ -669,7 +568,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun fournisseur trouvé',
+                                  context.tr('Aucun fournisseur trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -743,11 +642,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -767,7 +666,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             if (_selectedSupplierId != null && _selectedSupplierId != 'all' && v.supplierId != _selectedSupplierId) return false;
             if (_dateFrom != null && v.date.isBefore(DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day))) return false;
             if (_dateTo != null && v.date.isAfter(DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59))) return false;
-            if (_statusFilter != null && v.status != _statusFilter!.name) return false;
+            if (_statusFilter != null && v.status != _statusFilter) return false;
             return true;
           }).toList();
 
@@ -826,11 +725,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                 ),
                               ),
-                              Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -843,7 +742,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text("Aucun bon de réception trouvé", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                      Text(context.tr("Aucun bon de réception trouvé"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -852,10 +751,6 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                   separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border),
                                   itemBuilder: (context, index) {
                                     final voucher = paginatedVouchers[index];
-                                    final statusEnum = ReceivingVoucherStatus.values.firstWhere(
-                                      (e) => e.name == voucher.status,
-                                      orElse: () => ReceivingVoucherStatus.draft,
-                                    );
                                     final isSelected = _selectedVoucherIds.contains(voucher.id);
 
                                     return Container(
@@ -904,7 +799,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
-                                                    voucher.supplierName ?? 'Fournisseur Inconnu',
+                                                    voucher.supplierName ?? context.tr('Fournisseur Inconnu'),
                                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
@@ -918,57 +813,57 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                               alignment: Alignment.centerLeft,
                                               child: (!voucher.isSynced || voucher.number.startsWith('BROUILLON-'))
                                                   ? const PendingSyncBadge()
-                                                  : Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: statusEnum.color.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        statusEnum.label,
-                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                      ),
-                                                    ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(formatCurrency(voucher.computedTotalTTC), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                                          ),
-                                          SizedBox(
-                                            width: 60,
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: PopupMenuButton<String>(
-                                                icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
-                                                padding: EdgeInsets.zero,
-                                                constraints: const BoxConstraints(),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: AppColors.surface,
-                                                elevation: 4,
-                                                itemBuilder: (ctx) => _buildActionMenu(context, voucher),
-                                                onSelected: (val) {
-                                                  OfflineActionHelper.executeAction(
-                                                    context: context,
-                                                    action: val,
-                                                    onConfirmed: () {
-                                                      if (val == 'view') {
-                                                        final statusEnum = ReceivingVoucherStatus.values.firstWhere(
-                                                          (e) => e.name == voucher.status,
-                                                          orElse: () => ReceivingVoucherStatus.draft,
-                                                        );
-                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                        Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder: (_) => DocumentDetailScreen(
-                                                              document: doc,
-                                                              status: statusEnum.label,
-                                                              statusColor: statusEnum.color,
-                                                            ),
-                                                          ),
-                                                        );
-                                                      } else if (val == 'edit') {
+                                                  : () {
+                                                      final sInfo = CustomStatusService.instance.getStatusInfo('receiving_voucher', voucher.status);
+                                                      return Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: sInfo.color.withValues(alpha: 0.1),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          context.tr(sInfo.label),
+                                                          style: TextStyle(color: sInfo.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                        ),
+                                                      );
+                                                    }(),
+                                             ),
+                                           ),
+                                           Expanded(
+                                             flex: 2,
+                                             child: Text(formatCurrency(voucher.computedTotalTTC), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                                           ),
+                                           SizedBox(
+                                             width: 60,
+                                             child: Align(
+                                               alignment: Alignment.centerRight,
+                                               child: PopupMenuButton<String>(
+                                                 icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
+                                                 padding: EdgeInsets.zero,
+                                                 constraints: const BoxConstraints(),
+                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                 color: AppColors.surface,
+                                                 elevation: 4,
+                                                 itemBuilder: (ctx) => _buildActionMenu(context, voucher),
+                                                 onSelected: (val) {
+                                                   OfflineActionHelper.executeAction(
+                                                     context: context,
+                                                     action: val,
+                                                     onConfirmed: () {
+                                                       if (val == 'view') {
+                                                         final sInfo = CustomStatusService.instance.getStatusInfo('receiving_voucher', voucher.status);
+                                                         final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                         Navigator.push(
+                                                           context,
+                                                           MaterialPageRoute(
+                                                             builder: (_) => DocumentDetailScreen(
+                                                               document: doc,
+                                                               status: context.tr(sInfo.label),
+                                                               statusColor: sInfo.color,
+                                                             ),
+                                                           ),
+                                                         );
+                                                       } else if (val == 'edit') {
                                                         Navigator.push(
                                                           context,
                                                           MaterialPageRoute(
@@ -1035,9 +930,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                             builder: (_) => DocumentPreviewScreen(document: doc),
                                                           ),
                                                         );
+                                                      } else if (val == 'status') {
+                                                        _showChangeStatusDialog(context, voucher);
                                                       } else {
                                                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                                          content: Text('Cette fonctionnalité sera disponible prochainement'),
+                                                          content: Text(context.tr('Cette fonctionnalité sera disponible prochainement')),
                                                           backgroundColor: AppColors.info,
                                                         ));
                                                       }
@@ -1067,7 +964,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 ),
                 child: Row(
                   children: [
-                    Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     const SizedBox(width: 8),
                     Container(
                       height: 28,
@@ -1094,10 +991,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       ),
                     ),
                     const SizedBox(width: 20),
-                    Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     const Spacer(),
                     Text(
-                      totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                      totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} ${context.tr('à')} $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                     const SizedBox(width: 12),
@@ -1153,14 +1050,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             children: [
               Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
               SizedBox(width: 12),
-              Text('Confirmation', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(context.tr('Confirmation'), style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Voulez-vous transformer ce bon de réception en facture d\'achat ?', style: TextStyle(fontSize: 15)),
+              Text(context.tr('Voulez-vous transformer ce bon de réception en facture d\'achat ?'), style: TextStyle(fontSize: 15)),
               SizedBox(height: 16),
               Container(
                 padding: EdgeInsets.all(12),
@@ -1174,7 +1071,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                   children: [
                     Text('BR: ${voucher.number}', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     SizedBox(height: 4),
-                    Text('Fournisseur: ${voucher.supplierName ?? 'Inconnu'}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    Text('${context.tr('Fournisseur')}: ${voucher.supplierName ?? context.tr('Inconnu')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -1183,7 +1080,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1194,7 +1091,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: Text('Confirmer', style: TextStyle(color: Colors.white)),
+              child: Text(context.tr('Confirmer'), style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1211,7 +1108,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       prefix: DocPrefix.purchaseInvoice,
     );
     if (seq == null) return;
-    final invoiceNumber = generateDocNumber(DocPrefix.purchaseInvoice, seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
 
     List<PurchaseInvoiceItem> newItems = [];
 
@@ -1266,7 +1163,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Facture d\'achat créée avec succès ($invoiceNumber)'),
+      content: Text('${context.tr('Facture d\'achat créée avec succès')} ($invoiceNumber)'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -1275,12 +1172,12 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Êtes-vous sûr de vouloir supprimer le bon de réception ${voucher.number} ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Êtes-vous sûr de vouloir supprimer le bon de réception')} ${voucher.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
@@ -1288,10 +1185,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               context.read<ReceivingVouchersBloc>().add(DeleteReceivingVoucher(voucher.id));
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Bon de réception supprimé')),
+                SnackBar(content: Text(context.tr('Bon de réception supprimé'))),
               );
             },
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -1308,14 +1205,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             children: [
               Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
               SizedBox(width: 12),
-              Text('Confirmation', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(context.tr('Confirmation'), style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Voulez-vous transformer ce bon de réception en bon de retour fournisseur ?', style: TextStyle(fontSize: 15)),
+              Text(context.tr('Voulez-vous transformer ce bon de réception en bon de retour fournisseur ?'), style: TextStyle(fontSize: 15)),
               SizedBox(height: 16),
               Container(
                 padding: EdgeInsets.all(12),
@@ -1329,7 +1226,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                   children: [
                     Text('BR: ${voucher.number}', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     SizedBox(height: 4),
-                    Text('Fournisseur: ${voucher.supplierName ?? 'Inconnu'}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    Text('${context.tr('Fournisseur')}: ${voucher.supplierName ?? context.tr('Inconnu')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -1338,7 +1235,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1349,7 +1246,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: Text('Confirmer', style: TextStyle(color: Colors.white)),
+              child: Text(context.tr('Confirmer'), style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1366,7 +1263,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       prefix: DocPrefix.supplierReturn,
     );
     if (seq == null) return;
-    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq);
+    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
 
     List<SupplierReturnItem> newItems = [];
 
@@ -1412,9 +1309,24 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Bon de retour créé avec succès ($returnNumber)'),
+      content: Text('${context.tr('Bon de retour créé avec succès')} ($returnNumber)'),
       backgroundColor: AppColors.success,
     ));
+  }
+
+  void _showChangeStatusDialog(BuildContext context, ReceivingVoucher voucher) {
+    showDocumentChangeStatusDialog(
+      context: context,
+      documentType: 'receiving_voucher',
+      currentStatus: voucher.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedVoucher = voucher.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${voucher.notes ?? ''}\n$notes' : voucher.notes,
+        );
+        context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+      },
+    );
   }
 
   PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String label, Color iconColor, {bool showBorder = true}) {
@@ -1434,7 +1346,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                label, 
+                context.tr(label), 
                 style: TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1526,17 +1438,17 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${context.tr('Télécharger')} $count documents ( pdf )' : context.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(context.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1551,7 +1463,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -1581,7 +1493,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${selectedVouchers.length} document(s) exporté(s) en PDF'),
+        content: Text('${selectedVouchers.length} ${context.tr('document(s) exporté(s) en PDF')}'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -1630,12 +1542,12 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmation de suppression'),
-        content: Text('Voulez-vous vraiment supprimer les $count bon(s) de réception sélectionné(s) ?'),
+        title: Text(context.tr('Confirmation de suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer les')} $count ${context.tr('bon(s) de réception supprimé(s)')} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -1648,10 +1560,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 _selectedVoucherIds.clear();
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$count bon(s) de réception supprimé(s)')),
+                SnackBar(content: Text('$count ${context.tr('bon(s) de réception supprimé(s)')}')),
               );
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text(context.tr('Supprimer'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

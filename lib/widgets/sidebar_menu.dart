@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../services/permission_service.dart';
+import '../services/app_modules_service.dart';
 import 'enterprise_switcher.dart';
+import '../l10n/app_localizations.dart';
 
 enum AppModule {
   dashboard,
@@ -44,8 +46,13 @@ enum AppModule {
   projects,
   // Parametres
   settings,
+  appModulesSettings,
+  personalInfo,
   companyInfo,
+  documentNumbering,
   documentTemplates,
+  customFields,
+  customStatuses,
   userManagement,
   importExport,
   support,
@@ -74,9 +81,12 @@ class _SidebarMenuState extends State<SidebarMenu> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: PermissionService.instance.permissionsNotifier,
-      builder: (context, _, __) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        PermissionService.instance.permissionsNotifier,
+        AppModulesService.instance.notifier,
+      ]),
+      builder: (context, _) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
@@ -90,7 +100,10 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   child: Column(
                     children: [
                       _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
-                      const _SidebarDivider(),
+                      _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports et statistiques'),
+                      // Section 1: Documents commerciaux
+                      if (_hasAnyVisibleGroup(['ventes', 'achats', 'paiements', 'retenue_source', 'tresorerie']))
+                        const _SidebarDivider(),
                       _buildGroup('ventes', Icons.shopping_cart_rounded, 'Ventes', [
                         _buildSubItem(AppModule.quotes, 'Devis'),
                         _buildSubItem(AppModule.customerOrders, 'Commandes'),
@@ -119,14 +132,19 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         _buildSubItem(AppModule.transactions, 'Transactions'),
                         _buildSubItem(AppModule.checksTraites, 'Cheques & Traites'),
                       ]),
-                      const _SidebarDivider(),
+                      // Section 2: Tiers & Articles
+                      if (_hasAnyVisibleItem([AppModule.customers, AppModule.suppliers]) ||
+                          _hasAnyVisibleGroup(['articles']))
+                        const _SidebarDivider(),
                       _buildItem(AppModule.customers, Icons.people_rounded, 'Clients'),
                       _buildItem(AppModule.suppliers, Icons.factory_rounded, 'Fournisseurs'),
                       _buildGroup('articles', Icons.inventory_2_rounded, 'Articles', [
                         _buildSubItem(AppModule.products, 'Liste des articles'),
                         _buildSubItem(AppModule.productSettings, 'Parametres des articles'),
                       ]),
-                      const _SidebarDivider(),
+                      // Section 3: Stock
+                      if (_hasAnyVisibleGroup(['stock']))
+                        const _SidebarDivider(),
                       _buildGroup('stock', Icons.warehouse_rounded, 'Stock', [
                         _buildSubItem(AppModule.stockDashboard, 'Vue d\'ensemble'),
                         _buildSubItem(AppModule.stockMovements, 'Mouvements'),
@@ -136,12 +154,20 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         _buildSubItem(AppModule.inventorySheet, 'Fiche d\'inventaire'),
                         _buildSubItem(AppModule.warehouses, 'Entrepots'),
                       ]),
-                      const _SidebarDivider(),
+                      // Section 4: Projets
+                      if (_hasAnyVisibleItem([AppModule.projects]))
+                        const _SidebarDivider(),
                       _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
+                      // Section 5: Paramètres (always visible)
                       const _SidebarDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                      _buildItem(AppModule.appModulesSettings, Icons.widgets_rounded, 'Modules de l\'application'),
+                      _buildItem(AppModule.personalInfo, Icons.badge_outlined, 'Informations personnelles'),
                       _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
+                      _buildItem(AppModule.documentNumbering, Icons.format_list_numbered_rounded, 'Numérotation des documents'),
                       _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles de documents'),
+                      _buildItem(AppModule.customFields, Icons.tune_rounded, 'Champs personnalisés'),
+                      _buildItem(AppModule.customStatuses, Icons.bookmarks_outlined, 'Statuts personnalisés'),
                       _buildItem(AppModule.importExport, Icons.sync_alt_rounded, 'Import / Export des données'),
                       _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
                       if (PermissionService.instance.isAdmin)
@@ -186,6 +212,11 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   Widget _buildHeader() {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final collapseIcon = widget.isCollapsed
+        ? (isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded)
+        : (isRtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded);
+
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -202,7 +233,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
           ),
           IconButton(
             icon: Icon(
-              widget.isCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+              collapseIcon,
               color: AppColors.sidebarText,
               size: 20,
             ),
@@ -218,10 +249,13 @@ class _SidebarMenuState extends State<SidebarMenu> {
     if (!PermissionService.instance.canAccessModule(module)) {
       return const SizedBox.shrink();
     }
+    if (!AppModulesService.instance.isModuleEnabled(module)) {
+      return const SizedBox.shrink();
+    }
     final isActive = widget.activeModule == module;
     return _SidebarItemWidget(
       icon: icon,
-      label: label,
+      label: context.tr(label),
       isActive: isActive,
       isCollapsed: widget.isCollapsed,
       onTap: () => widget.onModuleSelected(module),
@@ -229,10 +263,15 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   Widget _buildGroup(String groupKey, IconData icon, String label, List<Widget> children) {
-    // Filter visible children based on permission
+    if (!AppModulesService.instance.isGroupEnabled(groupKey)) {
+      return const SizedBox.shrink();
+    }
+
+    // Filter visible children based on permission and module activation
     final visibleChildren = children.where((w) {
       if (w is _SidebarSubItemWidget) {
-        return PermissionService.instance.canAccessModule(w.module);
+        return PermissionService.instance.canAccessModule(w.module) &&
+            AppModulesService.instance.isModuleEnabled(w.module);
       }
       return true;
     }).toList();
@@ -243,11 +282,12 @@ class _SidebarMenuState extends State<SidebarMenu> {
 
     final isExpanded = _expandedGroups.contains(groupKey);
     const isGroupActive = false;
+    final localizedLabel = context.tr(label);
 
     if (widget.isCollapsed) {
       return _SidebarItemWidget(
         icon: icon,
-        label: label,
+        label: localizedLabel,
         isActive: isGroupActive,
         isCollapsed: true,
         onTap: () {},
@@ -273,7 +313,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
               children: [
                 Icon(icon, color: AppColors.sidebarText, size: 18),
                 const SizedBox(width: 10),
-                Expanded(child: Text(label, style: TextStyle(color: AppColors.sidebarText, fontSize: 13, fontWeight: FontWeight.w500))),
+                Expanded(child: Text(localizedLabel, style: TextStyle(color: AppColors.sidebarText, fontSize: 13, fontWeight: FontWeight.w500))),
                 Icon(
                   isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
                   color: AppColors.sidebarText,
@@ -292,13 +332,37 @@ class _SidebarMenuState extends State<SidebarMenu> {
     if (!PermissionService.instance.canAccessModule(module)) {
       return const SizedBox.shrink();
     }
+    if (!AppModulesService.instance.isModuleEnabled(module)) {
+      return const SizedBox.shrink();
+    }
     final isActive = widget.activeModule == module;
     return _SidebarSubItemWidget(
       module: module,
-      label: label,
+      label: context.tr(label),
       isActive: isActive,
       onTap: () => widget.onModuleSelected(module),
     );
+  }
+
+  /// Returns true if at least one group key in [groupKeys] is enabled and permitted.
+  bool _hasAnyVisibleGroup(List<String> groupKeys) {
+    for (final key in groupKeys) {
+      if (AppModulesService.instance.isGroupEnabled(key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Returns true if at least one module in [modules] is enabled and has permission.
+  bool _hasAnyVisibleItem(List<AppModule> modules) {
+    for (final mod in modules) {
+      if (PermissionService.instance.canAccessModule(mod) &&
+          AppModulesService.instance.isModuleEnabled(mod)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

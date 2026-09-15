@@ -18,9 +18,11 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
+import '../widgets/custom_fields_form_section.dart';
 
 enum SupplierReturnStatus {
   draft('Brouillon'),
@@ -74,6 +76,7 @@ class _CreateSupplierReturnScreenState
   // Custom fields
   final _vehicleCtrl = TextEditingController();
   final _driverCtrl = TextEditingController();
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -128,6 +131,7 @@ class _CreateSupplierReturnScreenState
       );
       _notesCtrl.text = n.reason ?? '';
       _conditionsCtrl.text = n.reason ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => SupplierReturnItem(
         id: i.id,
         supplierReturnId: i.supplierReturnId,
@@ -158,7 +162,7 @@ class _CreateSupplierReturnScreenState
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez ajouter au moins un article'),
+            content: Text(context.tr('Veuillez ajouter au moins un article')),
             backgroundColor: AppColors.error),
       );
       return;
@@ -170,7 +174,7 @@ class _CreateSupplierReturnScreenState
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez sélectionner un article pour chaque ligne'),
+            content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
             backgroundColor: AppColors.error),
       );
       return;
@@ -198,7 +202,7 @@ class _CreateSupplierReturnScreenState
         prefix: DocPrefix.supplierReturn,
       );
       if (seq == null) return;
-      number = generateDocNumber(DocPrefix.supplierReturn, seq);
+      number = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
     }
 
     final suppState = context.read<SuppliersBloc>().state;
@@ -222,6 +226,7 @@ class _CreateSupplierReturnScreenState
       date: _date,
       status: _status.name,
       reason: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+      customFields: _customFields,
       items: _items.map((item) => SupplierReturnItem(
         id: item.id,
         supplierReturnId: noteId,
@@ -271,6 +276,12 @@ class _CreateSupplierReturnScreenState
                   children: [
                     _buildFormCard(),
                     SizedBox(height: AppSpacing.lg),
+                    CustomFieldsFormSection(
+                      documentType: 'supplier_return',
+                      initialValues: _customFields,
+                      onChanged: (vals) => _customFields = vals,
+                    ),
+                    SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
                     SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
@@ -303,14 +314,14 @@ class _CreateSupplierReturnScreenState
       child: Row(
         children: [
           Text(
-            _isEditing ? 'Modifier le Bon de retour fournisseur' : 'Ajouter un Bon de retour fournisseur',
+            _isEditing ? context.tr('Modifier le Bon de retour fournisseur') : context.tr('Ajouter un Bon de retour fournisseur'),
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
           SizedBox(width: 12),
-          StatusBadge(label: _status.label, color: _status.color),
+          StatusBadge(label: context.tr(_status.label), color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
@@ -328,7 +339,7 @@ class _CreateSupplierReturnScreenState
             child: ElevatedButton.icon(
               onPressed: _save,
               icon: Icon(Icons.check_rounded, size: 16),
-              label: Text('Valider',
+              label: Text(context.tr('Valider'),
                   style:
                       TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               style: ElevatedButton.styleFrom(
@@ -353,7 +364,7 @@ class _CreateSupplierReturnScreenState
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 14),
-        label: Text(label,
+        label: Text(context.tr(label),
             style:
                 TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
@@ -381,7 +392,7 @@ class _CreateSupplierReturnScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date
-          Text("Date d'emission",
+          Text(context.tr("Date d'emission"),
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -394,14 +405,14 @@ class _CreateSupplierReturnScreenState
                 initialDate: _date,
                 firstDate: DateTime(2020),
                 lastDate: DateTime(2030),
-                locale: const Locale('fr', 'FR'),
+                locale: Localizations.localeOf(context),
               );
               if (picked != null) setState(() => _date = picked);
             },
             child: AbsorbPointer(
               child: TextFormField(
                 controller:
-                    TextEditingController(text: formatDateLong(_date)),
+                    TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -432,7 +443,7 @@ class _CreateSupplierReturnScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Fournisseur',
+                    Text(context.tr('Fournisseur'),
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -454,13 +465,13 @@ class _CreateSupplierReturnScreenState
 
                               return FormField<String>(
                                 initialValue: _selectedsupplierId,
-                                validator: (v) => _selectedsupplierId == null ? 'Requis' : null,
+                                validator: (v) => _selectedsupplierId == null ? context.tr('Requis') : null,
                                 builder: (field) {
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher un fournisseur...',
+                                        hint: context.tr('Rechercher un fournisseur...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -490,7 +501,7 @@ class _CreateSupplierReturnScreenState
                           SizedBox(
                             height: 48,
                             child: Tooltip(
-                              message: 'Créer un nouveau fournisseur',
+                              message: context.tr('Créer un nouveau fournisseur'),
                               child: ElevatedButton(
                                 onPressed: () {
                                   showDialog(
@@ -525,7 +536,7 @@ class _CreateSupplierReturnScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Projet',
+                    Text(context.tr('Projet'),
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -556,7 +567,7 @@ class _CreateSupplierReturnScreenState
                         );
 
                         return SearchableSelectorField(
-                          hint: 'Sélectionner un projet',
+                          hint: context.tr('Sélectionner un projet'),
                           selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
@@ -581,7 +592,7 @@ class _CreateSupplierReturnScreenState
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
               BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
@@ -601,7 +612,7 @@ class _CreateSupplierReturnScreenState
                   final warehouseName = selectedWh?.name;
 
                   return SearchableSelectorField(
-                    hint: 'Sélectionner un entrepôt',
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: warehouseName,
                     onTap: () async {
                       final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -627,14 +638,14 @@ class _CreateSupplierReturnScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Champs Personnalises',
+                Text(context.tr('Champs Personnalisés'),
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),
                 SizedBox(height: 4),
                 Text(
-                    'Informations supplementaires specifiques ÃƒÂ  ce document',
+                    context.tr('Informations supplémentaires spécifiques à ce document'),
                     style: TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
                 SizedBox(height: 12),
@@ -644,7 +655,7 @@ class _CreateSupplierReturnScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Matricule du vehicule',
+                          Text(context.tr('Matricule du véhicule'),
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -664,7 +675,7 @@ class _CreateSupplierReturnScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Nom du chauffeur',
+                          Text(context.tr('Nom du chauffeur'),
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -687,7 +698,7 @@ class _CreateSupplierReturnScreenState
           SizedBox(height: 20),
 
           // Pricing mode
-          Text('Les prix des articles sont en',
+          Text(context.tr('Les prix des articles sont en'),
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -701,7 +712,7 @@ class _CreateSupplierReturnScreenState
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Hors taxes'), style: TextStyle(fontSize: 13)),
               SizedBox(width: 24),
               Radio<bool>(
                 value: false,
@@ -709,7 +720,7 @@ class _CreateSupplierReturnScreenState
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Taxe incluse'), style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -719,7 +730,7 @@ class _CreateSupplierReturnScreenState
 
   InputDecoration _formInputDecoration({String? hint}) {
     return InputDecoration(
-      hintText: hint,
+      hintText: hint != null ? context.tr(hint) : null,
       hintStyle:
           TextStyle(color: AppColors.textTertiary, fontSize: 13),
       filled: true,
@@ -753,7 +764,7 @@ class _CreateSupplierReturnScreenState
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Text('Articles',
+            child: Text(context.tr('Articles'),
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -774,11 +785,11 @@ class _CreateSupplierReturnScreenState
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Designation',
+                    child: Text(context.tr('Designation'),
                         style: _tableHeaderStyle())),
                 SizedBox(
                     width: 120,
-                    child: Text('Quantite',
+                    child: Text(context.tr('Quantite'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
@@ -788,12 +799,12 @@ class _CreateSupplierReturnScreenState
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('TVA',
+                    child: Text(context.tr('TVA'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 140,
-                    child: Text('Total HT',
+                    child: Text(context.tr('Total HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
                 SizedBox(width: 60),
@@ -805,7 +816,7 @@ class _CreateSupplierReturnScreenState
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article',
+              child: Text(context.tr('Aucun article'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
@@ -848,7 +859,7 @@ class _CreateSupplierReturnScreenState
                   decoration: _itemInputDecoration(
                     'Rechercher un article...',
                     hasError: isArticleMissing,
-                    errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                    errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                   ),
                   style: TextStyle(fontSize: 13),
                   onChanged: (v) => setState(() =>
@@ -983,7 +994,7 @@ class _CreateSupplierReturnScreenState
                 onPressed: () =>
                     setState(() => _items.removeAt(index)),
                 splashRadius: 16,
-                tooltip: 'Supprimer',
+                tooltip: context.tr('Supprimer'),
               ),
               Icon(Icons.drag_indicator_rounded,
                   size: 16, color: AppColors.textTertiary),
@@ -1030,15 +1041,17 @@ class _CreateSupplierReturnScreenState
           width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products = state is ProductsLoaded ? state.products : <Product>[];
+              final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+              final products = allProducts.where((p) => p.isForPurchase).toList();
               return SearchableSelectorField(
-                hint: 'Sélectionner un article...',
+                hint: context.tr('Sélectionner un article...'),
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
+                    final price = product.purchasePrice > 0 ? product.purchasePrice : product.sellingPrice;
                     setState(() {
                       _items.add(SupplierReturnItem(
                         id: _uuid.v4(),
@@ -1046,9 +1059,9 @@ class _CreateSupplierReturnScreenState
                         productId: product.id,
                         designation: product.name,
                         quantity: -1,
-                        unitPrice: product.sellingPrice,
+                        unitPrice: price,
                         tvaRate: product.tvaRate,
-                        totalHT: -1 * product.sellingPrice,
+                        totalHT: -1 * price,
                       ));
                     });
                   }
@@ -1060,7 +1073,7 @@ class _CreateSupplierReturnScreenState
         SizedBox(width: 8),
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
+          tooltip: context.tr('Créer un nouvel article'),
           onPressed: () async {
             final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
             if (res != null && res is Product && mounted) {
@@ -1099,7 +1112,7 @@ class _CreateSupplierReturnScreenState
               });
             },
             icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            label: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            label: Text(context.tr('Ajouter une Ligne Vide'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.primary, width: 1.5),
@@ -1140,7 +1153,7 @@ class _CreateSupplierReturnScreenState
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale',
+                Text(context.tr('Ajouter une remise globale'),
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -1211,7 +1224,7 @@ class _CreateSupplierReturnScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total TTC:',
+                Text(context.tr('Total TTC:'),
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1282,7 +1295,7 @@ class _CreateSupplierReturnScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Notes',
+              Text(context.tr('Notes'),
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1292,7 +1305,7 @@ class _CreateSupplierReturnScreenState
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Visible sur le document final',
+                  hintText: context.tr('Visible sur le document final'),
                   hintStyle: TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
@@ -1321,7 +1334,7 @@ class _CreateSupplierReturnScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Conditions Generales',
+              Text(context.tr('Conditions Generales'),
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1331,7 +1344,7 @@ class _CreateSupplierReturnScreenState
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions generales pour ce document',
+                  hintText: context.tr('Conditions generales pour ce document'),
                   hintStyle: TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,

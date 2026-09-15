@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class ReceivingVoucher {
@@ -23,6 +24,7 @@ class ReceivingVoucher {
   final bool isConvertedToSupplierReturn;
   final String? convertedToSupplierReturnId;
   final String? notes;
+  final Map<String, dynamic>? customFields;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ReceivingVoucherItem> items;
@@ -50,6 +52,7 @@ class ReceivingVoucher {
     this.isConvertedToSupplierReturn = false,
     this.convertedToSupplierReturnId,
     this.notes,
+    this.customFields,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -91,6 +94,7 @@ class ReceivingVoucher {
     bool? isConvertedToSupplierReturn,
     String? convertedToSupplierReturnId,
     String? notes,
+    Map<String, dynamic>? customFields,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<ReceivingVoucherItem>? items,
@@ -117,6 +121,7 @@ class ReceivingVoucher {
       isConvertedToSupplierReturn: isConvertedToSupplierReturn ?? this.isConvertedToSupplierReturn,
       convertedToSupplierReturnId: convertedToSupplierReturnId ?? this.convertedToSupplierReturnId,
       notes: notes ?? this.notes,
+      customFields: customFields ?? this.customFields,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
@@ -147,6 +152,8 @@ class ReceivingVoucher {
       'is_converted_to_supplier_return': isConvertedToSupplierReturn ? 1 : 0,
       'converted_to_supplier_return_id': convertedToSupplierReturnId,
       'notes': notes,
+      'custom_fields': customFields,
+      'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'items': items.map((i) => i.toMap()).toList(),
@@ -181,6 +188,16 @@ class ReceivingVoucher {
       isConvertedToSupplierReturn: map['is_converted_to_supplier_return'] == 1,
       convertedToSupplierReturnId: map['converted_to_supplier_return_id'],
       notes: map['notes'],
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       items: parsedItems,

@@ -14,6 +14,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -26,6 +27,7 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'mobile_product_form_screen.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -56,6 +58,9 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   String _status = 'draft';
+  String _vehicleRegistration = '';
+  Map<String, dynamic> _customFields = {};
+  String _driverName = '';
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -107,6 +112,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
       _status = n.status;
       _notes = n.notes ?? '';
       _conditions = n.conditions ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => ReturnNoteItem(
         id: i.id,
         returnNoteId: i.returnNoteId,
@@ -126,7 +132,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -136,14 +142,14 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -165,7 +171,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
           setState(() => _isLoading = false);
           return;
         }
-        number = generateDocNumber('BR', seq);
+        number = generateDocNumber('BR', seq, docCollection: 'return_notes');
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -190,6 +196,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
         status: _status,
         notes: _notes.isNotEmpty ? _notes : null,
         conditions: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => ReturnNoteItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           returnNoteId: noteId,
@@ -211,7 +218,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Bon de retour mis à jour' : 'Bon de retour créé avec succès'),
+          content: Text(_isEditing ? context.tr('Bon de retour mis à jour') : context.tr('Bon de retour créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -270,7 +277,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: widget.isReadOnly ? 'Détails du bon de retour' : (_isEditing ? 'Modifier le bon' : 'Nouveau bon de retour'),
+      title: widget.isReadOnly ? 'Détails du bon de retour' : (_isEditing ? 'Modifier le bon de retour' : 'Nouveau bon de retour'),
       statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
       statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
       isLoading: _isLoading,
@@ -438,6 +445,36 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                     );
                   },
                 ),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(context.tr('Champs Personnalisés'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 4),
+                      Text(context.tr('Informations supplémentaires'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                      SizedBox(height: 16),
+                      SmartTextInput(
+                        label: 'Matricule du véhicule',
+                        hint: 'Entrer la valeur',
+                        initialValue: _vehicleRegistration,
+                        onChanged: (v) => setState(() => _vehicleRegistration = v),
+                      ),
+                      SizedBox(height: 16),
+                      SmartTextInput(
+                        label: 'Nom du chauffeur',
+                        hint: 'Entrer la valeur',
+                        initialValue: _driverName,
+                        onChanged: (v) => setState(() => _driverName = v),
+                      ),
+                    ],
+                  ),
+                ),
                 SizedBox(height: 24),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
@@ -445,7 +482,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                     label: 'Les prix des articles sont en:',
                     value: _pricingModeHT,
                     options: const [true, false],
-                    labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                    labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                     onChanged: (v) => setState(() => _pricingModeHT = v),
                   ),
                 ),
@@ -467,7 +504,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -489,7 +526,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                         child: OutlinedButton.icon(
                           onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
@@ -501,7 +538,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () async {
                           final newProd = await Navigator.push(
                             context,
@@ -563,6 +600,14 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'return_voucher',
+          initialValues: _customFields,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(

@@ -25,6 +25,7 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -89,11 +90,15 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   String _getWarehouseName(String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
     try {
-      return _warehouses.firstWhere((w) => w.id == id).name;
+      final name = _warehouses.firstWhere((w) => w.id == id).name;
+      if (name.toLowerCase() == 'entrepôt par défaut' || name.toLowerCase() == 'entrepot par defaut') {
+        return context.tr('Entrepôt par défaut');
+      }
+      return name;
     } catch (_) {
-      return 'Entrepôt par défaut';
+      return context.tr('Entrepôt par défaut');
     }
   }
 
@@ -116,10 +121,10 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   Widget _buildArticlesDisplay(List<StockTransferItem> items) {
-    if (items.isEmpty) return Text('0 article', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
     
     final summaryText = items.map((item) {
-      final pName = item.productName ?? 'Produit Inconnu';
+      final pName = item.productName ?? context.tr('Produit Inconnu');
       return '${item.quantityToTransfer.toInt()}x $pName';
     }).join(', ');
 
@@ -131,7 +136,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
       showDuration: Duration(seconds: 3),
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
-      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
   }
 
@@ -148,12 +153,12 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Supprimer le bon de transfert'),
-        content: Text('Voulez-vous vraiment supprimer le bon de transfert ${transfer.number} ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${context.tr('Bons de transfert')} ${transfer.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -161,7 +166,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
               context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
               Navigator.pop(ctx);
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -219,7 +224,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Bons de transfert",
+                      context.tr("Bons de transfert"),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -239,7 +244,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   OutlinedButton.icon(
                     onPressed: () => setState(() => _showMobileFilters = !_showMobileFilters),
                     icon: Icon(_showMobileFilters ? Icons.filter_list_off : Icons.filter_list, size: 18),
-                    label: Text(_showMobileFilters ? 'Masquer filtres' : 'Filtres'),
+                    label: Text(_showMobileFilters ? context.tr('Masquer filtres') : context.tr('Filtres')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -266,7 +271,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   children: [
                     TextField(
                       decoration: InputDecoration(
-                        hintText: 'Rechercher article...',
+                        hintText: context.tr('Rechercher un article...'),
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -297,7 +302,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                             ),
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
-                              const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
+                              DropdownMenuItem<String?>(value: null, child: Text(context.tr('Entrepôt'), style: const TextStyle(fontSize: 12))),
                               ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
@@ -307,7 +312,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Référence',
+                              hintText: context.tr('Référence'),
                               hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                               prefixIcon: Icon(Icons.numbers, size: 16, color: AppColors.textSecondary),
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -348,7 +353,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                               child: Text(
                                 _filterDateRange != null
                                     ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                    : 'Toutes les dates',
+                                    : context.tr('Toutes les dates'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -385,7 +390,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${entries.length} résultat${entries.length > 1 ? 's' : ''}',
+                        '${entries.length} ${entries.length > 1 ? context.tr('résultats') : context.tr('résultat')}',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                       ),
                     ),
@@ -399,7 +404,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                         _currentPage = 0;
                       }),
                       icon: Icon(Icons.clear_all, size: 16),
-                      label: Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                      label: Text(context.tr('Réinitialiser'), style: const TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(foregroundColor: AppColors.error, padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
@@ -423,9 +428,9 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           children: [
                             Icon(Icons.swap_horiz_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                             SizedBox(height: 12),
-                            Text("Aucun Bon de transfert", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                            Text(context.tr("Aucun bon de transfert"), style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                             SizedBox(height: 4),
-                            Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                            Text(context.tr("Appuyez sur + pour en créer un"), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                           ],
                         ),
                       );
@@ -525,7 +530,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Source: ${_getWarehouseName(transfer.sourceWarehouseId)}'),
+                      child: _buildInfoItem(Icons.warehouse_rounded, '${context.tr('Source')}: ${_getWarehouseName(transfer.sourceWarehouseId)}'),
                     ),
                   ],
                 ),
@@ -533,7 +538,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Dest: ${_getWarehouseName(transfer.destinationWarehouseId)}'),
+                      child: _buildInfoItem(Icons.warehouse_rounded, '${context.tr('Destination')}: ${_getWarehouseName(transfer.destinationWarehouseId)}'),
                     ),
                     _buildArticlesDisplay(transfer.items),
                   ],
@@ -560,7 +565,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Bons de transfert",
+                    context.tr("Bons de transfert"),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -568,7 +573,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text("Gérer vos transferts de stock", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr("Gérer vos bons de transfert de stock"), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -576,7 +581,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Créer'),
+                  label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -609,7 +614,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Entrepôt', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -620,8 +625,8 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                               orElse: () => null,
                             );
                             return SearchableSelectorField(
-                              hint: 'Tous les Entrepôts',
-                              selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                              hint: context.tr('Tous les Entrepôts'),
+                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -648,13 +653,13 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Article', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Article'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Rechercher produit...',
+                            hintText: context.tr('Rechercher un produit...'),
                             hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                             prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -679,7 +684,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Période', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Date'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -708,7 +713,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                                 child: Text(
                                   _filterDateRange != null
                                       ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : 'Toutes les dates',
+                                      : context.tr('Toutes les dates'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -741,7 +746,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                         _currentPage = 0;
                       }),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
-                      tooltip: 'Réinitialiser les filtres',
+                      tooltip: context.tr('Réinitialiser les filtres'),
                       style: IconButton.styleFrom(
                         foregroundColor: AppColors.error,
                         backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -774,12 +779,12 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   if (state is StockTransfersLoading || state is StockTransfersInitial) {
                     return ShimmerTable(
                       headerColumns: [
-                        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Créé par', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                       ],
                     );
                   }
@@ -789,7 +794,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   if (state is StockTransfersLoaded) {
                     if (entries.isEmpty) {
                       return Center(
-                        child: Text("Aucun bon de transfert trouvé", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                        child: Text(context.tr("Aucun bon de transfert trouvé"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                       );
                     }
 
@@ -810,12 +815,12 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           ),
                           child: Row(
                             children: [
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Créé par', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -840,7 +845,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -866,10 +871,10 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} à $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -983,7 +988,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           children: [
                             Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
                             const SizedBox(width: 8),
-                            const Text('Voir'),
+                            Text(context.tr('Voir')),
                           ],
                         ),
                       ),
@@ -998,7 +1003,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           children: [
                             Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
                             const SizedBox(width: 8),
-                            const Text('Modifier'),
+                            Text(context.tr('Modifier')),
                           ],
                         ),
                       ),
@@ -1013,7 +1018,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           children: [
                             Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
                             const SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                            Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error)),
                           ],
                         ),
                       ),
@@ -1054,15 +1059,15 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
     switch (status) {
       case 'validated':
         color = AppColors.success;
-        label = 'Validé';
+        label = context.tr('Validé');
         break;
       case 'cancelled':
         color = AppColors.error;
-        label = 'Annulé';
+        label = context.tr('Annulé');
         break;
       default:
         color = AppColors.textSecondary;
-        label = 'Brouillon';
+        label = context.tr('Brouillon');
     }
 
     return Container(

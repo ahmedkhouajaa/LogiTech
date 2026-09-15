@@ -29,6 +29,10 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
+import '../l10n/app_localizations.dart';
 
 enum ExitVoucherStatus {
   draft('Brouillon'),
@@ -62,12 +66,13 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  ExitVoucherStatus? _statusFilter;
+  String? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
   StreamSubscription<int>? _syncSub;
+  StreamSubscription? _customStatusSub;
 
   @override
   void initState() {
@@ -93,11 +98,21 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         );
       }
     });
+
+    CustomStatusService.instance.getCustomStatuses('exit_voucher').then((_) {
+      if (mounted) setState(() {});
+    });
+    _customStatusSub = CustomStatusService.instance.changeStream.listen((docType) {
+      if (docType == 'exit_voucher' && mounted) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
     _syncSub?.cancel();
+    _customStatusSub?.cancel();
     super.dispose();
   }
 
@@ -112,15 +127,23 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   }
 
   DocumentWrapper _createDocumentWrapper(StockWithdrawal note) {
+    final client = (note.customerCompany != null && note.customerCompany!.isNotEmpty)
+        ? note.customerCompany!
+        : (note.customerName ?? 'Client divers');
     return DocumentWrapper(
       id: note.id,
       number: note.number,
       documentTitle: "BON DE SORTIE",
+      documentType: "exit_voucher",
+      customerName: client,
+      customerId: note.customerId,
       date: note.date,
       totalHT: note.totalHTAfterDiscount,
       totalTva: note.totalTVA,
+      stampTax: note.timbreFiscal,
       totalTTC: note.totalTTC,
       notes: note.notes,
+      conditionsGenerales: note.conditionsGenerales,
       items: note.items.map((item) {
         final product = _getProduct(item.productId);
         return DocumentItemWrapper(
@@ -139,10 +162,15 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           },
         );
       }).toList(),
+      customFields: note.customFields,
       customData: {
         'warehouseId': note.warehouseId,
         'warehouseName': 'Entrepôt par défaut', // or fetch if available
         'createdBy': 'Admin',
+        'projectName': note.projectName,
+        'driverName': note.driverName,
+        'vehicleRegistration': note.vehicleRegistration,
+        'customFields': note.customFields,
       },
     );
   }
@@ -153,7 +181,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       customerId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter?.name,
+      status: _statusFilter,
     ));
     setState(() => _currentPage = 0);
   }
@@ -202,7 +230,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bon de Sortie',
+                        context.tr('Bon de Sortie'),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -211,7 +239,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Gerer vos bons de sortie',
+                        context.tr('Gérer vos bons de sortie'),
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                     ],
@@ -226,7 +254,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _navigate(context, null),
                       icon: Icon(Icons.add_rounded, size: 18),
-                      label: Text('Creer un Bon de Sortie'),
+                      label: Text(context.tr('Créer un Bon de Sortie')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
@@ -270,7 +298,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           children: [
                             Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                             SizedBox(height: 12),
-                            Text("Aucun bon de sortie trouve", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                            Text(context.tr("Aucun bon de sortie trouvé"), style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                           ],
                         ),
                       );
@@ -331,7 +359,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -351,7 +379,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -383,7 +411,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
@@ -401,7 +429,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -474,7 +502,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bon de Sortie',
+                    context.tr('Bon de Sortie'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -483,7 +511,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Gérer vos bons de sortie',
+                    context.tr('Gérer vos bons de sortie'),
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
@@ -492,7 +520,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context, null),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Créer un Bon de Sortie'),
+                  label: Text(context.tr('Créer un Bon de Sortie')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -541,7 +569,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         filteredVouchers = filteredVouchers.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter!.name).toList();
+        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter).toList();
       }
       totalItems = state.totalCount > 0 ? state.totalCount : filteredVouchers.length;
     }
@@ -567,7 +595,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               child: BlocBuilder<CustomersBloc, CustomersState>(
                 builder: (context, state) {
                   final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  String selectedCustomerName = 'Tous les clients';
+                  String selectedCustomerName = context.tr('Tous les clients');
                   if (_selectedClientId != null && _selectedClientId != 'all') {
                     final found = customers.firstWhere(
                       (c) => c.id == _selectedClientId,
@@ -602,7 +630,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           Expanded(
                             child: Text(
                               _selectedClientId == null || _selectedClientId == 'all'
-                                  ? 'Tous les clients'
+                                  ? context.tr('Tous les clients')
                                   : selectedCustomerName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -657,113 +685,13 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             flex: 2,
             child: _filterSection(
               label: 'Statut',
-              child: PopupMenuButton<ExitVoucherStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (val) {
+              child: DocumentStatusFilterDropdown(
+                documentType: 'exit_voucher',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (val) {
                   setState(() => _statusFilter = val);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<ExitVoucherStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...ExitVoucherStatus.values.map(
-                    (s) => PopupMenuItem<ExitVoucherStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -782,7 +710,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -807,7 +735,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         child,
       ],
@@ -826,7 +754,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (d != null) onPicked(d);
       },
@@ -844,7 +772,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                value != null ? formatDateLong(value) : hint,
+                value != null ? formatDateLong(value) : context.tr(hint),
                 style: TextStyle(
                   fontSize: 12,
                   color: value != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -873,11 +801,11 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -950,35 +878,35 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                               ),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Reference',
+                                  child: Text(context.tr('Reference'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 3,
-                                  child: Text('Client',
+                                  child: Text(context.tr('Client'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Statut',
+                                  child: Text(context.tr('Statut'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
-                                  child: Text('Montant',
+                                  child: Text(context.tr('Montant'),
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
                                           color: AppColors.textSecondary))),
                               SizedBox(
                                   width: 60,
-                                  child: Text('Actions',
+                                  child: Text(context.tr('Actions'),
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -998,7 +926,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text('Aucun bon de sortie trouvé',
+                                      Text(context.tr('Aucun bon de sortie trouvé'),
                                           style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors.textSecondary)),
@@ -1025,7 +953,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes',
+                              Text(context.tr('Lignes'),
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
@@ -1064,15 +992,15 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${page + 1} sur $totalPages',
+                              Text('${context.tr('Page')} ${page + 1} ${context.tr('sur')} $totalPages',
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}'
+                                    : '${context.tr('Affichage de')} ${start + 1} ${context.tr('à')} $end ${context.tr('sur')} $total ${context.tr('résultats')}',
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary),
@@ -1117,7 +1045,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       orElse: () => ExitVoucherStatus.created,
     );
     final clientLabel =
-        note.customerCompany ?? note.customerName ?? 'Client inconnu';
+        note.customerCompany ?? note.customerName ?? context.tr('Client inconnu');
     final isDraft = statusEnum == ExitVoucherStatus.draft;
 
     final isSelected = _selectedExitVoucherIds.contains(note.id);
@@ -1193,21 +1121,29 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               alignment: Alignment.centerLeft,
               child: (!note.isSynced || note.number.startsWith('BROUILLON-'))
                   ? const PendingSyncBadge()
-                  : Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusEnum.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        statusEnum.label,
-                        style: TextStyle(
-                            color: statusEnum.color,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500),
-                      ),
-                    ),
+                  : () {
+                      final sInfo = CustomStatusService.instance.getStatusInfo(
+                        'exit_voucher',
+                        note.status,
+                        fallbackLabel: statusEnum.label,
+                        fallbackColor: statusEnum.color,
+                      );
+                      return Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: sInfo.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          sInfo.label,
+                          style: TextStyle(
+                              color: sInfo.color,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      );
+                    }(),
             ),
           ),
           // Montant
@@ -1299,7 +1235,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           children: [
                             Icon(icon, size: 18, color: const Color(0xFF64748B)),
                             const SizedBox(width: 12),
-                            Text(label, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                            Text(context.tr(label), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -1454,7 +1390,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                 children: [
                                   Icon(icon, size: 16, color: col),
                                   const SizedBox(width: 8),
-                                  Text(label),
+                                  Text(context.tr(label)),
                                 ],
                               ),
                             ),
@@ -1581,67 +1517,17 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, StockWithdrawal note) {
-    ExitVoucherStatus selectedStatus = ExitVoucherStatus.values.firstWhere(
-      (e) => e.name == note.status,
-      orElse: () => ExitVoucherStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: ExitVoucherStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = note.copyWith(
-                    status: selectedStatus.name,
-                    notes: notesController.text.isNotEmpty ? '${note.notes ?? ''}\n${notesController.text}' : note.notes,
-                  );
-                  context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                child: Text('Confirmer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'exit_voucher',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${note.notes ?? ''}\n$notes' : note.notes,
+        );
+        context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
+      },
     );
   }
 
@@ -1660,17 +1546,17 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1685,7 +1571,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

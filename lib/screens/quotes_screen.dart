@@ -14,7 +14,6 @@ import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customer_orders/customer_orders_bloc.dart';
 import '../models/quote.dart';
 import '../models/customer.dart';
-import '../models/product.dart';
 import '../models/invoice.dart';
 import '../models/customer_order.dart';
 import '../models/delivery_note.dart';
@@ -22,7 +21,7 @@ import '../blocs/delivery_notes/delivery_notes_bloc.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/data_table_widget.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/dashboard_card.dart';
 import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
@@ -39,10 +38,12 @@ import 'create_delivery_note_screen.dart';
 import 'create_quote_screen.dart';
 import '../models/document_wrapper.dart';
 import '../services/pdf_service.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../utils/offline_action_helper.dart';
 
@@ -60,7 +61,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  DocumentStatus? _statusFilter;
+  String? _statusFilter;
 
   // Pagination state
   int _rowsPerPage = 20;
@@ -124,14 +125,14 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   Row(
                     children: [
                       Text(
-                        'Devis Client',
+                        context.tr('Devis Client'),
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       SizedBox(width: 8),
                     ],
                   ),
                   SizedBox(height: 2),
-                  Text('Gérer vos devis', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos devis'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               Row(
@@ -203,7 +204,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
         filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
+        filteredOrders = filteredOrders.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
       }
       totalItems = filteredOrders.length;
     }
@@ -229,7 +230,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Client', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Client'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 SizedBox(
                   height: 32,
@@ -239,11 +240,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       if (state is CustomersLoaded) {
                         customers = state.customers;
                       }
-                      String selectedCustomerName = 'Tous les clients';
+                      String selectedCustomerName = context.tr('Tous les clients');
                       if (_selectedClientId != null && _selectedClientId != 'all') {
                         final found = customers.firstWhere(
                           (c) => c.id == _selectedClientId,
-                          orElse: () => Customer(id: '', code: '', name: 'Inconnu', country: ''),
+                          orElse: () => Customer(id: '', code: '', name: context.tr('Inconnu'), country: ''),
                         );
                         selectedCustomerName = found.companyName?.isNotEmpty == true
                             ? found.companyName!
@@ -274,7 +275,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                               Expanded(
                                 child: Text(
                                   _selectedClientId == null || _selectedClientId == 'all'
-                                      ? 'Tous les clients'
+                                      ? context.tr('Tous les clients')
                                       : selectedCustomerName,
                                   style: TextStyle(
                                     fontSize: 12,
@@ -304,7 +305,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -313,7 +314,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       initialDate: _dateFrom ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateFrom = date);
@@ -333,7 +334,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -353,7 +354,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
@@ -362,7 +363,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       initialDate: _dateTo ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
+                      locale: Localizations.localeOf(context),
                     );
                     if (date != null) {
                       setState(() => _dateTo = date);
@@ -382,7 +383,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
                             style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -402,118 +403,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: PopupMenuButton<DocumentStatus?>(
-                    tooltip: 'Filtrer par statut',
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                    ),
-                    color: AppColors.surface,
-                    elevation: 4,
-                    offset: const Offset(0, 36),
-                    initialValue: _statusFilter,
-                    onSelected: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<DocumentStatus?>(
-                        value: null,
-                        height: 34,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                            ),
-                            const Spacer(),
-                            if (_statusFilter == null)
-                              Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                          ],
-                        ),
-                      ),
-                      ...DocumentStatus.values.map(
-                        (s) => PopupMenuItem<DocumentStatus?>(
-                          value: s,
-                          height: 34,
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  s.label,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: s.color,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                              if (_statusFilter == s)
-                                Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _statusFilter == null
-                                ? Text(
-                                    'Tous',
-                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      _statusFilter!.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: _statusFilter!.color,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
+                DocumentStatusFilterDropdown(
+                  documentType: 'quote',
+                  currentStatusFilter: _statusFilter,
+                  onStatusSelected: (val) {
+                    setState(() => _statusFilter = val);
+                    _applyFilters();
+                  },
                 ),
               ],
             ),
@@ -534,7 +432,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   _applyFilters();
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -588,7 +486,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -608,7 +506,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -640,14 +538,14 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
                           ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
                           : null,
                       onTap: () {
-                        Navigator.of(context).pop(Customer(id: 'all', code: '', name: 'Tous les clients', country: ''));
+                        Navigator.of(context).pop(Customer(id: 'all', code: '', name: context.tr('Tous les clients'), country: ''));
                       },
                     ),
 
@@ -658,7 +556,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -732,11 +630,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -763,7 +661,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
             filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
           }
           if (_statusFilter != null) {
-            filteredOrders = filteredOrders.where((q) => q.status == _statusFilter).toList();
+            filteredOrders = filteredOrders.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
           }
 
           final orders = filteredOrders;
@@ -823,11 +721,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                 ),
                               ),
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                              Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -840,7 +738,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
                                       const SizedBox(height: 12),
-                                      Text("Aucun devis trouvé", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                      Text(context.tr("Aucun devis trouvé"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -903,7 +801,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                 const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
-                                                    quote.customerName ?? 'Client Inconnu',
+                                                    quote.customerName ?? context.tr('Client passager'),
                                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
@@ -917,7 +815,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                               alignment: Alignment.centerLeft,
                                               child: (!quote.isSynced || quote.number.startsWith('BROUILLON-'))
                                                   ? Tooltip(
-                                                      message: 'En attente de synchronisation',
+                                                      message: context.tr('En attente de synchronisation'),
                                                       child: Container(
                                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                         decoration: BoxDecoration(
@@ -932,7 +830,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                             const SizedBox(width: 4),
                                                             Flexible(
                                                               child: Text(
-                                                                'En attente',
+                                                                context.tr('En attente'),
                                                                 overflow: TextOverflow.ellipsis,
                                                                 style: TextStyle(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold),
                                                               ),
@@ -941,17 +839,20 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                         ),
                                                       ),
                                                     )
-                                                  : Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: statusEnum.color.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        statusEnum.label,
-                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                      ),
-                                                    ),
+                                                  : () {
+                                                       final statusInfo = CustomStatusService.instance.getStatusInfo('quote', quote.effectiveStatus);
+                                                       return Container(
+                                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                         decoration: BoxDecoration(
+                                                           color: statusInfo.color.withValues(alpha: 0.1),
+                                                           borderRadius: BorderRadius.circular(4),
+                                                         ),
+                                                         child: Text(
+                                                           context.tr(statusInfo.label),
+                                                           style: TextStyle(color: statusInfo.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                         ),
+                                                       );
+                                                     }(),
                                             ),
                                           ),
                                           Expanded(
@@ -1057,7 +958,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -1082,10 +983,12 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0
+                                    ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}'
+                                    : '${context.tr('Affichage de')} ${startIndex + 1} ${context.tr('à')} $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -1144,7 +1047,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Text(context.tr(text), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -1253,76 +1156,22 @@ class _QuotesScreenState extends State<QuotesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, Quote quote) {
-    DocumentStatus selectedStatus = quote.status;
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: DocumentStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: StatusBadge(label: s.label, color: s.color),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              AppButton(
-                label: 'Enregistrer',
-                onPressed: () {
-                  final userId = AuthService.instance.currentUserUid ?? 'System';
-                  context.read<QuotesBloc>().add(UpdateQuoteStatus(
-                    quote.id,
-                    quote.status,
-                    selectedStatus,
-                    userId,
-                    notesController.text.isEmpty ? null : notesController.text,
-                  ));
-                  Navigator.pop(dialogCtx);
-                },
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'quote',
+      currentStatus: quote.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final userId = AuthService.instance.currentUserUid ?? 'System';
+        final enumMatch = DocumentStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        context.read<QuotesBloc>().add(UpdateQuoteStatus(
+          quote.id,
+          quote.status,
+          enumMatch ?? DocumentStatus.draft,
+          userId,
+          notes,
+          enumMatch == null ? newStatusKey : null,
+        ));
+      },
     );
   }
 
@@ -1372,10 +1221,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: 'FA',
+      prefix: DocPrefix.invoice,
     );
     if (seq == null) return;
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
 
     // Map Quote Items to Invoice Items
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
@@ -1531,7 +1380,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
       prefix: DocPrefix.customerOrder,
     );
     if (seq == null) return;
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq);
+    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq, docCollection: 'customer_orders');
 
     // Map Quote Items to CustomerOrder Items
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
@@ -1668,7 +1517,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
       prefix: DocPrefix.deliveryNote,
     );
     if (seq == null) return;
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
     
     // Map Quote Items to DeliveryNote Items
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(
@@ -1773,17 +1622,17 @@ class _QuotesScreenState extends State<QuotesScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count PDF' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -1798,7 +1647,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

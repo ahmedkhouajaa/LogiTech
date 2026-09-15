@@ -16,6 +16,8 @@ import '../utils/file_download_helper.dart';
 import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../utils/company_logo_helper.dart';
+import '../models/custom_field_definition.dart';
+import 'custom_fields_service.dart';
 
 class PdfService {
   static final PdfService instance = PdfService._();
@@ -65,9 +67,63 @@ class PdfService {
       }
     }
 
-    // Load template: use provided, or default, or built-in defaults
-    template ??= await DatabaseHelper.instance.getDefaultTemplate('invoice');
+    // Load template: use provided, or specific for document type, or default template
+    final docType = document.resolvedDocumentType;
+    template ??= await DatabaseHelper.instance.getTemplateForDocumentType(docType);
     final config = template?.config ?? DocumentTemplate.defaultConfig();
+
+    // Fetch custom fields definitions to print enabled custom fields
+    List<CustomFieldDefinition> customFieldDefs = [];
+    try {
+      customFieldDefs = await CustomFieldsService.instance.getCustomFields(docType);
+    } catch (_) {}
+
+    final customFieldsToggles = template != null
+        ? Map<String, dynamic>.from(template.config['customFields'] as Map? ?? {})
+        : <String, dynamic>{};
+
+    final List<Map<String, String>> customFieldsToPrint = [];
+    final seenLabels = <String>{};
+
+    for (final def in customFieldDefs) {
+      final isEnabled = customFieldsToggles[def.id] != false &&
+          customFieldsToggles[def.key] != false &&
+          customFieldsToggles[def.name] != false;
+      if (isEnabled) {
+        final val = document.customFields[def.id] ??
+            document.customFields[def.name] ??
+            document.customFields[def.key] ??
+            document.customData[def.id] ??
+            document.customData[def.name] ??
+            document.customData[def.key] ??
+            (document.customData['customFields'] is Map
+                ? (document.customData['customFields'] as Map)[def.id] ??
+                  (document.customData['customFields'] as Map)[def.name] ??
+                  (document.customData['customFields'] as Map)[def.key]
+                : null);
+        if (val != null && val.toString().trim().isNotEmpty) {
+          seenLabels.add(def.name.trim().toLowerCase());
+          seenLabels.add(def.key.trim().toLowerCase());
+          seenLabels.add(def.id.trim().toLowerCase());
+          customFieldsToPrint.add({'label': def.name, 'value': val.toString().trim()});
+        }
+      }
+    }
+
+    // Fallback: If document has custom fields that weren't matched in definitions,
+    // still display them if not explicitly disabled
+    document.customFields.forEach((k, v) {
+      if (v != null && v.toString().trim().isNotEmpty) {
+        final lowerK = k.trim().toLowerCase();
+        if (!seenLabels.contains(lowerK) &&
+            customFieldsToggles[k] != false &&
+            k != 'customFields' &&
+            !k.startsWith('_')) {
+          seenLabels.add(lowerK);
+          customFieldsToPrint.add({'label': k, 'value': v.toString().trim()});
+        }
+      }
+    });
 
     if (config.containsKey('canvas_document')) {
       final jsonStr = config['canvas_document'] as String;
@@ -79,10 +135,17 @@ class PdfService {
     final fontRegular = await PdfGoogleFonts.robotoRegular();
     final fontBold = await PdfGoogleFonts.robotoBold();
 
-    // Check if this is a stock document
-    final isStockDoc = document.documentTitle == "BON D'ENTRÉE" || document.documentTitle == "BON DE SORTIE" || document.documentTitle == "BON DE TRANSFERT" || document.documentTitle == "FICHE D'INVENTAIRE";
+    // Check if this is an internal warehouse stock document (Bons de sortie in Ventes are commercial documents)
+    final isStockDoc = document.documentType == 'stock_entry' ||
+        document.documentType == 'stock_withdrawal' ||
+        document.documentType == 'stock_transfer' ||
+        document.documentType == 'inventory_sheet' ||
+        document.documentTitle == "BON D'ENTRÉE" ||
+        document.documentTitle == "BON DE PRÉLÈVEMENT" ||
+        document.documentTitle == "BON DE TRANSFERT" ||
+        document.documentTitle == "FICHE D'INVENTAIRE";
     if (isStockDoc) {
-      return await _buildStockDocument(document, companySettings, fontRegular, fontBold);
+      return await _buildStockDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
     }
 
     final pdf = pw.Document();
@@ -105,7 +168,7 @@ class PdfService {
           bold: fontBold,
         ),
         header: (context) {
-          return _buildProfessionalHeader(document, companySettings, headerBgColor, headerTextColor, fontRegular, fontBold, config);
+          return _buildProfessionalHeader(document, companySettings, headerBgColor, headerTextColor, fontRegular, fontBold, config, customFieldsToPrint);
         },
         footer: (context) {
           final showPageNumbers = config['footer']?['showPageNumbers'] != false;
@@ -154,9 +217,17 @@ class PdfService {
           // Top gap between table and bottom blocks reflects user Y position
           final topGap = (minY - tableY - 45.0).clamp(6.0, 60.0);
 
+          final cfBoxCfg = config['customFieldsBox'] as Map<String, dynamic>? ?? {};
+          var cfY = (cfBoxCfg['positionY'] as num?)?.toDouble() ?? 150.0;
+          if (cfY == 76.0) cfY = 150.0;
+
           return [
             _buildItemsTable(document, headerBgColor, headerTextColor, config, fontSize, rowHeight),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 8),
+            if (customFieldsToPrint.isNotEmpty && cfY >= 80.0) ...[
+              _buildCustomFieldsBoxPdf(customFieldsToPrint, config, fontRegular, fontBold),
+              pw.SizedBox(height: 8),
+            ],
             if (customTexts.isNotEmpty) ...[
               _buildCustomTextsPdf(customTexts, fontRegular, fontBold),
               pw.SizedBox(height: 8),
@@ -184,12 +255,14 @@ class PdfService {
     try {
       final bytes = await generateDocumentBytes(document, template: template);
       final fileName = '${document.number}.pdf';
-      await FileDownloadHelper.saveAndOpenFile(
-        bytes,
-        fileName,
-        mimeType: 'application/pdf',
-        context: context,
-      );
+      if (context.mounted) {
+        await FileDownloadHelper.saveAndOpenFile(
+          bytes,
+          fileName,
+          mimeType: 'application/pdf',
+          context: context,
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -297,6 +370,7 @@ class PdfService {
     pw.Font font,
     pw.Font fontBold, [
     Map<String, dynamic>? config,
+    List<Map<String, String>>? customFieldsToPrint,
   ]) {
     const double mm = PdfPageFormat.mm;
     final comp = config?['companyInfo'] as Map<String, dynamic>? ?? {};
@@ -317,11 +391,13 @@ class PdfService {
     final showCompanyName = comp['showName'] != false;
     final nameX = (nameCfg['positionX'] as num?)?.toDouble() ?? defaultCompX;
     final nameY = (nameCfg['positionY'] as num?)?.toDouble() ?? 15.0;
+    final nameFs = (nameCfg['fontSize'] as num?)?.toDouble() ?? 18.0;
 
     // 3. Company Details Configuration
     final detailsCfg = config?['companyDetails'] as Map<String, dynamic>? ?? {};
     final detailsX = (detailsCfg['positionX'] as num?)?.toDouble() ?? defaultCompX;
     final detailsY = (detailsCfg['positionY'] as num?)?.toDouble() ?? 22.0;
+    final detailsFs = (detailsCfg['fontSize'] as num?)?.toDouble() ?? 8.5;
     final showAddress = comp['showAddress'] != false;
     final showPhone = comp['showPhone'] != false;
     final showEmail = comp['showEmail'] != false;
@@ -333,6 +409,7 @@ class PdfService {
     final titleCfg = config?['documentTitle'] as Map<String, dynamic>? ?? {};
     final titleX = (titleCfg['positionX'] as num?)?.toDouble() ?? 140.0;
     final titleY = (titleCfg['positionY'] as num?)?.toDouble() ?? 15.0;
+    final titleFs = (titleCfg['fontSize'] as num?)?.toDouble() ?? 13.0;
     final showTitle = docInfo['showTitle'] != false;
     final showNumber = docInfo['showNumber'] != false;
     final showDate = docInfo['showDate'] != false;
@@ -344,6 +421,8 @@ class PdfService {
     final clientY = (clientCfg['positionY'] as num?)?.toDouble() ?? 45.0;
     final clientW = (clientCfg['width'] as num?)?.toDouble() ?? 180.0;
     final clientH = (clientCfg['height'] as num?)?.toDouble() ?? 30.0;
+    final clientFs = (clientCfg['fontSize'] as num?)?.toDouble() ?? 11.0;
+    final clientSubFs = (clientFs * 0.77).clamp(6.5, 14.0);
     final showClientName = cli['showName'] != false;
     final showClientAddress = cli['showAddress'] != false;
     final showClientPhone = cli['showPhone'] != false;
@@ -367,11 +446,22 @@ class PdfService {
     final tableCfg = config?['table'] as Map<String, dynamic>? ?? {};
     final tableY = (tableCfg['positionY'] as num?)?.toDouble() ?? 82.0;
 
+    // 7. Custom Fields Box positioning
+    final hasCustomFields = customFieldsToPrint != null && customFieldsToPrint.isNotEmpty;
+    final cfBoxCfg = config?['customFieldsBox'] as Map<String, dynamic>? ?? {};
+    final cfX = (cfBoxCfg['positionX'] as num?)?.toDouble() ?? 15.0;
+    var cfY = (cfBoxCfg['positionY'] as num?)?.toDouble() ?? 150.0;
+    if (cfY == 76.0) cfY = 150.0;
+    final cfW = (cfBoxCfg['width'] as num?)?.toDouble() ?? 180.0;
+    final cfFs = (cfBoxCfg['fontSize'] as num?)?.toDouble() ?? 8.5;
+    final renderCfInHeader = hasCustomFields && cfY < 80.0;
+    final cfBottom = renderCfInHeader ? (cfY - 10.0) + 12.0 : 0.0;
+
     // Dynamic header height so no elements overlap the items table and table position is respected
     final clientBottom = (clientY - 10.0) + clientH;
     final docBottom = (titleY - 10.0) + 34.0;
     final detailsBottom = (detailsY - 10.0) + 28.0;
-    final maxBottom = [clientBottom, docBottom, detailsBottom, (tableY - 10.0), 60.0].reduce(math.max);
+    final maxBottom = [clientBottom, docBottom, detailsBottom, cfBottom, (tableY - 10.0), 60.0].reduce(math.max);
     final headerHeight = (maxBottom + 4.0) * mm;
 
     return pw.Container(
@@ -420,7 +510,7 @@ class PdfService {
               top: (nameY - 10.0).clamp(0.0, 200.0) * mm,
               child: pw.Text(
                 settings.name.isNotEmpty ? settings.name : 'Ma Société',
-                style: pw.TextStyle(font: fontBold, fontSize: 18, color: headerBg),
+                style: pw.TextStyle(font: fontBold, fontSize: nameFs, color: headerBg),
               ),
             ),
 
@@ -432,19 +522,19 @@ class PdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 if (showAddress && settings.address != null && settings.address!.isNotEmpty)
-                  pw.Text(settings.address!, style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text(settings.address!, style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showAddress && settings.city != null && settings.city!.isNotEmpty)
-                  pw.Text(settings.city!, style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text(settings.city!, style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showPhone && settings.phone != null && settings.phone!.isNotEmpty)
-                  pw.Text('Tel: ${settings.phone}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text('Tel: ${settings.phone}', style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showEmail && settings.email != null && settings.email!.isNotEmpty)
-                  pw.Text('Email: ${settings.email}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text('Email: ${settings.email}', style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showWebsite && settings.website != null && settings.website!.isNotEmpty)
-                  pw.Text('Web: ${settings.website}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text('Web: ${settings.website}', style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showTaxId && settings.taxId != null && settings.taxId!.isNotEmpty)
-                  pw.Text('NIF: ${settings.taxId}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text('NIF: ${settings.taxId}', style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
                 if (showRcNumber && settings.rcNumber != null && settings.rcNumber!.isNotEmpty)
-                  pw.Text('RC: ${settings.rcNumber}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey700)),
+                  pw.Text('RC: ${settings.rcNumber}', style: pw.TextStyle(font: font, fontSize: detailsFs, color: PdfColors.grey700)),
               ],
             ),
           ),
@@ -475,13 +565,13 @@ class PdfService {
                           if (showTitle)
                             pw.Text(
                               document.documentTitle,
-                              style: pw.TextStyle(font: fontBold, fontSize: 13, color: headerText, letterSpacing: 0.8),
+                              style: pw.TextStyle(font: fontBold, fontSize: titleFs, color: headerText, letterSpacing: 0.8),
                             ),
                           if (showNumber) ...[
                             pw.SizedBox(height: 2),
                             pw.Text(
                               'N° ${document.number}',
-                              style: pw.TextStyle(font: font, fontSize: 9.5, color: headerText),
+                              style: pw.TextStyle(font: font, fontSize: (titleFs * 0.73).clamp(7.0, 14.0), color: headerText),
                             ),
                           ],
                         ],
@@ -518,29 +608,65 @@ class PdfService {
                     pw.SizedBox(height: 2),
                     pw.Text(document.customData['warehouseName'] ?? 'Non spécifié', style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColors.black)),
                   ] else ...[
-                    pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey600)),
+                    pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey600)),
                     pw.SizedBox(height: 2),
                     if (showClientName)
-                      pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColors.black)),
+                      pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: clientFs, color: PdfColors.black)),
                     if (showClientAddress && document.customerAddress != null && document.customerAddress!.isNotEmpty)
-                      pw.Text('Adresse : ${document.customerAddress}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Adresse : ${document.customerAddress}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     if (showClientPhone && document.customerPhone != null && document.customerPhone!.isNotEmpty)
-                      pw.Text('Tél : ${document.customerPhone}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Tél : ${document.customerPhone}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     if (showClientEmail && document.customerEmail != null && document.customerEmail!.isNotEmpty)
-                      pw.Text('Email : ${document.customerEmail}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Email : ${document.customerEmail}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     if (showClientCode && document.customerCode != null && document.customerCode!.isNotEmpty)
-                      pw.Text('Code Client : ${document.customerCode}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Code Client : ${document.customerCode}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     if (showClientTaxId && document.customerTaxId != null && document.customerTaxId!.isNotEmpty)
-                      pw.Text('Matricule Fiscale : ${document.customerTaxId}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Matricule Fiscale : ${document.customerTaxId}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     if (document.customData.containsKey('projectName') && document.customData['projectName'] != null && document.customData['projectName'].toString().isNotEmpty) ...[
                       pw.SizedBox(height: 2),
-                      pw.Text('Projet : ${document.customData['projectName']}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
+                      pw.Text('Projet : ${document.customData['projectName']}', style: pw.TextStyle(font: font, fontSize: clientSubFs, color: PdfColors.grey800)),
                     ],
                   ],
                 ],
               ),
             ),
           ),
+
+          // Independent Custom Fields Box (only if positioned in header area)
+          if (renderCfInHeader)
+            pw.Positioned(
+              left: (cfX - 10.0).clamp(0.0, 180.0) * mm,
+              top: (cfY - 10.0).clamp(0.0, 200.0) * mm,
+              child: pw.Container(
+                width: cfW * mm,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey100,
+                  borderRadius: pw.BorderRadius.circular(3),
+                  border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                ),
+                child: pw.Wrap(
+                  spacing: 12 * mm,
+                  runSpacing: 4 * mm,
+                  children: customFieldsToPrint.map((cf) {
+                    return pw.RichText(
+                      text: pw.TextSpan(
+                        children: [
+                          pw.TextSpan(
+                            text: '${cf['label']} : ',
+                            style: pw.TextStyle(font: fontBold, fontSize: cfFs, color: PdfColors.grey900),
+                          ),
+                          pw.TextSpan(
+                            text: cf['value'],
+                            style: pw.TextStyle(font: font, fontSize: cfFs, color: PdfColors.grey800),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
 
           // QR Code Overlay
           if (showQr)
@@ -1021,6 +1147,48 @@ class PdfService {
     );
   }
 
+  pw.Widget _buildCustomFieldsBoxPdf(
+    List<Map<String, String>> customFieldsToPrint,
+    Map<String, dynamic> config,
+    pw.Font fontRegular,
+    pw.Font fontBold,
+  ) {
+    const double mm = PdfPageFormat.mm;
+    final cfBoxCfg = config['customFieldsBox'] as Map<String, dynamic>? ?? {};
+    final cfW = (cfBoxCfg['width'] as num?)?.toDouble() ?? 180.0;
+    final cfFs = (cfBoxCfg['fontSize'] as num?)?.toDouble() ?? 8.5;
+
+    return pw.Container(
+      width: cfW * mm,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.circular(3),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+      ),
+      child: pw.Wrap(
+        spacing: 12 * mm,
+        runSpacing: 4 * mm,
+        children: customFieldsToPrint.map((cf) {
+          return pw.RichText(
+            text: pw.TextSpan(
+              children: [
+                pw.TextSpan(
+                  text: '${cf['label']} : ',
+                  style: pw.TextStyle(font: fontBold, fontSize: cfFs, color: PdfColors.grey900),
+                ),
+                pw.TextSpan(
+                  text: cf['value'],
+                  style: pw.TextStyle(font: fontRegular, fontSize: cfFs, color: PdfColors.grey800),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   pw.Widget _buildCustomTextsPdf(List<Map<String, dynamic>> customTexts, pw.Font fontRegular, pw.Font fontBold) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1074,10 +1242,19 @@ class PdfService {
   }
 
   /// Dedicated professional PDF layout for stock documents (Bon d'entrée, Bon de sortie, etc.)
-  Future<Uint8List> _buildStockDocument(DocumentWrapper document, CompanySettings settings, pw.Font fontRegular, pw.Font fontBold) async {
+  Future<Uint8List> _buildStockDocument(
+    DocumentWrapper document,
+    CompanySettings settings,
+    pw.Font fontRegular,
+    pw.Font fontBold, [
+    Map<String, dynamic>? templateConfig,
+    List<Map<String, String>>? customFieldsToPrint,
+  ]) async {
     final pdf = pw.Document();
-    const accentColor = PdfColor.fromInt(0xFF1a56db);
-    const accentLight = PdfColor.fromInt(0xFFe8edfb);
+    final accentColorInt = templateConfig?['headerBgColor'] as int? ?? 0xFF1a56db;
+    final accentColor = PdfColor.fromInt(accentColorInt);
+    final accentLightInt = templateConfig?['accentColor'] as int? ?? 0xFFe8edfb;
+    final accentLight = PdfColor.fromInt(accentLightInt);
 
     final warehouseName = document.customData['warehouseName'] ?? 'Non spécifié';
 
@@ -1197,6 +1374,12 @@ class PdfService {
                 }),
               ],
             ),
+
+            // ── Custom Fields Box ──
+            if (customFieldsToPrint != null && customFieldsToPrint.isNotEmpty) ...[
+              pw.SizedBox(height: 14),
+              _buildCustomFieldsBoxPdf(customFieldsToPrint, templateConfig ?? {}, fontRegular, fontBold),
+            ],
 
             // ── Notes ──
             if (document.notes != null && document.notes!.isNotEmpty) ...[

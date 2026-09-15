@@ -4,6 +4,8 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../utils/mobile_status_colors.dart';
 
+import '../../services/custom_status_service.dart';
+
 class MobileDevisCard extends StatelessWidget {
   final Quote quote;
   final VoidCallback onTap;
@@ -16,8 +18,9 @@ class MobileDevisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(quote.status);
-    final statusText = quote.status.label;
+    final statusInfo = CustomStatusService.instance.getStatusInfo('quote', quote.effectiveStatus);
+    final statusColor = statusInfo.color;
+    final statusText = statusInfo.label;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

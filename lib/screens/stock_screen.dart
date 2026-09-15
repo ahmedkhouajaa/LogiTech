@@ -18,6 +18,7 @@ import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
+import '../l10n/app_localizations.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -43,11 +44,11 @@ class _StockScreenState extends State<StockScreen> {
             child: ShimmerTable(
               headerColumns: [
                 const SizedBox(width: 32),
-                Expanded(flex: 3, child: Text('Article', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Emplacement / Entrepot', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Quantite en Stock', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text(context.tr('Article'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Emplacement / Entrepot'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Quantite en Stock'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                SizedBox(width: 80, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
               ],
             ),
           );
@@ -64,16 +65,16 @@ class _StockScreenState extends State<StockScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Vue d\'ensemble du Stock', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        SizedBox(height: 4),
-                        Text('Gerer votre stock', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(context.tr('Vue d\'ensemble du Stock'), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        const SizedBox(height: 4),
+                        Text(context.tr('Gérer votre stock'), style: TextStyle(color: AppColors.textSecondary)),
                       ],
                     ),
                     if (PermissionService.instance.canCreate(UserPermissionResources.stockOverview) || PermissionService.instance.canCreate(UserPermissionResources.stockMovements))
                       ElevatedButton.icon(
-                        onPressed: () => showDialog(context: context, builder: (_) => _StockAdjustmentDialog()),
+                        onPressed: () => showDialog(context: context, builder: (_) => const _StockAdjustmentDialog()),
                         icon: const Icon(Icons.add_box_rounded, size: 18),
-                        label: const Text('Nouvel ajustement de stock'),
+                        label: Text(context.tr('Nouvel ajustement de stock')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -87,21 +88,21 @@ class _StockScreenState extends State<StockScreen> {
                 Row(
                   children: [
                     Expanded(child: DashboardCard(
-                      title: 'Valeur du stock',
+                      title: context.tr('Valeur du stock'),
                       value: formatCurrencyCompact(state.totalStockValue),
                       icon: Icons.inventory_rounded,
                       gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
                     )),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(child: DashboardCard(
-                      title: 'Entrepots',
+                      title: context.tr('Entrepots'),
                       value: state.warehouses.length.toString(),
                       icon: Icons.warehouse_rounded,
                       gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
                     )),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(child: DashboardCard(
-                      title: 'Mouvements (total)',
+                      title: context.tr('Mouvements (total)'),
                       value: state.movements.length.toString(),
                       icon: Icons.swap_horiz_rounded,
                       gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
@@ -111,7 +112,7 @@ class _StockScreenState extends State<StockScreen> {
                       builder: (context, pState) {
                         final lowCount = pState is ProductsLoaded ? pState.lowStockProducts.length : 0;
                         return Expanded(child: DashboardCard(
-                          title: 'Alertes stock bas',
+                          title: context.tr('Alertes stock bas'),
                           value: lowCount.toString(),
                           icon: Icons.warning_rounded,
                           gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
@@ -130,16 +131,16 @@ class _StockScreenState extends State<StockScreen> {
                       child: Column(
                         children: [
                           Padding(
-                            padding: EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(16),
                             child: SectionHeader(
-                              title: 'Produits en stock bas',
+                              title: context.tr('Produits en stock bas'),
                               icon: Icons.warning_amber_rounded,
-                              action: StatusBadge(label: '${pState.lowStockProducts.length} alertes', color: AppColors.error),
+                              action: StatusBadge(label: '${pState.lowStockProducts.length} ${context.tr('alertes')}', color: AppColors.error),
                             ),
                           ),
                           const Divider(height: 1),
                           DataTableWidget<Product>(
-                            columns: ['Code', 'Nom', 'Stock actuel', 'Minimum', 'Unite', 'Categorie'],
+                            columns: [context.tr('Code'), context.tr('Nom'), context.tr('Stock actuel'), context.tr('Minimum'), context.tr('Unite'), context.tr('Categorie')],
                             rows: pState.lowStockProducts,
                             emptyMessage: '',
                             cellBuilder: (p) => [
@@ -207,9 +208,9 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mouvements de stock', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Mouvements de stock'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 2),
-                Text('Gérer vos mouvements de stock', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                Text(context.tr('Gérer vos mouvements de stock'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -238,13 +239,13 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                     padding: EdgeInsets.zero,
                     child: ShimmerTable(
                       headerColumns: [
-                        Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Quantité', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Raison', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 3, child: Text(context.tr('Produit'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Type'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Quantité'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Raison'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                       ],
                     ),
                   ),
@@ -280,9 +281,9 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mouvements de stock', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Mouvements de stock'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 2),
-                Text('Gérer vos mouvements de stock', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                Text(context.tr('Gérer vos mouvements de stock'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -300,7 +301,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Entrepôt', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
@@ -311,8 +312,8 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                     orElse: () => null,
                                   );
                                   return SearchableSelectorField(
-                                    hint: 'Tous les Entrepôts',
-                                    selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                                    hint: context.tr('Tous les Entrepôts'),
+                                    selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
                                     onTap: () async {
                                       final res = await showWarehouseSelectDialog(
                                         context,
@@ -339,7 +340,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Type de mouvement', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Type de mouvement'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
@@ -357,8 +358,8 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                   fillColor: AppColors.surfaceAlt,
                                 ),
                                 items: [
-                                  const DropdownMenuItem(value: null, child: Text('Tous les types', style: TextStyle(fontSize: 12))),
-                                  ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                  DropdownMenuItem(value: null, child: Text(context.tr('Tous les types'), style: const TextStyle(fontSize: 12))),
+                                  ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(context.tr(t.label), style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                                 ],
                                 onChanged: (v) => setState(() => _filterType = v),
                               ),
@@ -374,14 +375,14 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Article', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Article'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
                               child: TextField(
                                 onChanged: (v) => setState(() => _searchQuery = v),
                                 decoration: InputDecoration(
-                                  hintText: 'Rechercher produit...',
+                                  hintText: context.tr('Rechercher produit...'),
                                   hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                   prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textTertiary),
                                   prefixIconConstraints: const BoxConstraints(minWidth: 32),
@@ -405,14 +406,14 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Référence', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Référence'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
                               child: TextField(
                                 onChanged: (v) => setState(() => _filterReference = v),
                                 decoration: InputDecoration(
-                                  hintText: 'Rechercher réf...',
+                                  hintText: context.tr('Rechercher réf...'),
                                   hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                   prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textTertiary),
                                   prefixIconConstraints: const BoxConstraints(minWidth: 32),
@@ -436,7 +437,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Période', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Période'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
@@ -464,7 +465,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                     Expanded(
                                       child: Text(
                                         _filterDateRange == null 
-                                            ? 'Toutes les dates' 
+                                            ? context.tr('Toutes les dates') 
                                             : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
                                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         overflow: TextOverflow.ellipsis,
@@ -495,7 +496,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                               _filterDateRange = null;
                             }),
                             icon: const Icon(Icons.refresh_rounded, size: 18),
-                            tooltip: 'Réinitialiser les filtres',
+                            tooltip: context.tr('Réinitialiser les filtres'),
                             style: IconButton.styleFrom(
                               foregroundColor: AppColors.error,
                               backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -514,9 +515,9 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<StockMovement>(
-                      columns: const ['Reference', 'Date', 'Produit', 'Entrepot', 'Type', 'Quantite', 'Raison'],
+                      columns: [context.tr('Référence'), context.tr('Date'), context.tr('Produit'), context.tr('Entrepôt'), context.tr('Type'), context.tr('Quantité'), context.tr('Raison')],
                       rows: filteredMovements,
-                      emptyMessage: 'Aucun mouvement de stock trouve',
+                      emptyMessage: context.tr('Aucun mouvement de stock trouvé'),
                       cellBuilder: (m) {
                         final bool isCancelled = m.isDeleted || (m.notes != null && m.notes!.contains('Suppression'));
                         double val = m.quantity;
@@ -573,7 +574,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                         String displayWhName = m.warehouseName ?? '';
                         if (displayWhName.isEmpty) {
                           if (m.warehouseId == 'default_warehouse') {
-                            displayWhName = 'Entrepôt principal';
+                            displayWhName = context.tr('Entrepôt principal');
                           } else {
                             try {
                               displayWhName = state.warehouses.firstWhere((w) => w.id == m.warehouseId).name;
@@ -593,7 +594,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                               children: [
                                 Icon(typeIcon, size: 16, color: typeColor),
                                 const SizedBox(width: 6),
-                                Text(isCancelled ? '${m.type.label} (Annulé)' : m.type.label, style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.w500)),
+                                Text(isCancelled ? '${context.tr(m.type.label)} (${context.tr('Annulé')})' : context.tr(m.type.label), style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.w500)),
                               ],
                             )
                           ),
@@ -675,10 +676,12 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
           _selectedWarehouseId = stockState.warehouses.first.id;
         }
 
-        double currentWarehouseStock = _selectedProduct != null ? _getWarehouseStockForProduct(_selectedProduct!, stockState) : 0;
+        double currentWarehouseStock = _selectedProduct != null
+            ? _getWarehouseStockForProduct(_selectedProduct!, stockState)
+            : 0;
 
         return AlertDialog(
-          title: const Text('Nouvel ajustement de stock', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(context.tr('Nouvel ajustement de stock'), style: const TextStyle(fontWeight: FontWeight.bold)),
           content: SizedBox(
             width: 500,
             child: Form(
@@ -688,7 +691,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Article', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    Text(context.tr('Article'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     BlocBuilder<ProductsBloc, ProductsState>(
                       builder: (context, pState) {
@@ -714,15 +717,15 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                               controller: controller,
                               focusNode: focusNode,
                               decoration: InputDecoration(
-                                hintText: 'Rechercher un article par nom ou code...',
+                                hintText: context.tr('Rechercher un article par nom ou code...'),
                                 prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                                 filled: true,
                                 fillColor: AppColors.background,
                               ),
-                              validator: (v) => _selectedProduct == null ? 'Veuillez sélectionner un article' : null,
+                              validator: (v) => _selectedProduct == null ? context.tr('Veuillez sélectionner un article') : null,
                             );
                           },
                           optionsViewBuilder: (context, onSelected, options) {
@@ -732,7 +735,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                                 elevation: 4,
                                 borderRadius: BorderRadius.circular(AppRadius.md),
                                 child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxHeight: 200, maxWidth: 500),
+                                  constraints: const BoxConstraints(maxHeight: 200, maxWidth: 460),
                                   child: ListView.builder(
                                     padding: EdgeInsets.zero,
                                     shrinkWrap: true,
@@ -741,8 +744,8 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                                       final option = options.elementAt(i);
                                       final optStock = _getWarehouseStockForProduct(option, stockState);
                                       return ListTile(
-                                        title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                        subtitle: Text('Stock actuel : ${optStock.toStringAsFixed(0)} ${option.unit}', style: TextStyle(fontSize: 11, color: AppColors.primary)),
+                                        title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                        subtitle: Text('${context.tr('Stock actuel')} : ${optStock.toStringAsFixed(0)} ${option.unit}', style: TextStyle(fontSize: 11, color: AppColors.primary)),
                                         onTap: () => onSelected(option),
                                         dense: true,
                                       );
@@ -756,21 +759,21 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                       },
                     ),
                     if (_selectedProduct != null) ...[
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Container(
-                        padding: EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                         child: Row(
                           children: [
                             Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Stock actuel : ${currentWarehouseStock.toStringAsFixed(0)} ${_selectedProduct!.unit}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            Text('${context.tr('Stock actuel')} : ${currentWarehouseStock.toStringAsFixed(0)} ${_selectedProduct!.unit}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                           ],
                         ),
                       ),
                     ],
-                    SizedBox(height: 16),
-                    Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     Builder(
                       builder: (context) {
@@ -779,8 +782,8 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                           orElse: () => null,
                         );
                         return SearchableSelectorField(
-                          hint: 'Sélectionner un entrepôt',
-                          selectedText: selectedWh?.name ?? 'Entrepot Principal',
+                          hint: context.tr('Sélectionner un entrepôt'),
+                          selectedText: selectedWh?.name ?? context.tr('Entrepôt principal'),
                           onTap: () async {
                             final res = await showWarehouseSelectDialog(
                               context,
@@ -803,17 +806,16 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Type d\'action', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                              SizedBox(height: 6),
+                              Text(context.tr('Type d\'action'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                              const SizedBox(height: 6),
                               DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
+                                dropdownColor: AppColors.surfaceAlt,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                                 value: _adjustmentAction,
                                 items: [
-                                  DropdownMenuItem(value: 'add', child: Text('Ajouter au stock', style: TextStyle(color: AppColors.success))),
-                                  DropdownMenuItem(value: 'exit', child: Text('Retirer du stock', style: TextStyle(color: AppColors.error))),
-                                  DropdownMenuItem(value: 'correct', child: Text('Corriger (Remplacer)', style: TextStyle(color: AppColors.warning))),
+                                  DropdownMenuItem(value: 'add', child: Text(context.tr('Ajouter au stock'), style: TextStyle(color: AppColors.success))),
+                                  DropdownMenuItem(value: 'exit', child: Text(context.tr('Retirer du stock'), style: TextStyle(color: AppColors.error))),
+                                  DropdownMenuItem(value: 'correct', child: Text(context.tr('Corriger (Remplacer)'), style: TextStyle(color: AppColors.warning))),
                                 ],
                                 onChanged: (v) {
                                   setState(() {
@@ -828,7 +830,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                                   filled: true,
                                   fillColor: AppColors.background,
                                 ),
@@ -842,7 +844,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_adjustmentAction == 'correct' ? 'Nouv. Stock Réel' : 'Quantité', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                              Text(_adjustmentAction == 'correct' ? context.tr('Nouv. Stock Réel') : context.tr('Quantité'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                               const SizedBox(height: 6),
                               TextFormField(
                                 controller: _quantityCtrl,
@@ -851,14 +853,14 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                                   suffixText: _selectedProduct?.unit ?? '',
                                   filled: true,
                                   fillColor: AppColors.background,
                                 ),
                                 validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Requis';
-                                  if (double.tryParse(v) == null) return 'Invalide';
+                                  if (v == null || v.isEmpty) return context.tr('Requis');
+                                  if (double.tryParse(v) == null) return context.tr('Invalide');
                                   return null;
                                 },
                               ),
@@ -867,16 +869,16 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
-                    Text('Notes / Motif d\'ajustement', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    Text(context.tr('Notes / Motif d\'ajustement'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _notesCtrl,
                       decoration: InputDecoration(
-                        hintText: 'Ex: Inventaire du mois, produit cassé...',
+                        hintText: context.tr('Ex: Inventaire du mois, produit cassé...'),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         filled: true,
                         fillColor: AppColors.background,
                       ),
@@ -890,7 +892,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context), 
-              child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary))
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary))
             ),
             ElevatedButton(
               onPressed: () {
@@ -904,7 +906,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: const Text('Enregistrer l\'ajustement'),
+              child: Text(context.tr('Enregistrer l\'ajustement')),
             ),
           ],
         );
@@ -930,7 +932,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
     }
 
     if (qtyToRegister == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('La quantité d\'ajustement ne peut pas être nulle.'), backgroundColor: AppColors.warning));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('La quantité d\'ajustement ne peut pas être nulle.')), backgroundColor: AppColors.warning));
       return;
     }
 
@@ -944,14 +946,14 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
       quantity: qtyToRegister,
       referenceType: 'Ajustement',
       date: DateTime.now(),
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : 'Ajustement manuel',
+      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : context.tr('Ajustement manuel'),
     );
 
     context.read<StockBloc>().add(AddStockMovement(movement));
     context.read<ProductsBloc>().add(LoadProducts());
 
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Ajustement enregistré avec succès')), backgroundColor: AppColors.success));
   }
 }
 
@@ -1046,9 +1048,9 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Niveaux de Stock Actuels', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      SizedBox(height: 4),
-                      Text('Voir les niveaux de stock actuels pour tous les produits', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(context.tr('Niveaux de Stock Actuels'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      Text(context.tr('Voir les niveaux de stock actuels pour tous les produits'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -1062,29 +1064,29 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                   },
                   offset: const Offset(0, 40),
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'pdf',
                       child: Row(
                         children: [
-                          Icon(Icons.picture_as_pdf, size: 18),
-                          SizedBox(width: 8),
-                          Text('Exporter en PDF'),
+                          const Icon(Icons.picture_as_pdf, size: 18),
+                          const SizedBox(width: 8),
+                          Text(context.tr('Exporter en PDF')),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'excel',
                       child: Row(
                         children: [
-                          Icon(Icons.table_chart, size: 18),
-                          SizedBox(width: 8),
-                          Text('Exporter en Excel'),
+                          const Icon(Icons.table_chart, size: 18),
+                          const SizedBox(width: 8),
+                          Text(context.tr('Exporter en Excel')),
                         ],
                       ),
                     ),
                   ],
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(8),
@@ -1093,8 +1095,8 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.download_rounded, size: 16, color: AppColors.textPrimary),
-                        SizedBox(width: 8),
-                        Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                        const SizedBox(width: 8),
+                        Text(context.tr('Exporter'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
@@ -1104,9 +1106,9 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
           ),
           // ── Filter Bar ──
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: Container(
-              padding: EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -1123,19 +1125,19 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             SizedBox(
                               height: 36,
                               child: Builder(
                                 builder: (context) {
-                                  String selectedLabel = 'Tous les Entrepôts';
+                                  String selectedLabel = context.tr('Tous les Entrepôts');
                                   if (_filterWarehouseId != null) {
                                     final w = widget.warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _filterWarehouseId, orElse: () => null);
                                     if (w != null) selectedLabel = w.name;
                                   }
                                   return SearchableSelectorField(
-                                    hint: 'Sélectionner entrepôt',
+                                    hint: context.tr('Sélectionner entrepôt'),
                                     selectedText: selectedLabel,
                                     onTap: () async {
                                       final res = await showWarehouseSelectDialog(
@@ -1158,13 +1160,13 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                           ],
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       // Destination filter
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Destination', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Destination'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             PopupMenuButton<String>(
                               shape: RoundedRectangleBorder(
@@ -1188,17 +1190,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.textTertiary.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'Toutes',
+                                          context.tr('Toutes'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterDestination == 'tous')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1211,17 +1213,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.primary.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'Vente',
+                                          context.tr('Vente'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterDestination == 'vente')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1233,17 +1235,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.warning.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'Achat',
+                                          context.tr('Achat'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warning),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterDestination == 'achat')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1259,24 +1261,24 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                     color: _filterDestination != 'tous' ? AppColors.primary : AppColors.border,
                                   ),
                                 ),
-                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _filterDestination == 'tous'
                                           ? Text(
-                                              'Toutes',
+                                              context.tr('Toutes'),
                                               style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                               overflow: TextOverflow.ellipsis,
                                             )
                                           : Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: (_filterDestination == 'vente' ? AppColors.primary : AppColors.warning).withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(AppRadius.sm),
                                               ),
                                               child: Text(
-                                                _filterDestination == 'vente' ? 'Vente' : 'Achat',
+                                                _filterDestination == 'vente' ? context.tr('Vente') : context.tr('Achat'),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
@@ -1286,7 +1288,7 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                               ),
                                             ),
                                     ),
-                                    SizedBox(width: 4),
+                                    const SizedBox(width: 4),
                                     Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                                   ],
                                 ),
@@ -1296,24 +1298,24 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                         ),
                       ),
 
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       // Product filter
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Article', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Article'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             SizedBox(
                               height: 36,
                               child: TextField(
                                 onChanged: (v) => setState(() { _filterProduct = v; _currentPage = 0; }),
                                 decoration: InputDecoration(
-                                  hintText: 'Rechercher produit...',
+                                  hintText: context.tr('Rechercher produit...'),
                                   hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                   prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textTertiary),
-                                  prefixIconConstraints: BoxConstraints(minWidth: 36),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 36),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                   filled: true,
@@ -1325,24 +1327,24 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                           ],
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       // Reference filter
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Référence', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Référence'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             SizedBox(
                               height: 36,
                               child: TextField(
                                 onChanged: (v) => setState(() { _filterReference = v; _currentPage = 0; }),
                                 decoration: InputDecoration(
-                                  hintText: 'Rechercher réf...',
+                                  hintText: context.tr('Rechercher réf...'),
                                   hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                   prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textTertiary),
-                                  prefixIconConstraints: BoxConstraints(minWidth: 36),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 36),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                   filled: true,
@@ -1354,13 +1356,13 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                           ],
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       // Status filter
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            Text(context.tr('Statut'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             PopupMenuButton<String>(
                               shape: RoundedRectangleBorder(
@@ -1384,17 +1386,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.textTertiary.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'Tous',
+                                          context.tr('Tous'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterStatus == 'tous')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1407,17 +1409,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.success.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'En Stock',
+                                          context.tr('En Stock'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterStatus == 'en_stock')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1429,17 +1431,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: AppColors.error.withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
-                                          'En Rupture',
+                                          context.tr('En Rupture'),
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
                                         ),
                                       ),
-                                      Spacer(),
+                                      const Spacer(),
                                       if (_filterStatus == 'rupture')
                                         Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                                     ],
@@ -1455,24 +1457,24 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                     color: _filterStatus != 'tous' ? AppColors.primary : AppColors.border,
                                   ),
                                 ),
-                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: _filterStatus == 'tous'
                                           ? Text(
-                                              'Tous',
+                                              context.tr('Tous'),
                                               style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                               overflow: TextOverflow.ellipsis,
                                             )
                                           : Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: (_filterStatus == 'en_stock' ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(AppRadius.sm),
                                               ),
                                               child: Text(
-                                                _filterStatus == 'en_stock' ? 'En Stock' : 'En Rupture',
+                                                _filterStatus == 'en_stock' ? context.tr('En Stock') : context.tr('En Rupture'),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w600,
@@ -1482,7 +1484,7 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                                               ),
                                             ),
                                     ),
-                                    SizedBox(width: 4),
+                                    const SizedBox(width: 4),
                                     Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                                   ],
                                 ),
@@ -1495,17 +1497,17 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                   ),
                   if (_filterWarehouseId != null || _filterDestination != 'tous' || _filterProduct.isNotEmpty || _filterReference.isNotEmpty || _filterStatus != 'tous')
                     Padding(
-                      padding: EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.only(top: 16),
                       child: Row(
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                              '$totalItems ${totalItems > 1 ? context.tr('résultats') : context.tr('résultat')}',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                             ),
                           ),
@@ -1519,8 +1521,8 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                               _filterStatus = 'tous';
                               _currentPage = 0;
                             }),
-                            icon: Icon(Icons.refresh_rounded, size: 16),
-                            label: Text('Réinitialiser les filtres', style: TextStyle(fontSize: 13)),
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: Text(context.tr('Réinitialiser les filtres'), style: const TextStyle(fontSize: 13)),
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.textSecondary,
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1535,25 +1537,25 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
           ),
           // Table header
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 1, child: Text('Disponible', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 1, child: Text('Réservé', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 1, child: Text('Total', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                SizedBox(width: 100, child: Text('Statut', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text(context.tr('Produit'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text(context.tr('Disponible'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text(context.tr('Réservé'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text(context.tr('Total'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                SizedBox(width: 100, child: Text(context.tr('Statut'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
               ],
             ),
           ),
           // Table body
           if (filteredItems.isEmpty)
             Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: Text("Aucun produit trouvé.", style: TextStyle(color: AppColors.textSecondary))),
+              padding: const EdgeInsets.all(32),
+              child: Center(child: Text(context.tr("Aucun produit trouvé."), style: TextStyle(color: AppColors.textSecondary))),
             )
           else
             ListView.builder(
@@ -1572,11 +1574,11 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                         child: Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(4)),
                               child: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Expanded(child: Text(item.product.name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500))),
                           ],
                         ),
@@ -1591,13 +1593,13 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: item.quantity > 0 ? AppColors.success.withValues(alpha: 0.1) : AppColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              item.quantity > 0 ? 'En Stock' : 'En Rupture',
+                              item.quantity > 0 ? context.tr('En Stock') : context.tr('En Rupture'),
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -1615,13 +1617,13 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
           // Pagination
           if (totalPages > 1)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                  SizedBox(width: 8),
+                  Text(context.tr('Lignes'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
                     child: DropdownButton<int>(
                       value: _rowsPerPage,
@@ -1638,24 +1640,24 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                       },
                     ),
                   ),
-                  Spacer(),
-                  Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const Spacer(),
+                  Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                   const SizedBox(width: 24),
                   Row(
                     children: [
                       InkWell(
                         onTap: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
                         child: Container(
-                          padding: EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(4)),
                           child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       InkWell(
                         onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
                         child: Container(
-                          padding: EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(4)),
                           child: Icon(Icons.chevron_right, size: 20, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
                         ),

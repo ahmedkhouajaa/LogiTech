@@ -13,6 +13,7 @@ import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
 
 class WarehousesScreen extends StatefulWidget {
   const WarehousesScreen({super.key});
@@ -45,7 +46,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
       if (isDefault) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié.')),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 2),
           ),
@@ -66,7 +67,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
     if (isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être supprimé.')),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 2),
         ),
@@ -76,17 +77,17 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Êtes-vous sûr de vouloir supprimer cet entrepôt ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text(context.tr('Êtes-vous sûr de vouloir supprimer cet entrepôt ?')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Annuler'))),
           ElevatedButton(
             onPressed: () {
               context.read<WarehousesBloc>().add(DeleteWarehouse(warehouse.id));
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -104,9 +105,9 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Entrepôts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  Text(context.tr('Entrepôts'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
-                  Text('Gérer vos entrepôts', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos entrepôts'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -114,7 +115,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                 ElevatedButton.icon(
                   onPressed: () => _showWarehouseDialog(),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Ajouter un Entrepôt'),
+                  label: Text(context.tr('Ajouter un Entrepôt')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -137,9 +138,9 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondary,
             indicatorColor: AppColors.primary,
-            tabs: const [
-              Tab(text: 'Entrepôts'),
-              Tab(text: 'Départements'),
+            tabs: [
+              Tab(text: context.tr('Entrepôts')),
+              Tab(text: context.tr('Départements')),
             ],
           ),
         ),
@@ -149,7 +150,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             controller: _tabController,
             children: [
               _buildWarehousesTab(),
-              Center(child: Text('Les départements seront bientôt disponibles', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+              Center(child: Text(context.tr('Les départements seront bientôt disponibles'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
             ],
           ),
         ),
@@ -165,10 +166,10 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: ShimmerTable(
               headerColumns: [
-                Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                Expanded(flex: 3, child: Text('Adresse', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text(context.tr('Nom'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text(context.tr('Adresse'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
               ],
             ),
           );
@@ -178,7 +179,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
           final warehouses = state.warehouses;
 
           if (warehouses.isEmpty) {
-            return Center(child: Text('Aucun entrepôt trouvé', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)));
+            return Center(child: Text(context.tr('Aucun entrepôt trouvé'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)));
           }
 
           return SingleChildScrollView(
@@ -201,11 +202,11 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                   horizontalMargin: 16,
                   headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
                   dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
-                  columns: const [
-                    DataColumn(label: Text('Nom')),
-                    DataColumn(label: Text('Référence')),
-                    DataColumn(label: Text('Adresse')),
-                    DataColumn(label: Text('Actions')),
+                  columns: [
+                    DataColumn(label: Text(context.tr('Nom'))),
+                    DataColumn(label: Text(context.tr('Référence'))),
+                    DataColumn(label: Text(context.tr('Adresse'))),
+                    DataColumn(label: Text(context.tr('Actions'))),
                   ],
                   rows: warehouses.map((w) {
                     final isDefault = w.isDefault ||
@@ -243,13 +244,13 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                             ],
                           ),
                         ),
-                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: TextStyle(color: AppColors.textSecondary, fontSize: 12))),
+                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : context.tr('Aucune référence'), style: TextStyle(color: AppColors.textSecondary, fontSize: 12))),
                         DataCell(
                           Row(
                             children: [
                               Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
                               const SizedBox(width: 4),
-                              Text(w.address?.isNotEmpty == true ? w.address! : 'Adresse par défaut', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                              Text(w.address?.isNotEmpty == true ? w.address! : context.tr('Adresse par défaut'), style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                             ],
                           ),
                         ),
@@ -273,7 +274,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                       children: [
                                         Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
                                         const SizedBox(width: 8),
-                                        const Text('Voir'),
+                                        Text(context.tr('Voir')),
                                       ],
                                     ),
                                     onTap: () {
@@ -294,7 +295,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                         children: [
                                           Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
                                           const SizedBox(width: 8),
-                                          const Text('Modifier'),
+                                          Text(context.tr('Modifier')),
                                         ],
                                       ),
                                       onTap: () {
@@ -313,7 +314,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                         children: [
                                           Icon(Icons.delete_outline, size: 16, color: AppColors.error),
                                           const SizedBox(width: 8),
-                                          Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                          Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error)),
                                         ],
                                       ),
                                       onTap: () {
@@ -332,7 +333,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                       children: [
                                         Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
                                         const SizedBox(width: 8),
-                                        Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                        Text(context.tr('Élément protégé'), style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                       ],
                                     ),
                                   ),
@@ -480,18 +481,18 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                       TextFormField(
                         controller: _nameController,
                         decoration: _inputDecoration('Saisissez le nom de l\'entrepôt'),
-                        validator: (value) => value == null || value.isEmpty ? 'Ce champ est requis' : null,
+                        validator: (value) => value == null || value.isEmpty ? context.tr('Ce champ est requis') : null,
                       ),
                       SizedBox(height: 16),
                       
-                      _buildLabel('Référence'),
+                      _buildLabel(context.tr('Référence')),
                       TextFormField(
                         controller: _referenceController,
                         decoration: _inputDecoration('Saisissez la référence de l\'entrepôt'),
                       ),
                       SizedBox(height: 16),
                       
-                      _buildLabel('Adresse'),
+                      _buildLabel(context.tr('Adresse')),
                       TextFormField(
                         controller: _addressController,
                         maxLines: 3,
@@ -505,10 +506,10 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Code Postal'),
+                                _buildLabel(context.tr('Code Postal')),
                                 TextFormField(
                                   controller: _postalCodeController,
-                                  decoration: _inputDecoration('Saisissez le code postal'),
+                                  decoration: _inputDecoration(context.tr('Saisissez le code postal')),
                                 ),
                               ],
                             ),
@@ -518,10 +519,10 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Ville'),
+                                _buildLabel(context.tr('Ville')),
                                 TextFormField(
                                   controller: _cityController,
-                                  decoration: _inputDecoration('Saisissez la ville'),
+                                  decoration: _inputDecoration(context.tr('Saisissez la ville')),
                                 ),
                               ],
                             ),
@@ -530,7 +531,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                       ),
                       SizedBox(height: 16),
                       
-                      _buildLabel('Pays'),
+                      _buildLabel(context.tr('Pays')),
                       Container(
                         decoration: BoxDecoration(
                           color: AppColors.surfaceAlt,
@@ -569,7 +570,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                             onChanged: (val) => setState(() => _isActive = val ?? true),
                             activeColor: AppColors.primary,
                           ),
-                          Text('Actif', style: TextStyle(fontWeight: FontWeight.w500)),
+                          Text(context.tr('Actif'), style: const TextStyle(fontWeight: FontWeight.w500)),
                         ],
                       ),
                       SizedBox(height: 8),
@@ -588,7 +589,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                               children: [
                                 Padding(
                                   padding: EdgeInsets.only(top: 12.0),
-                                  child: Text('Entrepôt par Défaut', style: TextStyle(fontWeight: FontWeight.w500)),
+                                  child: Text(context.tr('Entrepôt par Défaut'), style: const TextStyle(fontWeight: FontWeight.w500)),
                                 ),
                                 Text(
                                   'Ce sera l\'entrepôt par défaut pour les nouveaux produits et transactions',
@@ -619,7 +620,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
-                    child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary)),
+                    child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textPrimary)),
                   ),
                   SizedBox(width: 12),
                   ElevatedButton(
@@ -631,7 +632,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
-                    child: Text(widget.warehouse == null ? 'Créer' : 'Enregistrer'),
+                    child: Text(widget.warehouse == null ? context.tr('Créer') : context.tr('Enregistrer')),
                   ),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../utils/constants.dart';
 
 class PurchaseInvoice {
@@ -14,6 +15,7 @@ class PurchaseInvoice {
   final DateTime date;
   final DateTime dueDate;
   final InvoiceStatus status;
+  final String? customStatus;
   final double totalHT;
   final double totalTva;
   final double totalTTC;
@@ -25,6 +27,7 @@ class PurchaseInvoice {
   final String pricingMode; // 'ht' or 'ttc'
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic>? customFields;
   final List<PurchaseInvoiceItem> items;
   final String? firebaseUid;
   final String? creditNoteId;
@@ -49,6 +52,7 @@ class PurchaseInvoice {
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.unpaid,
+    this.customStatus,
     this.totalHT = 0,
     this.totalTva = 0,
     this.totalTTC = 0,
@@ -60,6 +64,7 @@ class PurchaseInvoice {
     this.pricingMode = 'ht',
     this.notes,
     this.conditionsGenerales,
+    this.customFields,
     this.items = const [],
     this.firebaseUid,
     this.creditNoteId,
@@ -72,6 +77,7 @@ class PurchaseInvoice {
 
   double get amountRemaining => totalTTC + stampTax - amountPaid;
   bool get isOverdue => dueDate.isBefore(DateTime.now()) && status != InvoiceStatus.paid;
+  String get effectiveStatus => (customStatus != null && customStatus!.isNotEmpty) ? customStatus! : status.name;
 
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'supplier_id': supplierId,
@@ -81,7 +87,9 @@ class PurchaseInvoice {
         'receiving_voucher_id': receivingVoucherId,
         'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
-        'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
+        'status': effectiveStatus,
+        'custom_status': customStatus,
+        'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
         'timbre_fiscal': timbreFiscal,
         'global_discount_percent': globalDiscountPercent,
@@ -89,6 +97,8 @@ class PurchaseInvoice {
         'pricing_mode': pricingMode,
         'notes': notes,
         'conditions': conditionsGenerales,
+        'custom_fields': customFields,
+        'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
         'firebase_uid': firebaseUid,
         'credit_note_id': creditNoteId,
         'is_deleted': isDeleted ? 1 : 0,
@@ -121,6 +131,10 @@ class PurchaseInvoice {
       rawTotalTTC = rawTotalHT + rawTotalTva + stamp;
     }
 
+    final rawStatus = map['status']?.toString() ?? 'unpaid';
+    final enumMatch = InvoiceStatus.values.where((e) => e.name == rawStatus).firstOrNull;
+    final cStatus = enumMatch == null ? rawStatus : (map['custom_status']?.toString() ?? map['customStatus']?.toString());
+
     return PurchaseInvoice(
         id: map['id']?.toString() ?? '', number: map['number']?.toString() ?? '',
         supplierId: map['supplier_id']?.toString() ?? '',
@@ -134,9 +148,8 @@ class PurchaseInvoice {
         warehouseId: map['warehouse_id']?.toString(),
         date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
         dueDate: map['due_date'] != null ? DateTime.tryParse(map['due_date'].toString()) ?? DateTime.now() : DateTime.now(),
-        status: InvoiceStatus.values.firstWhere(
-          (e) => e.name == map['status'], orElse: () => InvoiceStatus.unpaid,
-        ),
+        status: enumMatch ?? InvoiceStatus.unpaid,
+        customStatus: cStatus,
         totalHT: rawTotalHT,
         totalTva: rawTotalTva,
         totalTTC: rawTotalTTC,
@@ -148,6 +161,16 @@ class PurchaseInvoice {
         pricingMode: map['pricing_mode']?.toString() ?? 'ht',
         notes: map['notes']?.toString(),
         conditionsGenerales: map['conditions']?.toString(),
+        customFields: () {
+          if (map['custom_fields'] is Map) {
+            return Map<String, dynamic>.from(map['custom_fields'] as Map);
+          } else if (map['custom_fields_json'] != null) {
+            try {
+              return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+            } catch (_) {}
+          }
+          return null;
+        }(),
         firebaseUid: map['firebase_uid']?.toString(),
         creditNoteId: map['credit_note_id']?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
@@ -163,10 +186,11 @@ class PurchaseInvoice {
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
     String? devisId, String? receivingVoucherId, String? warehouseId,
     DateTime? date, DateTime? dueDate,
-    InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
+    InvoiceStatus? status, String? customStatus, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
     double? globalDiscountPercent, double? globalDiscountAmount,
     String? pricingMode, String? notes, String? conditionsGenerales,
+    Map<String, dynamic>? customFields,
     List<PurchaseInvoiceItem>? items,
     String? firebaseUid, String? creditNoteId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => PurchaseInvoice(
@@ -181,7 +205,9 @@ class PurchaseInvoice {
         receivingVoucherId: receivingVoucherId ?? this.receivingVoucherId,
         warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
-        status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
+        status: status ?? this.status,
+        customStatus: customStatus ?? this.customStatus,
+        totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,
         amountPaid: amountPaid ?? this.amountPaid, stampTax: stampTax ?? this.stampTax,
         timbreFiscal: timbreFiscal ?? this.timbreFiscal,
@@ -189,6 +215,7 @@ class PurchaseInvoice {
         globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
         pricingMode: pricingMode ?? this.pricingMode,
         notes: notes ?? this.notes, conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+        customFields: customFields ?? this.customFields,
         items: items ?? this.items,
         firebaseUid: firebaseUid ?? this.firebaseUid, creditNoteId: creditNoteId ?? this.creditNoteId,
         isDeleted: isDeleted ?? this.isDeleted,

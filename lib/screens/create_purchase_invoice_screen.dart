@@ -18,12 +18,14 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 import 'create_article_screen.dart';
 import '../services/enterprise_service.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../widgets/custom_fields_form_section.dart';
 
 
 
@@ -57,6 +59,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   
   Key _autocompleteKey = UniqueKey();
   InvoiceStatus _status = InvoiceStatus.unpaid;
+  Map<String, dynamic> _customFields = {};
   
   final Map<String, TextEditingController> _qtyControllers = {};
 
@@ -124,6 +127,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       _globalDiscountPercent = inv.globalDiscountPercent;
       _selectedProjectId = inv.projectId;
       _selectedWarehouseId = inv.warehouseId;
+      _customFields = inv.customFields != null ? Map<String, dynamic>.from(inv.customFields!) : {};
       _items = inv.items.toList();
     }
   }
@@ -153,6 +157,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                       _buildFormCard(),
+                      SizedBox(height: AppSpacing.lg),
+                      CustomFieldsFormSection(
+                        documentType: 'purchase_invoice',
+                        initialValues: _customFields,
+                        readOnly: widget.isReadOnly,
+                        onChanged: (vals) => _customFields = vals,
+                      ),
                       SizedBox(height: AppSpacing.lg),
                       _buildArticlesSection(),
                       SizedBox(height: AppSpacing.md),
@@ -188,12 +199,12 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       child: Row(
         children: [
           Text(
-            _isEditing ? 'Modifier la facture' : 'Ajouter une facture',
+            _isEditing ? context.tr('Modifier la facture') : context.tr('Ajouter une facture'),
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           SizedBox(width: 12),
           // Status badge
-          StatusBadge(label: _status.label, color: _status.color),
+          StatusBadge(label: context.tr(_status.label), color: _status.color),
           const Spacer(),
           _buildHeaderButton(Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
           SizedBox(width: 8),
@@ -211,7 +222,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               child: ElevatedButton.icon(
                 onPressed: _save,
                 icon: Icon(Icons.check_rounded, size: 16),
-                label: Text('Valider', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                label: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -227,13 +238,14 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     );
   }
 
-  Widget _buildHeaderButton(IconData icon, String label, VoidCallback onPressed) {
+  Widget _buildHeaderButton(
+      IconData icon, String label, VoidCallback onPressed) {
     return SizedBox(
       height: 36,
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 14),
-        label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        label: Text(context.tr(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
           side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -258,20 +270,20 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date d'emission
-          Text("Date d'emission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          Text(context.tr("Date d'emission"), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
                 context: context, initialDate: _date,
                 firstDate: DateTime(2020), lastDate: DateTime(2030),
-                locale: const Locale('fr', 'FR'),
+                locale: Localizations.localeOf(context),
               );
               if (picked != null) setState(() => _date = picked);
             },
             child: AbsorbPointer(
               child: TextFormField(
-                controller: TextEditingController(text: formatDateLong(_date)),
+                controller: TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -293,7 +305,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Fournisseur'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     Row(
                       children: [
@@ -312,13 +324,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
 
                               return FormField<String>(
                                 initialValue: _selectedSupplier?.id,
-                                validator: (v) => _selectedSupplier == null ? 'Requis' : null,
+                                validator: (v) => _selectedSupplier == null ? context.tr('Requis') : null,
                                 builder: (field) {
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher un fournisseur...',
+                                        hint: context.tr('Rechercher un fournisseur...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -349,7 +361,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                           SizedBox(
                             height: 48,
                             child: Tooltip(
-                              message: 'Créer un nouveau fournisseur',
+                              message: context.tr('Créer un nouveau fournisseur'),
                               child: ElevatedButton(
                                 onPressed: () async {
                                   final res = await showDialog(
@@ -398,7 +410,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Projet'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
@@ -423,7 +435,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                         );
 
                         return SearchableSelectorField(
-                          hint: 'Sélectionner un projet',
+                          hint: context.tr('Sélectionner un projet'),
                           selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
@@ -448,7 +460,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
               BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
@@ -468,7 +480,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                   final warehouseName = selectedWh?.name;
 
                   return SearchableSelectorField(
-                    hint: 'Sélectionner un entrepôt',
+                    hint: context.tr('Sélectionner un entrepôt'),
                     selectedText: warehouseName,
                     onTap: () async {
                       final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
@@ -483,7 +495,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           ),
           SizedBox(height: 20),
           // Pricing mode radio
-          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(context.tr('Les prix des articles sont en'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           SizedBox(height: 8),
           Row(
             children: [
@@ -493,7 +505,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Hors taxes'), style: TextStyle(fontSize: 13)),
               SizedBox(width: 24),
               Radio<bool>(
                 value: false,
@@ -501,7 +513,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text(context.tr('Taxe incluse'), style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -535,7 +547,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           // Section title
           Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: Text('Articles', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Text(context.tr('Articles'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           // Table header
           Container(
@@ -551,30 +563,30 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Designation', style: _tableHeaderStyle())),
+                    child: Text(context.tr('Designation'), style: _tableHeaderStyle())),
                 SizedBox(
                     width: 140,
-                    child: Text('Quantite',
+                    child: Text(context.tr('Quantite'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 130,
-                    child: Text('P.U HT',
+                    child: Text(context.tr('P.U HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('Remise %',
+                    child: Text(context.tr('Remise %'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 100,
-                    child: Text('TVA',
+                    child: Text(context.tr('TVA'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
                     width: 140,
-                    child: Text('Total HT',
+                    child: Text(context.tr('Total HT'),
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
                 SizedBox(width: 60),
@@ -586,7 +598,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              child: Text(context.tr('Aucun article'), textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -620,15 +632,16 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 flex: 3,
                 child: BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, state) {
-                    final products = state is ProductsLoaded ? state.products : <Product>[];
-                    final selectedProd = products.cast<Product?>().firstWhere((p) => p?.id == item.productId, orElse: () => null);
+                    final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+                    final selectedProd = allProducts.cast<Product?>().firstWhere((p) => p?.id == item.productId, orElse: () => null);
+                    final products = allProducts.where((p) => p.isForPurchase).toList();
                     return SearchableSelectorField(
-                      hint: 'Rechercher un article...',
+                      hint: context.tr('Rechercher un article...'),
                       selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
                       hasError: isArticleMissing,
-                      errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                      errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -786,7 +799,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
                 onPressed: () => setState(() => _items.removeAt(index)),
                 splashRadius: 16,
-                tooltip: 'Supprimer',
+                tooltip: context.tr('Supprimer'),
               ),
               // Drag handle
               Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
@@ -819,13 +832,14 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products = state is ProductsLoaded ? state.products : <Product>[];
+              final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+              final products = allProducts.where((p) => p.isForPurchase).toList();
               return SearchableSelectorField(
-                hint: 'Sélectionner un article...',
+                hint: context.tr('Sélectionner un article...'),
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     _addProductItem(product);
@@ -838,7 +852,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         SizedBox(width: 8),
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
+          tooltip: context.tr('Créer un nouvel article'),
           onPressed: () async {
             final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
             if (res != null && res is Product && mounted) {
@@ -853,7 +867,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           child: OutlinedButton.icon(
             onPressed: _addEmptyItem,
             icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
-            label: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            label: Text(context.tr('Ajouter une Ligne Vide'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.primary, width: 1.5),
@@ -891,7 +905,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Ajouter une remise globale'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -957,7 +971,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                           ),
                         ),
                         SizedBox(width: 8),
-                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(context.tr('Timbre fiscal:'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                     Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
@@ -975,7 +989,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Total TTC:'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
@@ -1004,13 +1018,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Visible sur le document final',
+                  hintText: context.tr('Visible sur le document final'),
                   hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -1029,13 +1043,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions generales pour ce document',
+                  hintText: context.tr('Conditions generales pour ce document'),
                   hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
@@ -1093,7 +1107,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       setState(() => _isSaving = false);
       return;
@@ -1107,14 +1121,14 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     if (hasEmptyArticle) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez selectionner un fournisseur'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez selectionner un fournisseur')), backgroundColor: AppColors.error),
       );
       setState(() => _isSaving = false);
       return;
@@ -1135,7 +1149,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           setState(() => _isSaving = false);
           return;
         }
-        number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
+        number = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
       } else {
         number = OfflineDocumentService.generateDraftNumber();
       }
@@ -1184,6 +1198,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+      customFields: _customFields,
       items: _items.map((item) => item.copyWith(purchaseInvoiceId: purchaseInvoiceId)).toList(),
       createdAt: _isEditing ? widget.existing!.createdAt : null,
       isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,

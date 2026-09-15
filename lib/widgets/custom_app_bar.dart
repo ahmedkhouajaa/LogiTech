@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -27,24 +28,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: AppShadows.sm,
       ),
-      padding: EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          if (leading != null) ...[leading!, SizedBox(width: 12)],
+          if (leading != null) ...[leading!, const SizedBox(width: 12)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  title,
+                  context.tr(title),
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
                 if (subtitle != null)
                   Text(
-                    subtitle!,
+                    context.tr(subtitle!),
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -93,10 +94,13 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizedLabel = context.tr(label);
+    final localizedHint = hint != null ? context.tr(hint!) : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(localizedLabel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
@@ -109,7 +113,7 @@ class AppTextField extends StatelessWidget {
           onChanged: onChanged,
           style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: localizedHint,
             hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             prefixIcon: prefix,
             suffixIcon: suffix,
@@ -184,8 +188,8 @@ class AppButton extends StatelessWidget {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (icon != null) ...[Icon(icon, size: isSmall ? 14 : 16), SizedBox(width: 6)],
-                  Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: isSmall ? 12 : 14)),
+                  if (icon != null) ...[Icon(icon, size: isSmall ? 14 : 16), const SizedBox(width: 6)],
+                  Text(context.tr(label), style: TextStyle(fontWeight: FontWeight.w600, fontSize: isSmall ? 12 : 14)),
                 ],
               ),
       ),
@@ -216,13 +220,13 @@ class EmptyState extends StatelessWidget {
             ),
             child: Icon(icon, size: 36, color: AppColors.primary),
           ),
-          SizedBox(height: 16),
-          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const SizedBox(height: 16),
+          Text(context.tr(title), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           if (subtitle != null) ...[
-            SizedBox(height: 8),
-            Text(subtitle!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            Text(context.tr(subtitle!), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           ],
-          if (action != null) ...[SizedBox(height: 24), action!],
+          if (action != null) ...[const SizedBox(height: 24), action!],
         ],
       ),
     );
@@ -250,21 +254,21 @@ class AppDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        SizedBox(height: 6),
+        Text(context.tr(label), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
         DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          dropdownColor: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: value,
           items: items,
           onChanged: onChanged,
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: hint != null ? context.tr(hint!) : null,
             hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
@@ -287,14 +291,14 @@ class AppSearchBar extends StatelessWidget {
       width: 280,
       child: TextField(
         onChanged: onChanged,
-        style: TextStyle(fontSize: 13),
+        style: const TextStyle(fontSize: 13),
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: context.tr(hint),
           hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textTertiary),
           filled: true,
           fillColor: AppColors.surfaceAlt,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),

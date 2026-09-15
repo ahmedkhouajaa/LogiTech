@@ -35,6 +35,8 @@ import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobilePurchaseInvoiceDetailScreen extends StatefulWidget {
   final PurchaseInvoice invoice;
@@ -92,8 +94,9 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentInvoice.status.toString().split('.').last);
-    final statusColor = _getStatusColor(currentInvoice.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', currentInvoice.effectiveStatus, fallbackLabel: translateStatus(currentInvoice.status.toString().split('.').last), fallbackColor: _getStatusColor(currentInvoice.status));
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -375,54 +378,19 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
   }
 
   void _showChangeStatusDialog(BuildContext context, PurchaseInvoice inv) {
-    InvoiceStatus selectedStatus = inv.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: InvoiceStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s.toString().split('.').last), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedInvoice = inv.copyWith(status: selectedStatus);
-                  context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'purchase_invoice',
+      currentStatus: inv.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final enumMatch = InvoiceStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        final updatedInvoice = inv.copyWith(
+          status: enumMatch ?? InvoiceStatus.unpaid,
+          customStatus: enumMatch == null ? newStatusKey : null,
+          notes: notes != null && notes.isNotEmpty ? '${inv.notes ?? ''}\n$notes' : inv.notes,
+        );
+        context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
+      },
     );
   }
 
@@ -464,7 +432,7 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
               final seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
-              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq);
+              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
               
               final creditNote = SupplierCreditNote(
                 id: cnId,

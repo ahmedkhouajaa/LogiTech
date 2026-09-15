@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class SupplierOrder {
@@ -17,6 +18,7 @@ class SupplierOrder {
   final double timbreFiscal;
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic> customFields;
   final String? firebaseUid;
   final bool isDeleted;
   final bool isSynced;
@@ -45,6 +47,7 @@ class SupplierOrder {
     this.timbreFiscal = 1.000,
     this.notes,
     this.conditionsGenerales,
+    this.customFields = const {},
     this.firebaseUid,
     this.isDeleted = false,
     this.isSynced = true,
@@ -131,6 +134,7 @@ class SupplierOrder {
     double? timbreFiscal,
     String? notes,
     String? conditionsGenerales,
+    Map<String, dynamic>? customFields,
     String? firebaseUid,
     bool? isDeleted,
     bool? isConvertedToReceipt,
@@ -158,6 +162,7 @@ class SupplierOrder {
       timbreFiscal: timbreFiscal ?? this.timbreFiscal,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      customFields: customFields ?? this.customFields,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
       isConvertedToReceipt: isConvertedToReceipt ?? this.isConvertedToReceipt,
@@ -188,6 +193,8 @@ class SupplierOrder {
       'timbre_fiscal': timbreFiscal,
       'notes': notes,
       'conditions': conditionsGenerales,
+      'custom_fields': customFields,
+      'custom_fields_json': jsonEncode(customFields),
       'total_ht': totalHTAfterDiscount,
       'total_tva': totalTVA,
       'total_ttc': totalTTC,
@@ -227,6 +234,17 @@ class SupplierOrder {
       timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '1.000') ?? 1.000,
       notes: map['notes']?.toString(),
       conditionsGenerales: map['conditions']?.toString(),
+      customFields: map['custom_fields'] is Map
+          ? Map<String, dynamic>.from(map['custom_fields'] as Map)
+          : (map['custom_fields_json'] != null
+              ? (() {
+                  try {
+                    return (jsonDecode(map['custom_fields_json'].toString()) as Map? ?? {}).cast<String, dynamic>();
+                  } catch (_) {
+                    return <String, dynamic>{};
+                  }
+                })()
+              : (map['customFields'] is Map ? Map<String, dynamic>.from(map['customFields'] as Map) : const {})),
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
       isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 /// Represents a document template configuration.
 ///
@@ -126,6 +127,167 @@ class DocumentTemplate {
         updatedAt: updatedAt ?? DateTime.now(),
       );
 
+  // ─── Supported Document Types (16 types across Ventes, Achats, Stock) ──
+
+  static const List<Map<String, dynamic>> supportedDocumentTypes = [
+    // Ventes (7)
+    {
+      'key': 'invoice',
+      'label': 'Facture de vente',
+      'shortLabel': 'Facture',
+      'category': 'Ventes',
+      'icon': Icons.receipt_long_rounded,
+    },
+    {
+      'key': 'quote',
+      'label': 'Devis',
+      'shortLabel': 'Devis',
+      'category': 'Ventes',
+      'icon': Icons.description_rounded,
+    },
+    {
+      'key': 'customer_order',
+      'label': 'Bon de commande client',
+      'shortLabel': 'Commande client',
+      'category': 'Ventes',
+      'icon': Icons.shopping_cart_rounded,
+    },
+    {
+      'key': 'delivery_note',
+      'label': 'Bon de livraison',
+      'shortLabel': 'Bon de livraison',
+      'category': 'Ventes',
+      'icon': Icons.local_shipping_rounded,
+    },
+    {
+      'key': 'exit_voucher',
+      'label': 'Bon de sortie',
+      'shortLabel': 'Bon de sortie',
+      'category': 'Ventes',
+      'icon': Icons.outbox_rounded,
+    },
+    {
+      'key': 'credit_note',
+      'label': 'Avoir client',
+      'shortLabel': 'Avoir client',
+      'category': 'Ventes',
+      'icon': Icons.assignment_return_rounded,
+    },
+    {
+      'key': 'return_voucher',
+      'label': 'Bon de retour client',
+      'shortLabel': 'Bon de retour',
+      'category': 'Ventes',
+      'icon': Icons.keyboard_return_rounded,
+    },
+
+    // Achats (5)
+    {
+      'key': 'purchase_invoice',
+      'label': 'Facture d\'achat',
+      'shortLabel': 'Facture d\'achat',
+      'category': 'Achats',
+      'icon': Icons.receipt_rounded,
+    },
+    {
+      'key': 'supplier_order',
+      'label': 'Bon de commande fournisseur',
+      'shortLabel': 'Commande fournisseur',
+      'category': 'Achats',
+      'icon': Icons.shopping_bag_rounded,
+    },
+    {
+      'key': 'receiving_voucher',
+      'label': 'Bon de réception',
+      'shortLabel': 'Bon de réception',
+      'category': 'Achats',
+      'icon': Icons.inventory_2_rounded,
+    },
+    {
+      'key': 'supplier_credit_note',
+      'label': 'Avoir fournisseur',
+      'shortLabel': 'Avoir fournisseur',
+      'category': 'Achats',
+      'icon': Icons.assignment_returned_rounded,
+    },
+    {
+      'key': 'supplier_return',
+      'label': 'Bon de retour fournisseur',
+      'shortLabel': 'Retour fournisseur',
+      'category': 'Achats',
+      'icon': Icons.assignment_return_outlined,
+    },
+
+    // Stock (4)
+    {
+      'key': 'stock_entry',
+      'label': 'Bon d\'entrée',
+      'shortLabel': 'Bon d\'entrée',
+      'category': 'Stock',
+      'icon': Icons.move_to_inbox_rounded,
+    },
+    {
+      'key': 'stock_withdrawal',
+      'label': 'Bon de prélèvement',
+      'shortLabel': 'Bon de prélèvement',
+      'category': 'Stock',
+      'icon': Icons.unarchive_outlined,
+    },
+    {
+      'key': 'stock_transfer',
+      'label': 'Bon de transfert',
+      'shortLabel': 'Bon de transfert',
+      'category': 'Stock',
+      'icon': Icons.swap_horiz_rounded,
+    },
+    {
+      'key': 'inventory_sheet',
+      'label': 'Fiche d\'inventaire',
+      'shortLabel': 'Fiche d\'inventaire',
+      'category': 'Stock',
+      'icon': Icons.fact_check_rounded,
+    },
+  ];
+
+  static String getDocumentTypeLabel(String key) {
+    for (final item in supportedDocumentTypes) {
+      if (item['key'] == key) {
+        return item['label'] as String;
+      }
+    }
+    switch (key) {
+      case 'invoice': return 'Facture de vente';
+      case 'quote': return 'Devis';
+      case 'customer_order': return 'Bon de commande client';
+      case 'delivery_note': return 'Bon de livraison';
+      case 'exit_voucher': return 'Bon de sortie';
+      case 'credit_note':
+      case 'creditNote': return 'Avoir client';
+      case 'return_voucher':
+      case 'return_note': return 'Bon de retour client';
+      case 'purchase_invoice':
+      case 'purchaseInvoice': return 'Facture d\'achat';
+      case 'supplier_order': return 'Bon de commande fournisseur';
+      case 'receiving_voucher': return 'Bon de réception';
+      case 'supplier_credit_note': return 'Avoir fournisseur';
+      case 'supplier_return': return 'Bon de retour fournisseur';
+      case 'stock_entry': return 'Bon d\'entrée';
+      case 'stock_withdrawal': return 'Bon de prélèvement';
+      case 'stock_transfer': return 'Bon de transfert';
+      case 'inventory_sheet': return 'Fiche d\'inventaire';
+      default: return key;
+    }
+  }
+
+  static IconData getDocumentTypeIcon(String key) {
+    for (final item in supportedDocumentTypes) {
+      if (item['key'] == key) {
+        return item['icon'] as IconData;
+      }
+    }
+    return Icons.description_rounded;
+  }
+
   // ─── Default Configurations (5 Presets) ───────────────────────────
 
   static Map<String, dynamic> defaultConfig() => classicConfig();
@@ -215,6 +377,7 @@ class DocumentTemplate {
         'companyDetails': {'positionX': 40.0, 'positionY': 22.0},
         'documentTitle': {'positionX': 140.0, 'positionY': 15.0},
         'clientDetails': {'positionX': 15.0, 'positionY': 45.0, 'width': 180.0, 'height': 30.0},
+        'customFieldsBox': {'positionX': 15.0, 'positionY': 150.0, 'width': 180.0, 'fontSize': 8.5},
 
         // Totals section positioning & visibility
         'totals': {'positionX': 130.0, 'positionY': 175.0, 'width': 65.0, 'lineSpacing': 7.0, 'labelWidth': 35.0},
@@ -551,6 +714,22 @@ class DocumentTemplate {
       config['documentTitle'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get clientDetailsConfig =>
       config['clientDetails'] as Map<String, dynamic>? ?? {};
+  Map<String, dynamic> get customFieldsBoxConfig {
+    final cfg = config['customFieldsBox'] as Map<String, dynamic>?;
+    if (cfg == null) {
+      return {
+        'positionX': 15.0,
+        'positionY': 150.0,
+        'width': 180.0,
+        'fontSize': 8.5,
+      };
+    }
+    final res = Map<String, dynamic>.from(cfg);
+    if (res['positionY'] == 76.0) {
+      res['positionY'] = 150.0;
+    }
+    return res;
+  }
   Map<String, dynamic> get signatureConfig =>
       config['signature'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get stampConfig =>

@@ -603,7 +603,7 @@ class TvaRates {
 // ─── Document Number Prefixes ─────────────────────────────────────
 class DocPrefix {
   static const String invoice = 'FAC';
-  static const String quote = 'DEV';
+  static const String quote = 'DV';
   static const String deliveryNote = 'BL';
   static const String creditNote = 'AV';
   static const String purchaseInvoice = 'FA';

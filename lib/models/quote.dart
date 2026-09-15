@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../utils/constants.dart';
 
 class Quote {
@@ -10,6 +11,7 @@ class Quote {
   final DateTime date;
   final DateTime validityDate;
   final DocumentStatus status;
+  final String? customStatus;
   final double totalHT;
   final double totalTva;
   final double totalTTC;
@@ -20,6 +22,7 @@ class Quote {
   final String? notes;
   final String? conditionsGenerales;
   final List<QuoteItem> items;
+  final Map<String, dynamic> customFields;
   final String? firebaseUid;
   final bool isDeleted;
   final bool isConverted;
@@ -37,9 +40,12 @@ class Quote {
   Quote({
     required this.id, required this.number, required this.customerId,
     this.customerName, this.projectId, this.projectName, this.warehouseId, required this.date, required this.validityDate,
-    this.status = DocumentStatus.draft, this.totalHT = 0, this.totalTva = 0,
+    this.status = DocumentStatus.draft,
+    this.customStatus,
+    this.totalHT = 0, this.totalTva = 0,
     this.totalTTC = 0, this.globalDiscountPercent = 0, this.globalDiscountAmount = 0,
     this.timbreFiscal = 1.000, this.pricingMode = 'ht', this.notes, this.conditionsGenerales, this.items = const [],
+    this.customFields = const {},
     this.firebaseUid, this.isDeleted = false,
     this.isConverted = false, this.convertedTo, this.convertedToId,
     this.isConvertedToOrder = false, this.convertedToOrderId,
@@ -50,14 +56,19 @@ class Quote {
         updatedAt = updatedAt ?? DateTime.now();
 
   bool get isExpired => validityDate.isBefore(DateTime.now());
+  String get effectiveStatus => (customStatus != null && customStatus!.isNotEmpty) ? customStatus! : status.name;
 
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId, 'customer_name': customerName, 'project_id': projectId, 'project_name': projectName, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'validity_date': validityDate.toIso8601String(),
-        'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
+        'status': effectiveStatus,
+        'custom_status': customStatus,
+        'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'global_discount_percent': globalDiscountPercent,
         'global_discount_amount': globalDiscountAmount, 'timbre_fiscal': timbreFiscal,
         'pricing_mode': pricingMode, 'notes': notes, 'conditions_generales': conditionsGenerales,
+        'custom_fields': customFields,
+        'custom_fields_json': jsonEncode(customFields),
         'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0, 
         'is_converted': isConverted ? 1 : 0,
@@ -72,52 +83,74 @@ class Quote {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-      factory Quote.fromMap(Map<String, dynamic> map) => Quote(
-        id: map['id'] as String, number: map['number'] as String,
-        customerId: map['customer_id'] as String,
-        customerName: map['customer_name'] as String?,
-        projectId: map['project_id'] as String?,
-        projectName: map['project_name'] as String?,
-        warehouseId: map['warehouse_id'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        validityDate: DateTime.parse(map['validity_date'] as String),
-        status: DocumentStatus.values.firstWhere(
-          (e) => e.name == map['status'], orElse: () => DocumentStatus.draft),
-        totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
-        totalTva: (map['total_tva'] as num?)?.toDouble() ?? 0,
-        totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
-        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0,
-        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0,
-        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
-        pricingMode: map['pricing_mode'] as String? ?? 'ht',
-        notes: map['notes'] as String?,
-        conditionsGenerales: map['conditions_generales'] as String?,
-        items: (map['items'] as List<dynamic>?)
-            ?.map((i) => QuoteItem.fromMap(Map<String, dynamic>.from(i as Map)))
-            .toList() ?? const [],
-        firebaseUid: map['firebase_uid'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        isConverted: map['is_converted'] == 1,
-        convertedTo: map['converted_to'] as String?,
-        convertedToId: map['converted_to_id'] as String?,
-        isConvertedToOrder: map['is_converted_to_order'] == 1,
-        convertedToOrderId: map['converted_to_order_id'] as String?,
-        isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
-        convertedToDeliveryId: map['converted_to_delivery_id'] as String?,
-        isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == true),
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-      );
+      factory Quote.fromMap(Map<String, dynamic> map) {
+        final rawStatus = map['status']?.toString() ?? 'draft';
+        final enumMatch = DocumentStatus.values.where((e) => e.name == rawStatus).firstOrNull;
+        final cStatus = enumMatch == null ? rawStatus : (map['custom_status']?.toString() ?? map['customStatus']?.toString());
+
+        return Quote(
+          id: map['id'] as String, number: map['number'] as String,
+          customerId: map['customer_id'] as String,
+          customerName: map['customer_name'] as String?,
+          projectId: map['project_id'] as String?,
+          projectName: map['project_name'] as String?,
+          warehouseId: map['warehouse_id'] as String?,
+          date: DateTime.parse(map['date'] as String),
+          validityDate: DateTime.parse(map['validity_date'] as String),
+          status: enumMatch ?? DocumentStatus.draft,
+          customStatus: cStatus,
+          totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
+          totalTva: (map['total_tva'] as num?)?.toDouble() ?? 0,
+          totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
+          globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0,
+          globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0,
+          timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
+          pricingMode: map['pricing_mode'] as String? ?? 'ht',
+          notes: map['notes'] as String?,
+          conditionsGenerales: map['conditions_generales'] as String?,
+          items: (map['items'] as List<dynamic>?)
+              ?.map((i) => QuoteItem.fromMap(Map<String, dynamic>.from(i as Map)))
+              .toList() ?? const [],
+          customFields: map['custom_fields'] is Map
+              ? Map<String, dynamic>.from(map['custom_fields'] as Map)
+              : (map['customFields'] is Map
+                  ? Map<String, dynamic>.from(map['customFields'] as Map)
+                  : (map['custom_fields_json'] != null && map['custom_fields_json'].toString().isNotEmpty
+                      ? (() {
+                          try {
+                            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()));
+                          } catch (_) {
+                            return <String, dynamic>{};
+                          }
+                        })()
+                      : const {})),
+          firebaseUid: map['firebase_uid'] as String?,
+          isDeleted: map['is_deleted'] == 1,
+          isConverted: map['is_converted'] == 1,
+          convertedTo: map['converted_to'] as String?,
+          convertedToId: map['converted_to_id'] as String?,
+          isConvertedToOrder: map['is_converted_to_order'] == 1,
+          convertedToOrderId: map['converted_to_order_id'] as String?,
+          isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
+          convertedToDeliveryId: map['converted_to_delivery_id'] as String?,
+          isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == true),
+          createdAt: DateTime.parse(map['created_at'] as String),
+          updatedAt: DateTime.parse(map['updated_at'] as String),
+        );
+      }
 
   Quote copyWith({
     String? id, String? number, String? customerId, String? customerName,
     String? projectId, String? projectName, String? warehouseId,
     DateTime? date, DateTime? validityDate, DocumentStatus? status,
+    String? customStatus,
     double? totalHT, double? totalTva, double? totalTTC,
     double? globalDiscountPercent, double? globalDiscountAmount,
     double? timbreFiscal, String? pricingMode,
     String? notes, String? conditionsGenerales,
-    List<QuoteItem>? items, String? firebaseUid, bool? isDeleted,
+    List<QuoteItem>? items,
+    Map<String, dynamic>? customFields,
+    String? firebaseUid, bool? isDeleted,
     bool? isConverted, String? convertedTo, String? convertedToId,
     bool? isConvertedToOrder, String? convertedToOrderId,
     bool? isConvertedToDelivery, String? convertedToDeliveryId,
@@ -131,7 +164,9 @@ class Quote {
         projectName: projectName ?? this.projectName,
         warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, validityDate: validityDate ?? this.validityDate,
-        status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
+        status: status ?? this.status,
+        customStatus: customStatus ?? this.customStatus,
+        totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,
         globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
         globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
@@ -139,6 +174,7 @@ class Quote {
         pricingMode: pricingMode ?? this.pricingMode,
         notes: notes ?? this.notes, conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
         items: items ?? this.items,
+        customFields: customFields ?? this.customFields,
         firebaseUid: firebaseUid ?? this.firebaseUid,
         isDeleted: isDeleted ?? this.isDeleted,
         isConverted: isConverted ?? this.isConverted,

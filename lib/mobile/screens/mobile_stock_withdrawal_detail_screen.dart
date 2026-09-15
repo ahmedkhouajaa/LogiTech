@@ -11,6 +11,7 @@ import '../../models/stock_withdrawal.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
@@ -20,13 +21,14 @@ import '../../blocs/warehouses/warehouses_state.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
-import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
 import '../../screens/create_stock_withdrawal_screen.dart';
 import '../../screens/exit_vouchers_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileStockWithdrawalDetailScreen extends StatefulWidget {
   final StockWithdrawal withdrawal;
@@ -92,13 +94,16 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       id: note.id,
       number: note.number,
       documentTitle: widget.isExitVoucher ? "BON DE SORTIE" : "BON DE PRÉLÈVEMENT",
+      documentType: widget.isExitVoucher ? "exit_voucher" : "stock_withdrawal",
       date: note.date,
-      customerName: note.customerName,
+      customerName: widget.isExitVoucher ? (note.customerCompany ?? note.customerName) : null,
+      customerId: widget.isExitVoucher ? note.customerId : null,
       totalHT: note.subTotalHT,
       totalTva: note.totalTVA,
-      stampTax: note.timbreFiscal ?? 0,
+      stampTax: note.timbreFiscal,
       totalTTC: note.totalTTC,
       notes: note.notes,
+      conditionsGenerales: note.conditionsGenerales,
       items: note.items.map((item) {
         final product = _getProduct(item.productId);
         return DocumentItemWrapper(
@@ -117,10 +122,15 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
           },
         );
       }).toList(),
+      customFields: note.customFields,
       customData: {
         'warehouseId': note.warehouseId,
         'warehouseName': 'Entrepôt par défaut',
         'createdBy': 'Admin',
+        'projectName': note.projectName,
+        'driverName': note.driverName,
+        'vehicleRegistration': note.vehicleRegistration,
+        'customFields': note.customFields,
       },
     );
   }
@@ -142,28 +152,25 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     }
     final String warehouseName = getWhName(currentWithdrawal.warehouseId);
 
-    final statusEnum = StockWithdrawalStatus.values.firstWhere(
-      (s) => s.name == currentWithdrawal.status, 
-      orElse: () => StockWithdrawalStatus.draft,
-    );
-    final statusLabel = statusEnum.label;
-    final statusColor = statusEnum.color;
+    final sInfo = CustomStatusService.instance.getStatusInfo('exit_voucher', currentWithdrawal.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
     final resKey = widget.isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
 
     final infoSections = [
       PremiumInfoSection(
-        title: 'Informations Générales',
+        title: context.tr('Informations Générales'),
         icon: Icons.info_outline,
         fields: [
           if (currentWithdrawal.customerName != null && currentWithdrawal.customerName!.isNotEmpty)
             PremiumInfoField(
-              label: 'Client',
+              label: context.tr('Client'),
               value: currentWithdrawal.customerName!,
               icon: Icons.person_outline,
               isHighlight: true,
             ),
           PremiumInfoField(
-            label: 'Entrepôt',
+            label: context.tr('Entrepôt'),
             value: warehouseName,
             icon: Icons.warehouse_outlined,
             isHighlight: currentWithdrawal.customerName == null,
@@ -202,15 +209,15 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
 
     final totals = <PremiumTotalRow>[
       PremiumTotalRow(
-        label: 'Total HT',
+        label: context.tr('Total HT'),
         amount: currentWithdrawal.subTotalHT,
       ),
       PremiumTotalRow(
-        label: 'Total TVA',
+        label: context.tr('Total TVA'),
         amount: currentWithdrawal.totalTVA,
       ),
       PremiumTotalRow(
-        label: 'Total TTC',
+        label: context.tr('Total TTC'),
         amount: currentWithdrawal.totalTTC,
         isGrandTotal: true,
       ),
@@ -282,20 +289,20 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                 }
 
                 if (canRead) {
-                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, context.tr('Voir'));
                 }
                 if (canUpdate) {
-                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
-                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, context.tr('Modifier'));
+                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, context.tr('Changer le statut'));
                 }
                 if (canDelete) {
-                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  addItem('delete', Icons.delete_outline, AppColors.error, context.tr('Supprimer'));
                 }
                 if (canRead) {
-                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
-                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  addItem('print', Icons.print_outlined, AppColors.primary, context.tr('Imprimer'));
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, context.tr('Télécharger PDF'));
+                  addItem('email', Icons.email_outlined, AppColors.primary, context.tr('Envoyer par email'));
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, context.tr('Envoyer par WhatsApp'));
                 }
 
                 return entries;
@@ -304,7 +311,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
           ],
         ),
         body: PremiumDetailShell(
-          documentType: widget.isExitVoucher ? 'Bon de Sortie' : 'Bon de Prélèvement',
+          documentType: widget.isExitVoucher ? context.tr('Bon de Sortie') : context.tr('Bon de Prélèvement'),
           referenceNumber: currentWithdrawal.number,
           statusLabel: statusLabel,
           statusColor: statusColor,
@@ -363,7 +370,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Action non implémentée'))));
     }
   }
 
@@ -413,71 +420,21 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
   }
 
   void _showChangeStatusDialog(BuildContext context, StockWithdrawal withdrawal) {
-    ExitVoucherStatus selectedStatus = ExitVoucherStatus.values.firstWhere(
-      (e) => e.name == withdrawal.status,
-      orElse: () => ExitVoucherStatus.draft,
-    );
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<ExitVoucherStatus>(
-                    dropdownColor: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: ExitVoucherStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = withdrawal.copyWith(
-                    status: selectedStatus.name,
-                    notes: notesController.text.isNotEmpty ? '${withdrawal.notes ?? ''}\n${notesController.text}' : withdrawal.notes,
-                  );
-                  if (widget.isExitVoucher) {
-                    context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
-                  } else {
-                    context.read<StockWithdrawalsBloc>().add(UpdateStockWithdrawal(updatedNote));
-                  }
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                child: const Text('Confirmer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'exit_voucher',
+      currentStatus: withdrawal.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = withdrawal.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${withdrawal.notes ?? ''}\n$notes' : withdrawal.notes,
+        );
+        if (widget.isExitVoucher) {
+          context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
+        } else {
+          context.read<StockWithdrawalsBloc>().add(UpdateStockWithdrawal(updatedNote));
+        }
+      },
     );
   }
 }

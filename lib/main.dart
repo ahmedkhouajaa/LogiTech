@@ -5,7 +5,10 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
+import 'blocs/locale/locale_cubit.dart';
+import 'l10n/app_localizations.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/customers/customers_bloc.dart';
 import 'blocs/suppliers/suppliers_bloc.dart';
@@ -100,6 +103,10 @@ void main() async {
   };
 
   await initializeDateFormatting('fr_FR', null);
+  try {
+    await initializeDateFormatting('en_US', null);
+    await initializeDateFormatting('ar', null);
+  } catch (_) {}
 
   // Initialize Firebase
   try {
@@ -144,16 +151,27 @@ void main() async {
     print(stack);
   }
 
-  runApp(const BusinessManagerApp());
+  String initialLang = 'fr';
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLang = prefs.getString(LocaleCubit.prefKey);
+    if (savedLang != null && ['fr', 'en', 'ar'].contains(savedLang)) {
+      initialLang = savedLang;
+    }
+  } catch (_) {}
+
+  runApp(BusinessManagerApp(initialLang: initialLang));
 }
 
 class BusinessManagerApp extends StatelessWidget {
-  const BusinessManagerApp({super.key});
+  final String initialLang;
+  const BusinessManagerApp({super.key, this.initialLang = 'fr'});
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider(create: (_) => LocaleCubit(initialLang)),
         BlocProvider(create: (_) => AuthBloc(authService: AuthService.instance)..add(AuthCheckRequested())),
         BlocProvider(create: (_) => EnterpriseBloc()),
         BlocProvider(create: (_) => DashboardBloc()),
@@ -195,23 +213,30 @@ class BusinessManagerApp extends StatelessWidget {
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, themeMode) {
           AppColors.isDarkMode = themeMode == ThemeMode.dark;
-          return MaterialApp(
-            key: ValueKey(themeMode),
-            title: 'LogiTech Pro',
-            debugShowCheckedModeBanner: false,
-            theme: _buildTheme(),
-            darkTheme: _buildDarkTheme(),
-            themeMode: themeMode,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('fr', 'FR'),
-              Locale('en', 'US'),
-            ],
-            home: const _AppGate(),
+          return BlocBuilder<LocaleCubit, Locale>(
+            builder: (context, locale) {
+              return MaterialApp(
+                key: ValueKey('${themeMode.name}_${locale.languageCode}'),
+                title: 'LogiTech Pro',
+                debugShowCheckedModeBanner: false,
+                theme: _buildTheme(locale),
+                darkTheme: _buildDarkTheme(locale),
+                themeMode: themeMode,
+                locale: locale,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('fr', 'FR'),
+                  Locale('fr'),
+                  Locale('en', 'US'),
+                  Locale('en'),
+                  Locale('ar'),
+                ],
+                home: const _AppGate(),
             onGenerateRoute: (settings) {
               if (settings.name != null) {
                 final uri = Uri.tryParse(settings.name!);
@@ -239,12 +264,14 @@ class BusinessManagerApp extends StatelessWidget {
               return null;
             },
           );
+            },
+          );
         },
       ),
     );
   }
 
-  ThemeData _buildTheme() {
+  ThemeData _buildTheme(Locale locale) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -257,7 +284,9 @@ class BusinessManagerApp extends StatelessWidget {
         onSurface: AppColors.textPrimary,
         surfaceContainerHighest: AppColors.surfaceAlt,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      textTheme: locale.languageCode == 'ar'
+          ? GoogleFonts.cairoTextTheme()
+          : GoogleFonts.interTextTheme(),
       scaffoldBackgroundColor: AppColors.background,
       cardTheme: CardThemeData(
         color: AppColors.surface,
@@ -414,7 +443,7 @@ class BusinessManagerApp extends StatelessWidget {
     );
   }
 
-  ThemeData _buildDarkTheme() {
+  ThemeData _buildDarkTheme(Locale locale) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -429,7 +458,10 @@ class BusinessManagerApp extends StatelessWidget {
         onSurface: AppColors.textPrimary,
         surfaceContainerHighest: AppColors.surfaceAlt,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).copyWith(
+      textTheme: (locale.languageCode == 'ar'
+              ? GoogleFonts.cairoTextTheme(ThemeData(brightness: Brightness.dark).textTheme)
+              : GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme))
+          .copyWith(
         bodyLarge: TextStyle(color: AppColors.textPrimary),
         bodyMedium: TextStyle(color: AppColors.textPrimary),
       ),

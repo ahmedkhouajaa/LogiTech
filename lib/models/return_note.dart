@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 
 class ReturnNoteItem extends Equatable {
@@ -105,6 +106,7 @@ class ReturnNote extends Equatable {
   final double totalTTC;
   final String? notes;
   final String? conditions;
+  final Map<String, dynamic>? customFields;
   final String status;
   final List<ReturnNoteItem> items;
   final bool isDeleted;
@@ -123,6 +125,7 @@ class ReturnNote extends Equatable {
     this.totalTTC = 0,
     this.notes,
     this.conditions,
+    this.customFields,
     this.status = 'draft',
     this.items = const [],
     this.isDeleted = false,
@@ -143,6 +146,7 @@ class ReturnNote extends Equatable {
     double? totalTTC,
     String? notes,
     String? conditions,
+    Map<String, dynamic>? customFields,
     String? status,
     List<ReturnNoteItem>? items,
     DateTime? createdAt,
@@ -160,6 +164,7 @@ class ReturnNote extends Equatable {
       totalTTC: totalTTC ?? this.totalTTC,
       notes: notes ?? this.notes,
       conditions: conditions ?? this.conditions,
+      customFields: customFields ?? this.customFields,
       status: status ?? this.status,
       items: items ?? this.items,
       createdAt: createdAt ?? this.createdAt,
@@ -180,6 +185,8 @@ class ReturnNote extends Equatable {
       'total_ttc': totalTTC,
       'notes': notes,
       'conditions': conditions,
+      'custom_fields': customFields,
+      'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
       'status': status,
       'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
@@ -209,6 +216,16 @@ class ReturnNote extends Equatable {
       totalTTC: rawTotal > 0 ? -rawTotal : rawTotal,
       notes: map['notes']?.toString(),
       conditions: map['conditions']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       status: map['status']?.toString() ?? 'draft',
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
       createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),

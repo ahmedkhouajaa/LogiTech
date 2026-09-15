@@ -7,6 +7,7 @@ import '../widgets/sync_indicator.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../utils/constants.dart';
 import '../services/permission_service.dart';
+import '../l10n/app_localizations.dart';
 
 import 'dashboard_screen.dart';
 import 'customers_screen.dart';
@@ -38,7 +39,12 @@ import 'exit_vouchers_screen.dart';
 import 'stock_withdrawals_screen.dart';
 import 'stock_entries_screen.dart';
 import 'company_info_screen.dart';
+import 'personal_info_screen.dart';
+import 'document_numbering_screen.dart';
 import 'document_templates_screen.dart';
+import 'custom_fields_screen.dart';
+import 'custom_statuses_screen.dart';
+import 'app_modules_settings_screen.dart';
 import 'stock_transfers_screen.dart';
 import 'inventory_sheets_screen.dart';
 import 'diagnostic_screen.dart';
@@ -191,10 +197,20 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const SupplierReturnsScreen();
       case AppModule.supplierCreditNotes:
         return const SupplierCreditNotesScreen();
+      case AppModule.personalInfo:
+        return const PersonalInfoScreen();
       case AppModule.companyInfo:
         return const CompanyInfoScreen();
+      case AppModule.documentNumbering:
+        return const DocumentNumberingScreen();
       case AppModule.documentTemplates:
         return const DocumentTemplatesScreen();
+      case AppModule.customFields:
+        return const CustomFieldsScreen();
+      case AppModule.customStatuses:
+        return const CustomStatusesScreen();
+      case AppModule.appModulesSettings:
+        return const AppModulesSettingsScreen();
       case AppModule.stockEntry:
         return const StockEntriesScreen();
       case AppModule.userManagement:
@@ -208,47 +224,54 @@ class AppShellScreenState extends State<AppShellScreen> {
 );
   }
 
-  String _getModuleTitle() {
+  String _getModuleTitle(BuildContext context) {
+    String raw;
     switch (_activeModule) {
-      case AppModule.dashboard: return 'Tableau de bord';
-      case AppModule.customers: return 'Clients';
-      case AppModule.suppliers: return 'Fournisseurs';
-      case AppModule.products: return 'Articles';
-      case AppModule.productSettings: return 'Parametres des articles';
-      case AppModule.invoices: return 'Factures';
-      case AppModule.quotes: return 'Devis';
-      case AppModule.deliveryNotes: return 'Bons de livraison';
-      case AppModule.stockDashboard: return 'Stock';
-      case AppModule.stockMovements: return 'Mouvements de stock';
-      case AppModule.transactions: return 'Transactions';
-      case AppModule.checksTraites: return 'Cheques & Traites';
-      case AppModule.projects: return 'Projets';
-      case AppModule.reports: return 'Rapports & Statistiques';
-      case AppModule.settings: return 'Parametres';
-      case AppModule.purchaseInvoices: return 'Factures d\'achat';
-      case AppModule.warehouses: return 'Entrepots';
-      case AppModule.withholdingTaxSales: return 'Retenue a la source (Ventes)';
-      case AppModule.withholdingTaxPurchase: return 'Retenue a la source (Achats)';
-      case AppModule.exitVouchers: return 'Bons de sortie';
-      case AppModule.creditNotes: return 'Avoirs client';
-      case AppModule.returnVouchers: return 'Bons de retour';
-      case AppModule.supplierOrders: return 'Commandes fournisseur';
-      case AppModule.receivingVouchers: return 'Bons de reception';
-      case AppModule.supplierCreditNotes: return 'Avoirs fournisseur';
-      case AppModule.supplierReturns: return 'Retours fournisseur';
-      case AppModule.customerOrders: return 'Commandes client';
-      case AppModule.accounts: return 'Comptes de Tresorerie';
-      case AppModule.stockEntry: return 'Bons d\'entree';
-      case AppModule.stockWithdrawal: return 'Bons de prelevement';
-      case AppModule.stockTransfer: return 'Bons de transfert';
-      case AppModule.inventorySheet: return 'Fiche d\'inventaire';
-      case AppModule.payments: return 'Paiements';
-      case AppModule.companyInfo: return 'Informations sur la societe';
-      case AppModule.documentTemplates: return 'Modeles de documents';
-      case AppModule.userManagement: return 'Gestion des utilisateurs';
-      case AppModule.importExport: return 'Import / Export des données';
-      case AppModule.support: return 'Support client & Assistance';
+      case AppModule.dashboard: raw = 'Tableau de bord'; break;
+      case AppModule.customers: raw = 'Clients'; break;
+      case AppModule.suppliers: raw = 'Fournisseurs'; break;
+      case AppModule.products: raw = 'Articles'; break;
+      case AppModule.productSettings: raw = 'Parametres des articles'; break;
+      case AppModule.invoices: raw = 'Factures'; break;
+      case AppModule.quotes: raw = 'Devis'; break;
+      case AppModule.deliveryNotes: raw = 'Bons de livraison'; break;
+      case AppModule.stockDashboard: raw = 'Stock'; break;
+      case AppModule.stockMovements: raw = 'Mouvements'; break;
+      case AppModule.transactions: raw = 'Transactions'; break;
+      case AppModule.checksTraites: raw = 'Cheques & Traites'; break;
+      case AppModule.projects: raw = 'Projets'; break;
+      case AppModule.reports: raw = 'Rapports et statistiques'; break;
+      case AppModule.settings: raw = 'Parametres'; break;
+      case AppModule.purchaseInvoices: raw = 'Factures d\'achat'; break;
+      case AppModule.warehouses: raw = 'Entrepots'; break;
+      case AppModule.withholdingTaxSales: raw = 'RS vente'; break;
+      case AppModule.withholdingTaxPurchase: raw = 'RS achat'; break;
+      case AppModule.exitVouchers: raw = 'Bons de sortie'; break;
+      case AppModule.creditNotes: raw = 'Avoirs'; break;
+      case AppModule.returnVouchers: raw = 'Bons de retour'; break;
+      case AppModule.supplierOrders: raw = 'Commandes fournisseur'; break;
+      case AppModule.receivingVouchers: raw = 'Bons de reception'; break;
+      case AppModule.supplierCreditNotes: raw = 'Avoirs fournisseur'; break;
+      case AppModule.supplierReturns: raw = 'Retours fournisseur'; break;
+      case AppModule.customerOrders: raw = 'Commandes'; break;
+      case AppModule.accounts: raw = 'Comptes'; break;
+      case AppModule.stockEntry: raw = 'Bons d\'entree'; break;
+      case AppModule.stockWithdrawal: raw = 'Bons de prelevement'; break;
+      case AppModule.stockTransfer: raw = 'Bons de transfert'; break;
+      case AppModule.inventorySheet: raw = 'Fiche d\'inventaire'; break;
+      case AppModule.payments: raw = 'Paiements'; break;
+      case AppModule.personalInfo: raw = 'Informations personnelles'; break;
+      case AppModule.companyInfo: raw = 'Informations de l\'entreprise'; break;
+      case AppModule.documentNumbering: raw = 'Numérotation des documents'; break;
+      case AppModule.documentTemplates: raw = 'Modèles de documents'; break;
+      case AppModule.customFields: raw = 'Champs personnalisés'; break;
+      case AppModule.customStatuses: raw = 'Statuts personnalisés'; break;
+      case AppModule.appModulesSettings: raw = 'Modules de l\'application'; break;
+      case AppModule.userManagement: raw = 'Gestion des utilisateurs'; break;
+      case AppModule.importExport: raw = 'Import / Export des données'; break;
+      case AppModule.support: raw = 'Support client'; break;
     }
+    return context.tr(raw);
   }
 
   @override
@@ -291,7 +314,7 @@ class AppShellScreenState extends State<AppShellScreen> {
                     ),
                   Expanded(
                     child: Text(
-                      _getModuleTitle(), 
+                      _getModuleTitle(context), 
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -338,7 +361,7 @@ class AppShellScreenState extends State<AppShellScreen> {
                         itemBuilder: (_) => [
                           PopupMenuItem(
                             onTap: () => setState(() => _activeModule = AppModule.settings),
-                            child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
+                            child: Row(children: [const Icon(Icons.settings_rounded, size: 16), const SizedBox(width: 8), Text(context.tr('Parametres'))]),
                           ),
                           PopupMenuItem(
                             onTap: () {
@@ -350,7 +373,7 @@ class AppShellScreenState extends State<AppShellScreen> {
                           ),
                           PopupMenuItem(
                             onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                            child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
+                            child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text(context.tr('Deconnexion'), style: TextStyle(color: AppColors.error))]),
                           ),
                         ],
                       );

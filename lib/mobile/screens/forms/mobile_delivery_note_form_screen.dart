@@ -15,10 +15,10 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
-import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -28,6 +28,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -58,6 +59,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   DeliveryNoteStatus _status = DeliveryNoteStatus.draft;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -120,6 +122,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
       _conditions = n.conditionsGenerales ?? '';
       _vehicleRegistration = n.vehicleRegistration ?? '';
       _driverName = n.driverName ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => DeliveryNoteItem(
         id: i.id,
         deliveryNoteId: i.deliveryNoteId,
@@ -140,7 +143,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -152,14 +155,14 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -183,7 +186,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber('BL', seq);
+          number = generateDocNumber('BL', seq, docCollection: 'delivery_notes');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -218,6 +221,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
         driverName: _driverName.isNotEmpty ? _driverName : null,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => DeliveryNoteItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           deliveryNoteId: noteId,
@@ -257,7 +261,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Bon mis à jour' : 'Bon créé avec succès'),
+          content: Text(_isEditing ? context.tr('Bon mis à jour') : context.tr('Bon créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -490,18 +494,20 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Champs Personnalisés', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      Text(context.tr('Champs Personnalisés'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       SizedBox(height: 4),
-                      Text('Informations supplémentaires', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                      Text(context.tr('Informations supplémentaires'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                       SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Matricule du véhicule',
+                        hint: 'Entrer la valeur',
                         initialValue: _vehicleRegistration,
                         onChanged: (v) => setState(() => _vehicleRegistration = v),
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Nom du chauffeur',
+                        hint: 'Entrer la valeur',
                         initialValue: _driverName,
                         onChanged: (v) => setState(() => _driverName = v),
                       ),
@@ -513,7 +519,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                   label: 'Les prix des articles sont en:',
                   value: _pricingModeHT,
                   options: const [true, false],
-                  labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                  labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                   onChanged: (v) => setState(() => _pricingModeHT = v),
                 ),
               ],
@@ -534,7 +540,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -555,7 +561,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                       child: OutlinedButton.icon(
                         onPressed: () => _showArticleForm(),
                         icon: Icon(Icons.add_rounded),
-                        label: Text('Ajouter une ligne'),
+                        label: Text(context.tr('Ajouter une ligne')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -567,7 +573,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                     SizedBox(width: 8),
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                      tooltip: 'Créer un nouvel article',
+                      tooltip: context.tr('Créer un nouvel article'),
                       onPressed: () async {
                         final newProd = await Navigator.push(
                           context,
@@ -627,6 +633,13 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
             onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'delivery_note',
+          initialValues: _customFields,
+          isMobile: true,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(

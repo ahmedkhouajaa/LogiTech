@@ -18,6 +18,7 @@ import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import 'mobile_supplier_credit_note_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/custom_status_service.dart';
 import '../../models/user_management_model.dart';
 
 class MobileSupplierCreditNotesScreen extends StatefulWidget {
@@ -168,8 +169,11 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final rawStatus = item.status.toLowerCase();
               final translatedLower = translateStatus(item.status).toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('supplier_credit_note', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (rawStatus != filterLower && translatedLower != filterLower) return false;
+              if (rawStatus != filterLower && translatedLower != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -179,7 +183,9 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
 
           cards = filteredItems.map((item) {
             String reference = item.number;
-            String status = item.status;
+            final sInfo = CustomStatusService.instance.getStatusInfo('supplier_credit_note', item.status);
+            String status = sInfo.label;
+            Color statusColor = sInfo.color;
             DateTime date = item.date;
             double amount = item.totalTTC;
 
@@ -197,6 +203,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: statusColor,
               name: name,
               date: date,
               amount: amount,
@@ -281,7 +288,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
               _fetchFilteredCreditNotes();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Créé', 'Validé', 'Annulé'],
+            documentType: 'supplier_credit_note',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredCreditNotes();

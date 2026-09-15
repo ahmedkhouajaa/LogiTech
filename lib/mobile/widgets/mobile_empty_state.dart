@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileEmptyState extends StatelessWidget {
   final String message;
@@ -22,7 +23,7 @@ class MobileEmptyState extends StatelessWidget {
             Icon(icon, size: 64, color: AppColors.textTertiary),
             SizedBox(height: 16),
             Text(
-              message,
+              context.tr(message),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,

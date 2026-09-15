@@ -7,6 +7,7 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/treasury_transaction.dart';
 import '../../../../models/treasury_account.dart';
 import '../../../../models/project.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -116,7 +117,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Transaction mise à jour' : 'Transaction ajoutée'),
+          content: Text(_isEditing ? context.tr('Transaction mise à jour') : context.tr('Transaction ajoutée')),
           backgroundColor: AppColors.success,
         ));
       }

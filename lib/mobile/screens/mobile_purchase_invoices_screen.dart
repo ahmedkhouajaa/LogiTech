@@ -19,6 +19,7 @@ import '../../models/user_management_model.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../services/custom_status_service.dart';
 
 class MobilePurchaseInvoicesScreen extends StatefulWidget {
   const MobilePurchaseInvoicesScreen({super.key});
@@ -178,8 +179,18 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
             // 5. Status Filter
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLabel = item.status.label.toLowerCase();
+              final statusName = item.status.name.toLowerCase();
+              final effStatus = item.effectiveStatus.toLowerCase();
+              final cStatus = (item.customStatus ?? '').toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', item.effectiveStatus);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower) return false;
+              if (statusLabel != filterLower &&
+                  statusName != filterLower &&
+                  effStatus != filterLower &&
+                  cStatus != filterLower &&
+                  sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -189,7 +200,8 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
 
           cards = filteredItems.map((item) {
             final reference = item.number;
-            final status = item.status.label;
+            final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', item.effectiveStatus, fallbackLabel: item.status.label, fallbackColor: item.status.color);
+            final status = sInfo.label;
             final name = item.supplierName ?? 'Fournisseur Inconnu';
             final date = item.date;
             final amount = item.totalTTC;
@@ -197,6 +209,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: sInfo.color,
               name: name,
               date: date,
               amount: amount,
@@ -266,7 +279,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
               _fetchFilteredPurchaseInvoices();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Envoyé', 'Payée', 'Partiellement payée', 'Non payée', 'Annulée'],
+            documentType: 'purchase_invoice',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredPurchaseInvoices();

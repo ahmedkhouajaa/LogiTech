@@ -78,6 +78,7 @@ class UpdateQuoteStatus extends QuotesEvent {
   final String id;
   final DocumentStatus oldStatus;
   final DocumentStatus newStatus;
+  final String? customStatus;
   final String? changedBy;
   final String? notes;
   const UpdateQuoteStatus(
@@ -86,8 +87,9 @@ class UpdateQuoteStatus extends QuotesEvent {
     this.newStatus, [
     this.changedBy,
     this.notes,
+    this.customStatus,
   ]);
-  @override List<Object?> get props => [id, oldStatus, newStatus, changedBy, notes];
+  @override List<Object?> get props => [id, oldStatus, newStatus, changedBy, notes, customStatus];
 }
 class DeleteQuote extends QuotesEvent { final String id; const DeleteQuote(this.id); @override List<Object?> get props => [id]; }
 
@@ -292,12 +294,16 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       return;
     }
     try {
-      await FirestoreRepository.instance.updateDocument('quotes', event.id, {'status': event.newStatus.name});
+      final targetStatus = event.customStatus ?? event.newStatus.name;
+      await FirestoreRepository.instance.updateDocument('quotes', event.id, {
+        'status': targetStatus,
+        'custom_status': event.customStatus,
+      });
       final history = QuoteStatusHistory(
         id: DatabaseHelper.instance.newId,
         quoteId: event.id,
         oldStatus: event.oldStatus.name,
-        newStatus: event.newStatus.name,
+        newStatus: targetStatus,
         changedBy: event.changedBy ?? 'System',
         notes: event.notes,
         changedAt: DateTime.now(),

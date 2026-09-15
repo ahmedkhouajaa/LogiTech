@@ -47,8 +47,13 @@ import 'screens/mobile_warehouses_screen.dart';
 import '../screens/treasury_accounts_screen.dart';
 import 'screens/mobile_reports_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/personal_info_screen.dart';
 import '../screens/company_info_screen.dart';
+import '../screens/document_numbering_screen.dart';
 import '../screens/document_templates_screen.dart';
+import '../screens/custom_fields_screen.dart';
+import '../screens/custom_statuses_screen.dart';
+import '../screens/app_modules_settings_screen.dart';
 import '../screens/product_settings_screen.dart';
 import '../screens/stock_entries_screen.dart';
 import '../screens/stock_withdrawals_screen.dart';
@@ -61,6 +66,7 @@ import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
 import '../services/permission_service.dart';
 import '../widgets/draggable_ai_floating_button.dart';
+import '../l10n/app_localizations.dart';
 
 class MobileShellScreen extends StatefulWidget {
   const MobileShellScreen({super.key});
@@ -240,10 +246,20 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const MobileSupplierCreditNotesScreen();
       case AppModule.accounts:
         return const TreasuryAccountsScreen();
+      case AppModule.personalInfo:
+        return const PersonalInfoScreen();
       case AppModule.companyInfo:
         return const CompanyInfoScreen();
+      case AppModule.documentNumbering:
+        return const DocumentNumberingScreen();
       case AppModule.documentTemplates:
         return const DocumentTemplatesScreen();
+      case AppModule.customFields:
+        return const CustomFieldsScreen();
+      case AppModule.customStatuses:
+        return const CustomStatusesScreen();
+      case AppModule.appModulesSettings:
+        return const AppModulesSettingsScreen(isMobile: true);
       case AppModule.stockEntry:
         return const StockEntriesScreen();
       case AppModule.userManagement:
@@ -276,7 +292,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.transactions: return 'Transactions';
       case AppModule.checksTraites: return 'Cheques & Traites';
       case AppModule.projects: return 'Projets';
-      case AppModule.reports: return 'Rapports';
+      case AppModule.reports: return 'Rapports et statistiques';
       case AppModule.settings: return 'Parametres';
       case AppModule.purchaseInvoices: return 'Factures d\'achat';
       case AppModule.warehouses: return 'Entrepots';
@@ -290,8 +306,13 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.customerOrders: return 'Commandes Client';
       case AppModule.accounts: return 'Comptes';
       case AppModule.payments: return 'Paiements';
+      case AppModule.personalInfo: return 'Informations personnelles';
       case AppModule.companyInfo: return 'Ma Societe';
+      case AppModule.documentNumbering: return 'Numérotation des documents';
       case AppModule.documentTemplates: return 'Modeles';
+      case AppModule.customFields: return 'Champs personnalisés';
+      case AppModule.customStatuses: return 'Statuts personnalisés';
+      case AppModule.appModulesSettings: return 'Modules de l\'application';
       case AppModule.userManagement: return 'Gestion des utilisateurs';
       case AppModule.importExport: return 'Import / Export';
       case AppModule.support: return 'Support client';
@@ -319,7 +340,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
           ),
         ),
         title: Text(
-          _getModuleTitle(),
+          context.tr(_getModuleTitle()),
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,

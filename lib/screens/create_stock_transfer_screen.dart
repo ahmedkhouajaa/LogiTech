@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../database/database_helper.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -133,7 +134,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
     
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -141,7 +142,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
     final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -259,7 +260,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              isEdit ? 'Modifier le bon ${widget.existing!.number}' : 'Créer un bon de transfert',
+              isEdit ? '${context.tr('Modifier le bon')} ${widget.existing!.number}' : context.tr('Créer un bon de transfert'),
               style: TextStyle(
                 fontSize: _isMobile ? 18 : 22,
                 fontWeight: FontWeight.bold,
@@ -309,7 +310,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
             ),
           ),
           SizedBox(width: 12),
@@ -323,7 +324,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 elevation: 0,
               ),
-              child: Text('Valider', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],
@@ -381,7 +382,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         final dateField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Date'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             SizedBox(height: 8),
             InkWell(
               onTap: () async {
@@ -458,7 +459,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         final reasonField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             SizedBox(height: 8),
             TextFormField(
               controller: _reasonController,
@@ -477,12 +478,12 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         final notesField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             SizedBox(height: 8),
             TextFormField(
               controller: _notesController,
               decoration: InputDecoration(
-                hintText: 'Notes additionnelles...',
+                hintText: context.tr('Notes additionnelles...'),
                 filled: true,
                 fillColor: AppColors.surfaceAlt,
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -505,7 +506,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(context.tr('Informations'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 SizedBox(height: 16),
                 if (_isMobile) ...[
                   dateField,
@@ -566,18 +567,18 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                    Text(context.tr('Articles'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     SizedBox(height: 16),
                     
                     if (!_isMobile) ...[
                       // Desktop Header Row
                       Row(
                         children: [
-                          Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          Expanded(flex: 3, child: Text(context.tr('Produit'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
                           SizedBox(width: 8),
                           Expanded(flex: 1, child: Text('Qté en stock source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
                           SizedBox(width: 8),
-                          Expanded(flex: 1, child: Text('Qté à transférer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          Expanded(flex: 1, child: Text(context.tr('Qté à transférer'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
                           SizedBox(width: 8),
                           Expanded(flex: 1, child: Text('Qté finale source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
                           SizedBox(width: 8),
@@ -640,10 +641,10 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                       );
                       final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
                       final autocompleteWidget = SearchableSelectorField(
-                        hint: 'Sélectionner un article',
+                        hint: context.tr('Sélectionner un article'),
                         selectedText: selectedProd?.name,
                         hasError: isDuplicate || isMissing,
-                        errorText: isMissing ? 'Veuillez sélectionner un article' : null,
+                        errorText: isMissing ? context.tr('Veuillez sélectionner un article') : null,
                         onTap: () async {
                           final stockMap = <String, double>{};
                           if (stockState is StockLoaded) {
@@ -706,7 +707,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                  Text(context.tr('Produit'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                   Spacer(),
                                   IconButton(
                                     icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
@@ -754,7 +755,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                                 child: Text(
                                                   (item.productName != null && item.productName!.isNotEmpty)
                                                       ? item.productName!
-                                                      : 'Sélectionner un article',
+                                                      : context.tr('Sélectionner un article'),
                                                   style: TextStyle(
                                                     fontSize: 13,
                                                     color: isMissingMobile
@@ -771,7 +772,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                         if (isMissingMobile)
                                           Padding(
                                             padding: EdgeInsets.only(top: 4, left: 4),
-                                            child: Text('Veuillez sélectionner un article', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                            child: Text(context.tr('Veuillez sélectionner un article'), style: TextStyle(color: AppColors.error, fontSize: 11)),
                                           ),
                                       ],
                                     );
@@ -781,7 +782,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               if (isDuplicate)
                                 Padding(
                                   padding: EdgeInsets.only(top: 4, left: 4),
-                                  child: Text('Produit déjà ajouté', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                  child: Text(context.tr('Produit déjà ajouté'), style: TextStyle(color: AppColors.error, fontSize: 11)),
                                 ),
                               SizedBox(height: 12),
                               Row(
@@ -1037,7 +1038,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                             }
                           },
                           icon: Icon(Icons.add, size: 16),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
                             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -1046,7 +1047,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         SizedBox(width: 8),
                         IconButton(
                           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                          tooltip: 'Créer un nouvel article',
+                          tooltip: context.tr('Créer un nouvel article'),
                           onPressed: () {
                             if (_isMobile) {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));

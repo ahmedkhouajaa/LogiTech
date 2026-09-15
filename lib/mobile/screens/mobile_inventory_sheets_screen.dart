@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_advanced_filter_panel.dart';
@@ -10,7 +11,6 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_bloc.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_event.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_state.dart';
-import '../../database/database_helper.dart';
 import '../../services/sync_service.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
@@ -82,14 +82,14 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
   // removed _loadWarehouses()
 
   String _getWarehouseName(WarehousesState wState, String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
     if (wState is WarehousesLoaded) {
       try {
         final match = wState.warehouses.cast<dynamic>().firstWhere((w) => w.id == id, orElse: () => null);
         if (match != null) return match.name;
       } catch (_) {}
     }
-    return 'Entrepôt par défaut';
+    return context.tr('Entrepôt par défaut');
   }
 
   void _onSearchChanged(String query) {
@@ -214,7 +214,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
             ));
           },
           scrollController: _scrollController,
-          emptyMessage: 'Aucune fiche trouvée.',
+          emptyMessage: context.tr('Aucune fiche trouvée.'),
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
@@ -387,7 +387,7 @@ class _InventorySheetCard extends StatelessWidget {
                         ),
                       ),
                     Text(
-                      '${sheet.items.length} article${sheet.items.length > 1 ? 's' : ''}',
+                      '${sheet.items.length} ${context.tr(sheet.items.length > 1 ? 'articles' : 'article')}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,

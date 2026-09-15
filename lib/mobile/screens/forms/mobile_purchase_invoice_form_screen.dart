@@ -15,6 +15,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -29,6 +30,7 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/suppliers_screen.dart';
 import '../../../../services/enterprise_service.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -59,6 +61,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   InvoiceStatus _status = InvoiceStatus.unpaid;
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -116,6 +119,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       _status = inv.status;
       _notes = inv.notes ?? '';
       _conditions = inv.conditionsGenerales ?? '';
+      _customFields = inv.customFields != null ? Map<String, dynamic>.from(inv.customFields!) : {};
       _items = inv.items.map((i) => PurchaseInvoiceItem(
         id: i.id,
         purchaseInvoiceId: i.purchaseInvoiceId,
@@ -137,7 +141,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -149,14 +153,14 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un fournisseur')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -180,7 +184,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
+          number = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -236,6 +240,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
         totalTTC: _totalTTC,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map<PurchaseInvoiceItem>((item) => PurchaseInvoiceItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           purchaseInvoiceId: invoiceId,
@@ -276,7 +281,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Facture mise à jour' : 'Facture créée avec succès'),
+          content: Text(_isEditing ? context.tr('Facture mise à jour') : context.tr('Facture créée avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -541,7 +546,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -563,7 +568,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                         child: OutlinedButton.icon(
                           onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
@@ -575,7 +580,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () async {
                           final newProd = await Navigator.push(
                             context,
@@ -638,6 +643,14 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'purchase_invoice',
+          initialValues: _customFields,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(

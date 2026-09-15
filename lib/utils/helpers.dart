@@ -1,4 +1,6 @@
 import 'package:intl/intl.dart';
+import '../models/document_numbering_config.dart';
+import '../services/document_numbering_service.dart';
 
 // ─── Currency Formatting ──────────────────────────────────────────
 String formatCurrency(double amount, {String symbol = 'TND'}) {
@@ -16,16 +18,16 @@ String formatCurrencyCompact(double amount) {
 }
 
 // ─── Date Formatting ──────────────────────────────────────────────
-String formatDate(DateTime date) {
-  return DateFormat('dd/MM/yyyy', 'fr_FR').format(date.toLocal());
+String formatDate(DateTime date, [String? locale]) {
+  return DateFormat('dd/MM/yyyy', locale ?? Intl.defaultLocale ?? 'fr_FR').format(date.toLocal());
 }
 
-String formatDateTime(DateTime date) {
-  return DateFormat('dd/MM/yyyy HH:mm', 'fr_FR').format(date.toLocal());
+String formatDateTime(DateTime date, [String? locale]) {
+  return DateFormat('dd/MM/yyyy HH:mm', locale ?? Intl.defaultLocale ?? 'fr_FR').format(date.toLocal());
 }
 
-String formatDateShort(DateTime date) {
-  return DateFormat('dd MMM yyyy', 'fr_FR').format(date.toLocal());
+String formatDateShort(DateTime date, [String? locale]) {
+  return DateFormat('dd MMM yyyy', locale ?? Intl.defaultLocale ?? 'fr_FR').format(date.toLocal());
 }
 
 String formatDateRelative(DateTime date) {
@@ -40,10 +42,61 @@ String formatDateRelative(DateTime date) {
 }
 
 // ─── Document Number Generator ────────────────────────────────────
-String generateDocNumber(String prefix, int sequence) {
+String generateDocNumber(String prefix, int sequence, {String? docCollection}) {
+  final col = docCollection != null
+      ? DocumentTypeDefinition.normalizeKey(docCollection)
+      : _mapPrefixToCollection(prefix);
+
+  if (col != null) {
+    return DocumentNumberingService.formatDocumentNumber(
+      col,
+      sequence,
+      defaultPrefix: prefix,
+    );
+  }
+
   final year = DateTime.now().year;
   final seq = sequence.toString().padLeft(6, '0');
   return '$prefix-$year-$seq';
+}
+
+String? _mapPrefixToCollection(String prefix) {
+  final p = prefix.toUpperCase().trim();
+  switch (p) {
+    case 'FAC':
+    case 'FA':
+      return 'invoices';
+    case 'DV':
+    case 'DEV':
+      return 'quotes';
+    case 'CC':
+    case 'CMD':
+    case 'BC':
+      return 'customer_orders';
+    case 'BL':
+      return 'delivery_notes';
+    case 'BS':
+      return 'bons_sortie';
+    case 'AV':
+      return 'credit_notes';
+    case 'BR':
+      return 'return_notes';
+    case 'CF':
+    case 'BCF':
+      return 'supplier_orders';
+    case 'BRC':
+      return 'receiving_vouchers';
+    case 'FACH':
+      return 'purchase_invoices';
+    case 'AVF':
+    case 'AF':
+      return 'supplier_credit_notes';
+    case 'BRF':
+    case 'RF':
+      return 'supplier_returns';
+    default:
+      return null;
+  }
 }
 
 // ─── Number Helpers ───────────────────────────────────────────────
@@ -111,12 +164,13 @@ String formatCurrencyDT(double amount) {
 }
 
 // ─── Long Date Format (e.g., "11 juin 2026") ──────────────────────
-String formatDateLong(DateTime date) {
-  return DateFormat('d MMMM yyyy', 'fr_FR').format(date.toLocal());
+String formatDateLong(DateTime date, [String? locale]) {
+  return DateFormat('d MMMM yyyy', locale ?? Intl.defaultLocale ?? 'fr_FR').format(date.toLocal());
 }
 
 // ─── Date + Time Format (e.g., "11 juin 2026 - 18:18") ───────────
-String formatDateTimeLong(DateTime date) {
+String formatDateTimeLong(DateTime date, [String? locale]) {
   final d = date.toLocal();
-  return '${DateFormat('d MMMM yyyy', 'fr_FR').format(d)} - ${DateFormat('HH:mm', 'fr_FR').format(d)}';
+  final loc = locale ?? Intl.defaultLocale ?? 'fr_FR';
+  return '${DateFormat('d MMMM yyyy', loc).format(d)} - ${DateFormat('HH:mm', loc).format(d)}';
 }

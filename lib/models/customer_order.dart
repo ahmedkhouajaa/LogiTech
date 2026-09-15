@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class CustomerOrder {
@@ -18,6 +19,7 @@ class CustomerOrder {
   final double timbreFiscal;
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic> customFields;
   final bool isConvertedToInvoice;
   final String? convertedToInvoiceId;
   final bool isConvertedToDelivery;
@@ -41,6 +43,7 @@ class CustomerOrder {
     this.projectName,
     this.warehouseId,
     this.quoteId,
+    this.customFields = const {},
     required this.date,
     this.deliveryDate,
     this.status = 'draft',
@@ -138,6 +141,7 @@ class CustomerOrder {
     double? timbreFiscal,
     String? notes,
     String? conditionsGenerales,
+    Map<String, dynamic>? customFields,
     bool? isConvertedToInvoice,
     String? convertedToInvoiceId,
     bool? isConvertedToDelivery,
@@ -166,6 +170,7 @@ class CustomerOrder {
       timbreFiscal: timbreFiscal ?? this.timbreFiscal,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      customFields: customFields ?? this.customFields,
       isConvertedToInvoice: isConvertedToInvoice ?? this.isConvertedToInvoice,
       convertedToInvoiceId: convertedToInvoiceId ?? this.convertedToInvoiceId,
       isConvertedToDelivery: isConvertedToDelivery ?? this.isConvertedToDelivery,
@@ -198,6 +203,8 @@ class CustomerOrder {
       'timbre_fiscal': timbreFiscal,
       'notes': notes,
       'conditions': conditionsGenerales,
+      'custom_fields': customFields,
+      'custom_fields_json': jsonEncode(customFields),
       'total_ht': totalHTAfterDiscount,
       'total_tva': totalTVA,
       'total_ttc': totalTTC,
@@ -235,6 +242,17 @@ class CustomerOrder {
       timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
       notes: map['notes']?.toString(),
       conditionsGenerales: map['conditions']?.toString(),
+      customFields: map['custom_fields'] is Map
+          ? Map<String, dynamic>.from(map['custom_fields'] as Map)
+          : (map['custom_fields_json'] != null
+              ? (() {
+                  try {
+                    return (jsonDecode(map['custom_fields_json'].toString()) as Map? ?? {}).cast<String, dynamic>();
+                  } catch (_) {
+                    return <String, dynamic>{};
+                  }
+                })()
+              : (map['customFields'] is Map ? Map<String, dynamic>.from(map['customFields'] as Map) : const {})),
       isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,
       convertedToInvoiceId: map['converted_to_invoice_id']?.toString(),
       isConvertedToDelivery: map['is_converted_to_delivery'] == 1 || map['is_converted_to_delivery'] == '1' || map['is_converted_to_delivery'] == true,

@@ -99,7 +99,7 @@ class MarkPurchaseInvoicePaid extends PurchaseInvoicesEvent {
   List<Object?> get props => [id, amountPaid];
 }
 class FilterPurchaseInvoicesByStatus extends PurchaseInvoicesEvent {
-  final InvoiceStatus? status;
+  final String? status;
   const FilterPurchaseInvoicesByStatus(this.status);
   @override
   List<Object?> get props => [status];
@@ -108,7 +108,7 @@ class FilterPurchaseInvoices extends PurchaseInvoicesEvent {
   final String? clientId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
-  final InvoiceStatus? status;
+  final String? status;
   const FilterPurchaseInvoices({this.clientId, this.dateFrom, this.dateTo, this.status});
   @override
   List<Object?> get props => [clientId, dateFrom, dateTo, status];
@@ -124,7 +124,7 @@ class PurchaseInvoicesLoading extends PurchaseInvoicesState {}
 class PurchaseInvoicesLoaded extends PurchaseInvoicesState {
   final List<PurchaseInvoice> purchaseInvoices;
   final List<PurchaseInvoice> filteredPurchaseInvoices;
-  final InvoiceStatus? activeFilter;
+  final String? activeFilter;
   final String? clientFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
@@ -147,7 +147,7 @@ class PurchaseInvoicesLoaded extends PurchaseInvoicesState {
   PurchaseInvoicesLoaded copyWith({
     List<PurchaseInvoice>? purchaseInvoices,
     List<PurchaseInvoice>? filteredPurchaseInvoices,
-    InvoiceStatus? activeFilter,
+    String? activeFilter,
     String? clientFilter,
     DateTime? dateFromFilter,
     DateTime? dateToFilter,
@@ -357,7 +357,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
   }
 
   void _onFilter(FilterPurchaseInvoicesByStatus event, Emitter<PurchaseInvoicesState> emit) {
-    add(LoadFirstPurchaseInvoices(status: event.status?.name));
+    add(LoadFirstPurchaseInvoices(status: event.status));
   }
 
   void _onFilterCombined(FilterPurchaseInvoices event, Emitter<PurchaseInvoicesState> emit) {
@@ -365,7 +365,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
       supplierId: event.clientId,
       dateFrom: event.dateFrom,
       dateTo: event.dateTo,
-      status: event.status?.name,
+      status: event.status,
     ));
   }
 }

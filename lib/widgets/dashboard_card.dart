@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class DashboardCard extends StatefulWidget {
   final String title;
@@ -67,10 +68,10 @@ class _DashboardCardState extends State<DashboardCard> {
                 SizedBox(height: AppSpacing.md),
                 Text(widget.value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 SizedBox(height: 4),
-                Text(widget.title, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                Text(context.tr(widget.title), style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                 if (widget.subtitle != null) ...[
                   SizedBox(height: 4),
-                  Text(widget.subtitle!, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                  Text(context.tr(widget.subtitle!), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                 ],
               ],
             ),
@@ -95,7 +96,12 @@ class StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+      child: Text(
+        context.tr(label),
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

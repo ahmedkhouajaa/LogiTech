@@ -23,6 +23,8 @@ import 'forms/mobile_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileCreditNoteDetailScreen extends StatefulWidget {
   final CreditNote creditNote;
@@ -90,8 +92,9 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = currentCreditNote.status.label;
-    final statusColor = _getStatusColor(currentCreditNote.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('credit_note', currentCreditNote.effectiveStatus, fallbackLabel: currentCreditNote.status.label, fallbackColor: _getStatusColor(currentCreditNote.status));
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -313,6 +316,22 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
         break;
       case 'delete':
         context.read<CreditNotesBloc>().add(DeleteCreditNote(creditNote.id));
+        break;
+      case 'status':
+        showDocumentChangeStatusDialog(
+          context: context,
+          documentType: 'credit_note',
+          currentStatus: creditNote.effectiveStatus,
+          onSave: (newStatusKey, notes) async {
+            final enumMatch = CreditNoteStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+            final updatedNote = creditNote.copyWith(
+              status: enumMatch ?? CreditNoteStatus.unused,
+              customStatus: enumMatch == null ? newStatusKey : null,
+              notes: notes != null && notes.isNotEmpty ? '${creditNote.notes ?? ''}\n$notes' : creditNote.notes,
+            );
+            context.read<CreditNotesBloc>().add(UpdateCreditNote(updatedNote));
+          },
+        );
         break;
     }
   }

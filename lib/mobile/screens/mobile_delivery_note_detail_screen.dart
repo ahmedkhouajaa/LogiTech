@@ -35,6 +35,8 @@ import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileDeliveryNoteDetailScreen extends StatefulWidget {
   final DeliveryNote deliveryNote;
@@ -93,12 +95,9 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
 
   @override
   Widget build(BuildContext context) {
-    final statusEnum = DeliveryNoteStatus.values.firstWhere(
-      (s) => s.name == currentDeliveryNote.status,
-      orElse: () => DeliveryNoteStatus.draft,
-    );
-    final statusLabel = statusEnum.label;
-    final statusColor = statusEnum.color;
+    final statusInfo = CustomStatusService.instance.getStatusInfo('delivery_note', currentDeliveryNote.status);
+    final statusLabel = statusInfo.label;
+    final statusColor = statusInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -386,64 +385,17 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
   }
 
   void _showChangeStatusDialog(BuildContext context, DeliveryNote deliveryNote) {
-    DeliveryNoteStatus selectedStatus = DeliveryNoteStatus.values.firstWhere((s) => s.name == deliveryNote.status, orElse: () => DeliveryNoteStatus.draft);
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: DeliveryNoteStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = deliveryNote.copyWith(
-                    status: selectedStatus.name,
-                    notes: notesController.text.isNotEmpty ? '${deliveryNote.notes ?? ''}\n${notesController.text}' : deliveryNote.notes,
-                  );
-                  context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'delivery_note',
+      currentStatus: deliveryNote.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = deliveryNote.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${deliveryNote.notes ?? ''}\n$notes' : deliveryNote.notes,
+        );
+        context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
+      },
     );
   }
 
@@ -514,7 +466,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
   Future<void> _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
     final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber('FA', seq);
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
 
     final invoiceItems = note.items.map((i) => InvoiceItem(
       id: const Uuid().v4(),

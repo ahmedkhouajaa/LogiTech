@@ -5,8 +5,8 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../models/project.dart';
 import '../../../../models/customer.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
-import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -64,7 +64,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez entrer le nom du projet'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Veuillez entrer le nom du projet')), backgroundColor: AppColors.error));
       return;
     }
 
@@ -94,7 +94,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
       
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(widget.existing == null ? 'Projet créé avec succès' : 'Projet mis à jour'),
+        content: Text(widget.existing == null ? context.tr('Projet créé avec succès') : context.tr('Projet mis à jour')),
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
@@ -107,9 +107,9 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: widget.isReadOnly ? 'Détails du projet' : (_isEditing ? 'Modifier le projet' : 'Nouveau projet'),
+      title: widget.isReadOnly ? context.tr('Détails du projet') : (_isEditing ? context.tr('Modifier le projet') : context.tr('Nouveau projet')),
       isLoading: _isLoading,
-      saveLabel: 'Enregistrer',
+      saveLabel: context.tr('Enregistrer'),
       onCancel: () => Navigator.pop(context),
       onSave: () {
         if (!widget.isReadOnly) _save();
@@ -120,7 +120,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
           child: Column(
             children: [
               MobileFormSection(
-                title: 'Informations',
+                title: context.tr('Informations'),
                 icon: Icons.info_outline_rounded,
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -128,13 +128,13 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SmartTextInput(
-                        label: 'Nom du Projet *',
+                        label: '${context.tr('Nom du Projet')} *',
                         initialValue: _name,
                         onChanged: (v) { if (!widget.isReadOnly) _name = v; },
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(
-                        label: 'Description',
+                        label: context.tr('Description'),
                         initialValue: _description,
                         maxLines: 2,
                         onChanged: (v) { if (!widget.isReadOnly) _description = v; },
@@ -146,8 +146,8 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                           return AbsorbPointer(
                             absorbing: widget.isReadOnly,
                             child: SmartSearchableSelector(
-                              label: 'Client (Optionnel)',
-                              hint: 'Aucun client',
+                              label: context.tr('Client (Optionnel)'),
+                              hint: context.tr('Aucun client'),
                               selectedText: _selectedCustomerId != null
                                   ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
                                       ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
@@ -169,7 +169,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
               ),
               
               MobileFormSection(
-                title: 'Planification & Budget',
+                title: context.tr('Planification & Budget'),
                 icon: Icons.calendar_month_outlined,
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -180,7 +180,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                         children: [
                           Expanded(
                             child: SmartDatePicker(
-                              label: 'Date de Début',
+                              label: context.tr('Date de Début'),
                               value: _startDate,
                               onChanged: (v) { if (!widget.isReadOnly) setState(() => _startDate = v); },
                             ),
@@ -188,7 +188,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                           SizedBox(width: 16),
                           Expanded(
                             child: SmartDatePicker(
-                              label: 'Date de Fin (Opt)',
+                              label: context.tr('Date de Fin (Opt)'),
                               value: _endDate ?? DateTime.now(),
                               onChanged: (v) { if (!widget.isReadOnly) setState(() => _endDate = v); },
                             ),
@@ -197,7 +197,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(
-                        label: 'Budget Estimé',
+                        label: context.tr('Budget Estimé'),
                         initialValue: _budget > 0 ? _budget.toString() : '',
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         onChanged: (v) { if (!widget.isReadOnly) _budget = double.tryParse(v) ?? 0; },
@@ -208,7 +208,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
               ),
 
               MobileFormSection(
-                title: 'Suivi & Avancement',
+                title: context.tr('Suivi & Avancement'),
                 icon: Icons.track_changes_outlined,
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -218,25 +218,25 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                       AbsorbPointer(
                         absorbing: widget.isReadOnly,
                         child: SmartDropdown<ProjectStatus>(
-                          label: 'Statut du Projet',
+                          label: context.tr('Statut du Projet'),
                           value: _status,
                           items: ProjectStatus.values.map((s) {
                             String label = '';
                             switch(s) {
-                              case ProjectStatus.planning: label = 'Planification'; break;
-                              case ProjectStatus.active: label = 'En Cours'; break;
-                              case ProjectStatus.onHold: label = 'En Pause'; break;
-                              case ProjectStatus.completed: label = 'Terminé'; break;
-                              case ProjectStatus.cancelled: label = 'Annulé'; break;
+                              case ProjectStatus.planning: label = context.tr('Planification'); break;
+                              case ProjectStatus.active: label = context.tr('En cours'); break;
+                              case ProjectStatus.onHold: label = context.tr('En pause'); break;
+                              case ProjectStatus.completed: label = context.tr('Terminé'); break;
+                              case ProjectStatus.cancelled: label = context.tr('Annulé'); break;
                             }
-                            return DropdownMenuItem(value: s, child: Text(label, style: TextStyle(fontSize: 16)));
+                            return DropdownMenuItem(value: s, child: Text(label, style: const TextStyle(fontSize: 16)));
                           }).toList(),
                           onChanged: (v) { if (!widget.isReadOnly && v != null) setState(() => _status = v); },
-                          hint: 'Statut',
+                          hint: context.tr('Statut'),
                         ),
                       ),
                       SizedBox(height: 24),
-                      Text('Avancement: ${_progress.toInt()}%', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text('${context.tr('Avancement')}: ${_progress.toInt()}%', style: const TextStyle(fontWeight: FontWeight.w500)),
                       SizedBox(height: 8),
                       Slider(
                         value: _progress,
@@ -253,13 +253,13 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
               ),
 
               MobileFormSection(
-                title: 'Notes',
+                title: context.tr('Notes'),
                 icon: Icons.notes_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: SmartTextInput(
-                    label: 'Remarques / Notes',
+                    label: context.tr('Remarques / Notes'),
                     initialValue: _notes,
                     maxLines: 3,
                     onChanged: (v) { if (!widget.isReadOnly) _notes = v; },

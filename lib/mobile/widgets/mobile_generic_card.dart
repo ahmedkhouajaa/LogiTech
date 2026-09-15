@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_status_colors.dart';
 import '../../widgets/pending_sync_badge.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileGenericCard extends StatelessWidget {
   final String reference;
@@ -14,6 +15,7 @@ class MobileGenericCard extends StatelessWidget {
   final DateTime? date;
   final double? amount;
   final bool isSynced;
+  final Color? statusColor;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onPdf;
@@ -23,6 +25,7 @@ class MobileGenericCard extends StatelessWidget {
     super.key,
     required this.reference,
     required this.status,
+    this.statusColor,
     this.name,
     this.nameIcon,
     this.subtitle,
@@ -40,7 +43,7 @@ class MobileGenericCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusLabel = translateStatus(status);
-    final statusColor = MobileStatusColors.getColorForStatus(statusLabel);
+    final effectiveStatusColor = statusColor ?? MobileStatusColors.getColorForStatus(statusLabel);
 
     Widget card = Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -103,7 +106,7 @@ class MobileGenericCard extends StatelessWidget {
                                   Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
                                   const SizedBox(width: 3),
                                   Text(
-                                    badgeText!,
+                                    context.tr(badgeText!),
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
@@ -126,14 +129,14 @@ class MobileGenericCard extends StatelessWidget {
                             : Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
+                                  color: effectiveStatusColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                  border: Border.all(color: effectiveStatusColor.withValues(alpha: 0.3)),
                                 ),
                                 child: Text(
-                                  statusLabel,
+                                  context.tr(statusLabel),
                                   style: TextStyle(
-                                    color: statusColor,
+                                    color: effectiveStatusColor,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),

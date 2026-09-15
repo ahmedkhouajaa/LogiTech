@@ -24,6 +24,8 @@ import 'forms/mobile_return_voucher_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileReturnNoteDetailScreen extends StatefulWidget {
   final ReturnNote returnNote;
@@ -81,8 +83,9 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentReturnNote.status);
-    final statusColor = MobileStatusColors.getColorForStatus(statusLabel);
+    final sInfo = CustomStatusService.instance.getStatusInfo('return_voucher', currentReturnNote.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -310,54 +313,17 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
   }
 
   void _showChangeStatusDialog(BuildContext context, ReturnNote returnNote) {
-    String selectedStatus = returnNote.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = returnNote.copyWith(status: selectedStatus);
-                  context.read<ReturnNotesBloc>().add(UpdateReturnNote(updatedNote));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'return_voucher',
+      currentStatus: returnNote.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = returnNote.copyWith(
+          status: newStatusKey,
+          notes: notes != null && notes.isNotEmpty ? '${returnNote.notes ?? ''}\n$notes' : returnNote.notes,
+        );
+        context.read<ReturnNotesBloc>().add(UpdateReturnNote(updatedNote));
+      },
     );
   }
 }

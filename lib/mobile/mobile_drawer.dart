@@ -7,6 +7,10 @@ import '../widgets/enterprise_switcher.dart';
 import '../utils/constants.dart';
 import '../blocs/theme/theme_cubit.dart';
 import '../services/permission_service.dart';
+import '../services/app_modules_service.dart';
+import '../blocs/locale/locale_cubit.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/language_selection_dialog.dart';
 
 class MobileDrawer extends StatefulWidget {
   final AppModule activeModule;
@@ -27,9 +31,12 @@ class _MobileDrawerState extends State<MobileDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: PermissionService.instance.permissionsNotifier,
-      builder: (context, _, __) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        PermissionService.instance.permissionsNotifier,
+        AppModulesService.instance.notifier,
+      ]),
+      builder: (context, _) {
         return Drawer(
           backgroundColor: AppColors.sidebarBg,
           shape: const RoundedRectangleBorder(
@@ -48,7 +55,10 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
                       _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
-                      const _DrawerDivider(),
+                      _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports et statistiques'),
+                      // Section 1: Documents commerciaux
+                      if (_hasAnyVisibleGroup(['ventes', 'achats', 'paiements', 'tresorerie', 'retenue_source', 'contacts', 'articles', 'stock']))
+                        const _DrawerDivider(),
                       _buildGroup('ventes', 'Ventes', Icons.trending_up_rounded, [
                         _buildItem(AppModule.quotes, Icons.description_rounded, 'Devis'),
                         _buildItem(AppModule.customerOrders, Icons.shopping_cart_rounded, 'Commandes Client'),
@@ -67,11 +77,13 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       ]),
                       _buildGroup('paiements', 'Paiements', Icons.payment_rounded, [
                         _buildItem(AppModule.payments, Icons.payments_rounded, 'Paiements'),
+                      ]),
+                      _buildGroup('tresorerie', 'Trésorerie', Icons.account_balance_rounded, [
                         _buildItem(AppModule.accounts, Icons.account_balance_rounded, 'Comptes'),
                         _buildItem(AppModule.transactions, Icons.swap_horiz_rounded, 'Transactions'),
                         _buildItem(AppModule.checksTraites, Icons.note_rounded, 'Cheques & Traites'),
                       ]),
-                      _buildGroup('retenue', 'Retenue à la source', Icons.request_quote_rounded, [
+                      _buildGroup('retenue_source', 'Retenue à la source', Icons.request_quote_rounded, [
                         _buildItem(AppModule.withholdingTaxSales, Icons.description_rounded, 'RS vente'),
                         _buildItem(AppModule.withholdingTaxPurchase, Icons.receipt_rounded, 'RS achat'),
                       ]),
@@ -92,12 +104,22 @@ class _MobileDrawerState extends State<MobileDrawer> {
                         _buildItem(AppModule.inventorySheet, Icons.fact_check_rounded, 'Fiche d\'inventaire'),
                         _buildItem(AppModule.warehouses, Icons.warehouse_rounded, 'Entrepots'),
                       ]),
-                      const _DrawerDivider(),
+                      // Section 2: Projets + Paramètres
+                      if (_hasAnyVisibleDrawerItem([AppModule.projects]))
+                        const _DrawerDivider(),
                       _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
+                      // Paramètres always visible
+                      const _DrawerDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                      _buildItem(AppModule.appModulesSettings, Icons.widgets_rounded, 'Modules de l\'application'),
                       _buildThemeToggleItem(),
-                      _buildItem(AppModule.companyInfo, Icons.business_center_rounded, 'Ma Societe'),
+                      _buildLanguageItem(),
+                      _buildItem(AppModule.personalInfo, Icons.badge_outlined, 'Informations personnelles'),
+                      _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la société'),
+                      _buildItem(AppModule.documentNumbering, Icons.format_list_numbered_rounded, 'Numérotation des documents'),
                       _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
+                      _buildItem(AppModule.customFields, Icons.tune_rounded, 'Champs personnalisés'),
+                      _buildItem(AppModule.customStatuses, Icons.bookmarks_outlined, 'Statuts personnalisés'),
                       _buildItem(AppModule.importExport, Icons.sync_alt_rounded, 'Import / Export'),
                       _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
                       if (PermissionService.instance.isAdmin)
@@ -117,7 +139,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                         context.read<AuthBloc>().add(AuthLogoutRequested());
                       },
                       icon: const Icon(Icons.logout_rounded, size: 18),
-                      label: const Text('Deconnexion', style: TextStyle(fontWeight: FontWeight.w600)),
+                      label: Text(context.tr('Deconnexion'), style: const TextStyle(fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
                         side: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
@@ -154,6 +176,9 @@ class _MobileDrawerState extends State<MobileDrawer> {
     if (!PermissionService.instance.canAccessModule(module)) {
       return const SizedBox.shrink();
     }
+    if (!AppModulesService.instance.isModuleEnabled(module)) {
+      return const SizedBox.shrink();
+    }
     final isActive = widget.activeModule == module;
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -183,7 +208,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    label,
+                    context.tr(label),
                     style: TextStyle(
                       color: isActive ? Colors.white : AppColors.sidebarText,
                       fontSize: 13,
@@ -235,7 +260,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
-                        'Mode sombre',
+                        context.tr('Mode sombre'),
                         style: TextStyle(
                           color: AppColors.sidebarText,
                           fontSize: 13,
@@ -248,7 +273,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       onChanged: (value) {
                         context.read<ThemeCubit>().toggleTheme();
                       },
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                       activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
                     ),
                   ],
@@ -261,7 +286,72 @@ class _MobileDrawerState extends State<MobileDrawer> {
     );
   }
 
+  Widget _buildLanguageItem() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: BlocBuilder<LocaleCubit, Locale>(
+        builder: (context, locale) {
+          final localeCubit = context.read<LocaleCubit>();
+          return Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                LanguageSelectionDialog.show(context);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.language_rounded,
+                      size: 20,
+                      color: AppColors.sidebarText,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        context.tr('Langue et region'),
+                        style: TextStyle(
+                          color: AppColors.sidebarText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      localeCubit.currentLanguageName,
+                      style: TextStyle(
+                        color: AppColors.primaryLight,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildGroup(String key, String title, IconData icon, List<Widget> children) {
+    if (key != 'contacts' && !AppModulesService.instance.isGroupEnabled(key)) {
+      return const SizedBox.shrink();
+    }
+
+    // For 'contacts' group, check individual module visibility
+    if (key == 'contacts') {
+      final hasCustomers = PermissionService.instance.canAccessModule(AppModule.customers) &&
+          AppModulesService.instance.isModuleEnabled(AppModule.customers);
+      final hasSuppliers = PermissionService.instance.canAccessModule(AppModule.suppliers) &&
+          AppModulesService.instance.isModuleEnabled(AppModule.suppliers);
+      if (!hasCustomers && !hasSuppliers) return const SizedBox.shrink();
+    }
+
     // Filter visible children
     final visibleChildren = children.where((c) {
       if (c is SizedBox) return false;
@@ -315,7 +405,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      title,
+                      context.tr(title),
                       style: TextStyle(
                         color: hasActive ? Colors.white : AppColors.sidebarText.withValues(alpha: 0.7),
                         fontSize: 11,
@@ -349,6 +439,31 @@ class _MobileDrawerState extends State<MobileDrawer> {
         ),
       ],
     );
+  }
+
+  bool _hasAnyVisibleGroup(List<String> groupKeys) {
+    for (final key in groupKeys) {
+      if (key == 'contacts') {
+        final hasCustomers = PermissionService.instance.canAccessModule(AppModule.customers) &&
+            AppModulesService.instance.isModuleEnabled(AppModule.customers);
+        final hasSuppliers = PermissionService.instance.canAccessModule(AppModule.suppliers) &&
+            AppModulesService.instance.isModuleEnabled(AppModule.suppliers);
+        if (hasCustomers || hasSuppliers) return true;
+      } else if (AppModulesService.instance.isGroupEnabled(key)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _hasAnyVisibleDrawerItem(List<AppModule> modules) {
+    for (final mod in modules) {
+      if (PermissionService.instance.canAccessModule(mod) &&
+          AppModulesService.instance.isModuleEnabled(mod)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

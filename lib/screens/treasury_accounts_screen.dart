@@ -15,8 +15,8 @@ import '../mobile/screens/mobile_treasury_accounts_screen.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -90,7 +90,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   Row(
                     children: [
                       Text(
-                        'Comptes de Trésorerie',
+                        context.tr('Comptes de Trésorerie'),
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
                       const SizedBox(width: 8),
@@ -105,7 +105,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                           child: OutlinedButton.icon(
                             onPressed: () => _showAccountDialog(context),
                             icon: const Icon(Icons.add_rounded, size: 16),
-                            label: const Text('Ajouter Compte', style: TextStyle(fontSize: 12)),
+                            label: Text(context.tr('Ajouter Compte'), style: const TextStyle(fontSize: 12)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.textPrimary,
                               side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -122,7 +122,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () => _showExpenseDialog(context),
                             icon: const Icon(Icons.attach_money_rounded, size: 16),
-                            label: const Text('Ajouter Dépense', style: TextStyle(fontSize: 12)),
+                            label: Text(context.tr('Ajouter Dépense'), style: const TextStyle(fontSize: 12)),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
@@ -140,7 +140,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       Row(
                         children: [
                           Text(
-                            'Comptes de Trésorerie',
+                            context.tr('Comptes de Trésorerie'),
                             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                           ),
                           const SizedBox(width: 8),
@@ -148,7 +148,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text('Gérer vos comptes de trésorerie', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      Text(context.tr('Gérer vos comptes de trésorerie'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),
                   const Spacer(),
@@ -156,7 +156,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                     OutlinedButton.icon(
                       onPressed: () => _showAccountDialog(context),
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Ajouter un Compte', style: TextStyle(fontSize: 13)),
+                      label: Text(context.tr('Ajouter un Compte'), style: const TextStyle(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -170,7 +170,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _showExpenseDialog(context),
                       icon: const Icon(Icons.attach_money_rounded, size: 18),
-                      label: const Text('Ajouter une Dépense', style: TextStyle(fontSize: 13)),
+                      label: Text(context.tr('Ajouter une Dépense'), style: const TextStyle(fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
@@ -190,10 +190,10 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
                     headerColumns: [
-                      Expanded(flex: 3, child: Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Solde', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text(context.tr('Nom du Compte'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text(context.tr('Type'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text(context.tr('Solde'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                     ],
                   ),
                 );
@@ -213,7 +213,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<TreasuryAccount>(
-                      columns: ['Nom du Compte', 'Type', 'Solde'],
+                      columns: [context.tr('Nom du Compte'), context.tr('Type'), context.tr('Solde')],
                       rows: filtered,
                       emptyMessage: 'Aucun compte trouve',
                       cellBuilder: (acc) {
@@ -239,7 +239,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                                         Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
                                         SizedBox(width: 2),
                                         Text(
-                                          'Par défaut',
+                                          context.tr('Par défaut'),
                                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
                                         ),
                                       ],
@@ -249,7 +249,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                               ],
                             ),
                           ),
-                          DataCell(Text(acc.type == 'bank' ? 'Compte Bancaire' : 'Caisse')),
+                          DataCell(Text(acc.type == 'bank' ? context.tr('Compte Bancaire') : context.tr('Caisse'))),
                           DataCell(
                             Text(
                               formatCurrencyDT(acc.balance),
@@ -269,24 +269,24 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
 
                         return PopupMenuButton<String>(
                           icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                          onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
+                          onSelected: (val) => _handleAction(context, val, acc, state.accounts),
                           itemBuilder: (_) {
                             final entries = <PopupMenuEntry<String>>[];
 
                             if (canCreateTx) {
-                              entries.add(_buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'));
+                              entries.add(_buildMenuItem('depot', Icons.file_upload_outlined, context.tr('Dépôt')));
                               entries.add(const PopupMenuDivider(height: 1));
-                              entries.add(_buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'));
+                              entries.add(_buildMenuItem('transfer', Icons.swap_horiz_outlined, context.tr('Transférer')));
                             }
 
                             if (!isDefault) {
                               if (canUpdate) {
                                 if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                                entries.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier'));
+                                entries.add(_buildMenuItem('edit', Icons.edit_outlined, context.tr('Modifier')));
                               }
                               if (canDelete) {
                                 if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                                entries.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true));
+                                entries.add(_buildMenuItem('delete', Icons.delete_outline, context.tr('Supprimer'), isDestructive: true));
                               }
                             }
 
@@ -327,7 +327,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
     if (isDefault && (action == 'edit' || action == 'delete')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié/supprimé.'),
+          content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié/supprimé.')),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 2),
         ),
@@ -374,17 +374,17 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce compte de trésorerie ?'),
+            title: Text(context.tr('Confirmer la suppression')),
+            content: Text(context.tr('Voulez-vous vraiment supprimer ce compte de trésorerie ?')),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(context.tr('Annuler'))),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<TreasuryAccountsBloc>().add(DeleteTreasuryAccount(account.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -520,119 +520,119 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
                 children: [
                   Expanded(
                     child: Text(
-                      widget.existing == null ? 'Creer un Compte de Tresorerie' : 'Modifier le Compte',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      widget.existing == null ? context.tr('Créer un Compte de Trésorerie') : context.tr('Modifier le Compte'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () => Navigator.pop(context),
-                        icon: Icon(Icons.close_rounded, size: 16),
-                        label: Text('Annuler'),
+                        icon: const Icon(Icons.close_rounded, size: 16),
+                        label: Text(context.tr('Annuler')),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: _save,
-                        icon: Icon(Icons.save_rounded, size: 16),
-                        label: Text('Creer'),
+                        icon: const Icon(Icons.save_rounded, size: 16),
+                        label: Text(widget.existing == null ? context.tr('Créer') : context.tr('Enregistrer')),
                       ),
                     ],
                   ),
                 ],
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               // Type Selector
-              Text('Type de Compte', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-              SizedBox(height: 8),
+              Text(context.tr('Type de Compte'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
-                    child: _buildTypeButton('Caisse', 'cash', _type == 'cash', () => setState(() => _type = 'cash')),
+                    child: _buildTypeButton(context.tr('Caisse'), 'cash', _type == 'cash', () => setState(() => _type = 'cash')),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildTypeButton('Compte Bancaire', 'bank', _type == 'bank', () => setState(() => _type = 'bank')),
+                    child: _buildTypeButton(context.tr('Compte Bancaire'), 'bank', _type == 'bank', () => setState(() => _type = 'bank')),
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-              SizedBox(height: 8),
+              Text(context.tr('Nom du Compte'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _nameCtrl,
                 decoration: InputDecoration(
-                  hintText: 'Entrez le nom du compte',
+                  hintText: context.tr('Entrez le nom du compte'),
                   hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                 ),
-                style: TextStyle(fontSize: 13),
-                validator: (v) => v!.trim().isEmpty ? 'Requis' : null,
+                style: const TextStyle(fontSize: 13),
+                validator: (v) => v!.trim().isEmpty ? context.tr('Requis') : null,
               ),
-              SizedBox(height: 6),
-              Text('Nom interne visible uniquement par vous', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-              SizedBox(height: 16),
+              const SizedBox(height: 6),
+              Text(context.tr('Nom interne visible uniquement par vous'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+              const SizedBox(height: 16),
 
               if (_type == 'bank') ...[
-                Text('Banque', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text(context.tr('Banque'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _selectedBank,
                   isExpanded: true,
-                  hint: Text('Sélectionnez une banque', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                  hint: Text(context.tr('Sélectionnez une banque'), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                   icon: Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
                   decoration: InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   ),
                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   items: _tunisianBanks.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (v) => setState(() => _selectedBank = v),
-                  validator: (v) => v == null ? 'Requis' : null,
+                  validator: (v) => v == null ? context.tr('Requis') : null,
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-                Text('Agence', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text(context.tr('Agence'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _agencyCtrl,
                   decoration: InputDecoration(
-                    hintText: "Entrez le nom de l'agence",
+                    hintText: context.tr("Entrez le nom de l'agence"),
                     hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   ),
-                  style: TextStyle(fontSize: 13),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 Text('IBAN', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _ibanCtrl,
                   decoration: InputDecoration(
                     hintText: 'TN59XXXXXXXXXXXXXXXXXXXX',
                     hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   ),
-                  style: TextStyle(fontSize: 13),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
 
               // Currency indicator
-              Text('Devise', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+              Text(context.tr('Devise'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
               SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedCurrency,
@@ -826,33 +826,33 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Nouvelle Dépense',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          context.tr('Nouvelle Dépense'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           OutlinedButton.icon(
                             onPressed: _isSaving ? null : () => Navigator.pop(context),
-                            icon: Icon(Icons.close_rounded, size: 16),
-                            label: Text('Fermer'),
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                            label: Text(context.tr('Fermer')),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: _isSaving ? null : _save,
                             icon: _isSaving
-                                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : Icon(Icons.save_rounded, size: 16),
-                            label: Text(_isSaving ? 'Création...' : 'Créer'),
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.save_rounded, size: 16),
+                            label: Text(_isSaving ? context.tr('Création...') : context.tr('Créer')),
                           ),
                         ],
                       ),
                     ],
                   ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Amount and Date
                 Row(
@@ -861,38 +861,38 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Montant', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                          SizedBox(height: 8),
+                          Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
                           TextFormField(
                             controller: _amountCtrl,
                             decoration: InputDecoration(
                               suffixText: 'DT',
-                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                             ),
-                            style: TextStyle(fontSize: 13),
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            style: const TextStyle(fontSize: 13),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Requis';
-                              if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalide';
+                              if (v == null || v.trim().isEmpty) return context.tr('Requis');
+                              if (double.tryParse(v.replaceAll(',', '.')) == null) return context.tr('Invalide');
                               return null;
                             },
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Date', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                          SizedBox(height: 8),
+                          Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
                           InkWell(
                             onTap: _pickDate,
                             child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
                                 border: Border.all(color: AppColors.border),
@@ -904,11 +904,11 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                                   Expanded(
                                     child: Text(
                                       DateFormat('dd/MM/yyyy').format(_date), 
-                                      style: TextStyle(fontSize: 13), 
+                                      style: const TextStyle(fontSize: 13), 
                                       overflow: TextOverflow.ellipsis
                                     ),
                                   ),
-                                  SizedBox(width: 4),
+                                  const SizedBox(width: 4),
                                   Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
                                 ],
                               ),
@@ -919,11 +919,11 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Account
-                Text('Compte de Trésorerie', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text(context.tr('Compte de Trésorerie'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                   builder: (context, state) {
                     List<TreasuryAccount> accounts = [];
@@ -933,27 +933,27 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     return DropdownButtonFormField<String>(
                       isExpanded: true,
                       value: _selectedAccountId,
-                      hint: Text('Sélectionner un compte de trésorerie', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                      hint: Text(context.tr('Sélectionner un compte de trésorerie'), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                       icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textTertiary),
                       decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       ),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
                       onChanged: (v) => setState(() => _selectedAccountId = v),
-                      validator: (v) => v == null ? 'Requis' : null,
+                      validator: (v) => v == null ? context.tr('Requis') : null,
                     );
                   },
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Category
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text('Catégorie de Dépense', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary))),
+                    Expanded(child: Text(context.tr('Catégorie de Dépense'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary))),
                     TextButton.icon(
                       onPressed: () async {
                         final updated = await showDialog<Map<String, String>>(
@@ -970,30 +970,30 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                         }
                       },
                       icon: Icon(Icons.edit_rounded, size: 14, color: AppColors.textSecondary),
-                      label: Text('Modifier', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size(0, 0)),
+                      label: Text(context.tr('Modifier'), style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 if (_categories.isEmpty)
-                  Text('Aucune catégorie.', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))
+                  Text(context.tr('Aucune catégorie.'), style: TextStyle(color: AppColors.textTertiary, fontSize: 13))
                 else
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: _categories.keys.map((k) => IntrinsicWidth(child: _buildCategoryButton(k))).toList(),
                   ),
-                SizedBox(height: 16),
-                Divider(),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
 
                 // Withholding Tax
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text('Appliquer une retenue à la source ?', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                      child: Text(context.tr('Appliquer une retenue à la source ?'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     ),
                     Switch(
                       value: _applyWithholdingTax,
@@ -1003,31 +1003,31 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                   ],
                 ),
                 if (_applyWithholdingTax) ...[
-                  SizedBox(height: 16),
-                  Text('Taux de Retenue (%)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 16),
+                  Text(context.tr('Taux de Retenue (%)'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _withholdingTaxRateCtrl,
                     decoration: InputDecoration(
                       suffixText: '%',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     ),
-                    style: TextStyle(fontSize: 13),
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(fontSize: 13),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Requis';
-                      if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalide';
+                      if (v == null || v.trim().isEmpty) return context.tr('Requis');
+                      if (double.tryParse(v.replaceAll(',', '.')) == null) return context.tr('Invalide');
                       return null;
                     },
                   ),
                 ],
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Project
-                Text('Projet (Optionnel)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text(context.tr('Projet (Optionnel)'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     List<Project> projects = [];
@@ -1037,10 +1037,10 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     return DropdownButtonFormField<String>(
                       isExpanded: true,
                       value: _selectedProjectId,
-                      hint: Text('Sélectionner un projet', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                      hint: Text(context.tr('Sélectionner un projet'), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                       icon: Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
                       decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       ),
@@ -1050,21 +1050,21 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     );
                   },
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Reason
-                Text('Raison (Optionnel)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text(context.tr('Raison (Optionnel)'), style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _reasonCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Entrez la raison ou la description de la dépense',
+                    hintText: context.tr('Entrez la raison ou la description de la dépense'),
                     hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   ),
-                  style: TextStyle(fontSize: 13),
+                  style: const TextStyle(fontSize: 13),
                   maxLines: 3,
                 ),
               ],
@@ -1082,9 +1082,9 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
       onTap: () => setState(() => _selectedCategory = key),
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xFFEFF6FF) : Colors.white,
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: 1),
         ),
@@ -1094,7 +1094,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
           children: [
             Flexible(
               child: Text(
-                _categories[key]!,
+                context.tr(_categories[key]!),
                 style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: isSelected ? AppColors.primary : AppColors.textSecondary),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1109,30 +1109,6 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
     );
   }
 
-  Widget _buildTypeButton(String label, bool value, bool isSelected, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xFFEFF6FF) : Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: isSelected ? AppColors.primary : AppColors.textSecondary)),
-            if (isSelected) ...[
-              SizedBox(width: 8),
-              Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 16),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ManageExpenseCategoriesDialog extends StatefulWidget {
@@ -1185,17 +1161,17 @@ class _ManageExpenseCategoriesDialogState extends State<_ManageExpenseCategories
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Catégories de Dépense', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(icon: Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+                Text(context.tr('Catégories de Dépense'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             SizedBox(
               height: 250,
               child: ListView(
                 children: _categories.entries.map((e) {
                   return ListTile(
-                    title: Text(e.value),
+                    title: Text(context.tr(e.value)),
                     trailing: e.key == 'other'
                         ? null
                         : IconButton(
@@ -1206,27 +1182,27 @@ class _ManageExpenseCategoriesDialogState extends State<_ManageExpenseCategories
                 }).toList(),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _newCategoryCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Nouvelle catégorie (ex: 🚕 Transport)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      hintText: context.tr('Nouvelle catégorie (ex: 🚕 Transport)'),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     ),
                     onSubmitted: (_) => _add(),
                   ),
                 ),
-                SizedBox(width: 8),
-                ElevatedButton(onPressed: _add, child: Text('Ajouter')),
+                const SizedBox(width: 8),
+                ElevatedButton(onPressed: _add, child: Text(context.tr('Ajouter'))),
               ],
             ),
-            SizedBox(height: 24),
-            ElevatedButton(onPressed: _save, child: Text('Enregistrer')),
+            const SizedBox(height: 24),
+            ElevatedButton(onPressed: _save, child: Text(context.tr('Enregistrer'))),
           ],
         ),
       ),
@@ -1277,7 +1253,6 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
     
     try {
       final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
-      final account = widget.accounts.firstWhere((a) => a.id == _selectedAccountId);
       
       // Create transaction (databaseHelper automatically updates the account balance)
       final transaction = TreasuryTransaction(
@@ -1309,9 +1284,9 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Nouveau Dépôt'),
+          Text(context.tr('Nouveau Dépôt')),
           IconButton(
-            icon: Icon(Icons.close),
+            icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
             splashRadius: 20,
           ),
@@ -1325,27 +1300,27 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Montant', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
+              Text(context.tr('Montant'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _amountCtrl,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   hintText: '0',
                   suffixText: 'DT',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Requis';
-                  if (double.tryParse(val.replaceAll(',', '.')) == null) return 'Montant invalide';
+                  if (val == null || val.isEmpty) return context.tr('Requis');
+                  if (double.tryParse(val.replaceAll(',', '.')) == null) return context.tr('Montant invalide');
                   return null;
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
-              Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
+              Text(context.tr('Date'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -1361,7 +1336,7 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
                 child: InputDecorator(
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1372,15 +1347,15 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
-              Text('Compte de Trésorerie', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
+              Text(context.tr('Compte de Trésorerie'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 items: widget.accounts.map((acc) {
                   return DropdownMenuItem(
@@ -1392,17 +1367,17 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
                   if (val != null) setState(() => _selectedAccountId = val);
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
-              Text('Raison', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
+              Text(context.tr('Raison'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _reasonCtrl,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Entrez la raison ou la description du dépôt',
+                  hintText: context.tr('Entrez la raison ou la description du dépôt'),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
               ),
             ],
@@ -1417,19 +1392,19 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          child: Text('Fermer'),
+          child: Text(context.tr('Fermer')),
         ),
         ElevatedButton.icon(
           onPressed: _isSubmitting ? null : _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF2563EB), // Blue button from image 3
+            backgroundColor: const Color(0xFF2563EB), // Blue button from image 3
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           icon: _isSubmitting 
-            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : Icon(Icons.save_outlined, size: 18, color: Colors.white),
-          label: Text('Créer', style: TextStyle(color: Colors.white)),
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+          label: Text(context.tr('Créer'), style: const TextStyle(color: Colors.white)),
         ),
       ],
     );
@@ -1476,11 +1451,11 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_destinationAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte destination'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Veuillez sélectionner un compte destination')), backgroundColor: AppColors.error));
       return;
     }
     if (_selectedAccountId == _destinationAccountId) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Le compte source et destination doivent être différents'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Le compte source et destination doivent être différents')), backgroundColor: AppColors.error));
       return;
     }
 
@@ -1489,7 +1464,7 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
     try {
       final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
       final destAccount = widget.accounts.firstWhere((a) => a.id == _destinationAccountId);
-      final reason = _reasonCtrl.text.isEmpty ? 'Virement vers ${destAccount.name}' : _reasonCtrl.text;
+      final reason = _reasonCtrl.text.isEmpty ? '${context.tr('Virement')} -> ${destAccount.name}' : _reasonCtrl.text;
       final ts = DateTime.now().millisecondsSinceEpoch;
 
       // Expense from source
@@ -1537,9 +1512,9 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Nouveau Virement'),
+          Text(context.tr('Nouveau Virement')),
           IconButton(
-            icon: Icon(Icons.close),
+            icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
             splashRadius: 20,
           ),
@@ -1559,33 +1534,33 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Montant', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-                        SizedBox(height: 8),
+                        Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(height: 8),
                         TextFormField(
                           controller: _amountCtrl,
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: InputDecoration(
                             hintText: '0',
                             suffixText: 'DT',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           ),
                           validator: (val) {
-                            if (val == null || val.isEmpty) return 'Requis';
-                            if (double.tryParse(val.replaceAll(',', '.')) == null) return 'Invalide';
+                            if (val == null || val.isEmpty) return context.tr('Requis');
+                            if (double.tryParse(val.replaceAll(',', '.')) == null) return context.tr('Invalide');
                             return null;
                           },
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-                        SizedBox(height: 8),
+                        Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(height: 8),
                         InkWell(
                           onTap: () async {
                             final picked = await showDatePicker(
@@ -1601,7 +1576,7 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1617,15 +1592,15 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
-              Text('Compte Source', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-              SizedBox(height: 8),
+              Text(context.tr('Compte Source'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 items: widget.accounts.map((acc) {
                   return DropdownMenuItem(
@@ -1644,16 +1619,16 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
                   }
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              Text('Compte Destination', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-              SizedBox(height: 8),
+              Text(context.tr('Compte Destination'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _destinationAccountId,
-                hint: Text('Sélectionner le compte destination'),
+                hint: Text(context.tr('Sélectionner le compte destination')),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 items: widget.accounts.where((acc) => acc.id != _selectedAccountId).map((acc) {
                   return DropdownMenuItem(
@@ -1665,17 +1640,17 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
                   if (val != null) setState(() => _destinationAccountId = val);
                 },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
-              Text('Raison', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-              SizedBox(height: 8),
+              Text(context.tr('Raison'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _reasonCtrl,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Entrez la raison ou la description du virement',
+                  hintText: context.tr('Entrez la raison ou la description du virement'),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
               ),
             ],
@@ -1689,22 +1664,22 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
             foregroundColor: AppColors.textSecondary,
             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          icon: Icon(Icons.close, size: 16),
-          label: Text('Fermer'),
+          icon: const Icon(Icons.close, size: 16),
+          label: Text(context.tr('Fermer')),
         ),
         ElevatedButton.icon(
           onPressed: _isSubmitting ? null : _submit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF2563EB), // Blue button from image 3
+            backgroundColor: const Color(0xFF2563EB), // Blue button from image 3
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           icon: _isSubmitting 
-            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : Icon(Icons.save_outlined, size: 18, color: Colors.white),
-          label: Text('Confirmer', style: TextStyle(color: Colors.white)),
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+          label: Text(context.tr('Confirmer'), style: const TextStyle(color: Colors.white)),
         ),
       ],
     );

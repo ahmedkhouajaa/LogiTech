@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
@@ -52,7 +53,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
       if (isDefault) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié.')),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 2),
           ),
@@ -74,7 +75,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
     if (isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être supprimé.')),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 2),
         ),
@@ -84,12 +85,12 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: Text('Êtes-vous sûr de vouloir supprimer l\'entrepôt "${warehouse.name}" ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Êtes-vous sûr de vouloir supprimer l\'entrepôt')} "${warehouse.name}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -97,7 +98,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
               Navigator.pop(dialogContext);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -118,7 +119,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
     if (item.country != null && item.country!.trim().isNotEmpty && item.country != 'Tunisia') {
       parts.add(item.country!.trim());
     }
-    return parts.isNotEmpty ? parts.join(', ') : 'Adresse par défaut';
+    return parts.isNotEmpty ? parts.join(', ') : context.tr('Adresse par défaut');
   }
 
   @override
@@ -164,7 +165,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
               reference: ref,
               name: item.name,
               status: item.isActive ? 'Actif' : 'Inactif',
-              badgeText: isDefault ? 'Par défaut' : null,
+              badgeText: isDefault ? context.tr('Par défaut') : null,
               subtitle: _buildAddressString(item),
               subtitleIcon: Icons.location_on_outlined,
               nameIcon: Icons.warehouse_rounded,
@@ -172,7 +173,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
                 if (isDefault) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié.')),
                       backgroundColor: AppColors.warning,
                       duration: const Duration(seconds: 2),
                     ),
@@ -204,7 +205,7 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
           onRefresh: () async {
             context.read<WarehousesBloc>().add(LoadWarehouses());
           },
-          emptyMessage: 'Aucun entrepôt trouvé.',
+          emptyMessage: context.tr('Aucun entrepôt trouvé.'),
           fabText: _config.fabText,
           onFabPressed: () => _showCreateDialog(),
           child: Column(

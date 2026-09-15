@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/constants.dart';
 import '../../services/permission_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileUserCard extends StatelessWidget {
   final EnterpriseUserModel user;
@@ -54,7 +55,7 @@ class MobileUserCard extends StatelessWidget {
                         border: Border.all(color: roleColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(
-                        user.displayRole,
+                        context.tr(user.displayRole),
                         style: TextStyle(
                           color: roleColor,
                           fontSize: 12,
@@ -70,9 +71,9 @@ class MobileUserCard extends StatelessWidget {
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'Propriétaire',
-                          style: TextStyle(
+                        child: Text(
+                          context.tr('Propriétaire'),
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFD97706),
@@ -83,7 +84,7 @@ class MobileUserCard extends StatelessWidget {
                     const Spacer(),
                     if (user.isOwner)
                       Tooltip(
-                        message: 'Propriétaire de l\'entreprise (Profil protégé)',
+                        message: context.tr('Propriétaire de l\'entreprise (Profil protégé)'),
                         child: Container(
                           width: 28,
                           height: 28,
@@ -101,7 +102,7 @@ class MobileUserCard extends StatelessWidget {
                       )
                     else if (user.isAdmin && !isCurrentUserOwner)
                       Tooltip(
-                        message: 'Seul le propriétaire peut gérer un administrateur',
+                        message: context.tr('Seul le propriétaire peut gérer un administrateur'),
                         child: Container(
                           width: 28,
                           height: 28,
@@ -130,13 +131,13 @@ class MobileUserCard extends StatelessWidget {
                           }
                         },
                         itemBuilder: (ctx) => [
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'edit',
                             child: Row(
                               children: [
-                                Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)),
-                                SizedBox(width: 10),
-                                Text('Modifier'),
+                                const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)),
+                                const SizedBox(width: 10),
+                                Text(context.tr('Modifier')),
                               ],
                             ),
                           ),
@@ -147,7 +148,7 @@ class MobileUserCard extends StatelessWidget {
                                 children: [
                                   Icon(Icons.delete_outline, size: 18, color: AppColors.error),
                                   const SizedBox(width: 10),
-                                  Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                  Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error)),
                                 ],
                               ),
                             ),
@@ -217,7 +218,7 @@ class MobileUserCard extends StatelessWidget {
                           Icon(Icons.business_rounded, size: 13, color: AppColors.primary),
                           const SizedBox(width: 5),
                           Text(
-                            '${user.enterprises.isNotEmpty ? user.enterprises.length : 1} entreprise${(user.enterprises.length > 1) ? 's' : ''}',
+                            '${user.enterprises.isNotEmpty ? user.enterprises.length : 1} ${context.tr('entreprise(s)')}',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

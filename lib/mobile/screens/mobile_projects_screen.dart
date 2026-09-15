@@ -9,6 +9,7 @@ import '../../blocs/projects/projects_bloc.dart';
 import 'forms/mobile_project_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../l10n/app_localizations.dart';
 
 
 class MobileProjectsScreen extends StatefulWidget {
@@ -46,19 +47,19 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text(context.tr('Voulez-vous vraiment supprimer cet élément ?')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           TextButton(
             onPressed: () {
               context.read<ProjectsBloc>().add(DeleteProject(id));
               Navigator.pop(ctx);
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -107,10 +108,16 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
             final isDefault = item.isDefault ||
                 item.name.trim().toLowerCase() == 'projet par défaut' ||
                 item.name.trim().toLowerCase() == 'projet principal par défaut';
-            String reference = item.name.isNotEmpty ? item.name : 'Projet sans nom';
+            String reference = item.name.isNotEmpty
+                ? (isDefault && (item.name.trim().toLowerCase() == 'projet par défaut' || item.name.trim().toLowerCase() == 'projet principal par défaut')
+                    ? context.tr('Projet par défaut')
+                    : item.name)
+                : context.tr('Projet sans nom');
             
             String status = item.status.name;
-            String? description = item.description;
+            String? description = isDefault && item.description != null && (item.description!.trim().toLowerCase() == 'projet principal par défaut' || item.description!.trim().toLowerCase() == 'projet par défaut')
+                ? context.tr('Projet principal par défaut')
+                : item.description;
             
             DateTime date = item.startDate;
             double budget = item.budget;
@@ -119,15 +126,15 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
             return MobileGenericCard(
               reference: reference,
               status: status,
-              badgeText: isDefault ? 'Par défaut' : null,
-              name: description != null && description.isNotEmpty ? description : 'Budget: ${budget.toStringAsFixed(2)} TND',
+              badgeText: isDefault ? context.tr('Par défaut') : null,
+              name: description != null && description.isNotEmpty ? description : '${context.tr('Budget')}: ${budget.toStringAsFixed(2)} TND',
               date: date,
               amount: budget > 0 ? budget : null,
               onTap: () {
                 if (isDefault) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié.')),
                       backgroundColor: AppColors.warning,
                       duration: const Duration(seconds: 2),
                     ),
@@ -138,6 +145,7 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
                 ).then((_) {
+                  if (!mounted) return;
                   context.read<ProjectsBloc>().add(LoadProjects());
                 });
               },
@@ -147,6 +155,7 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
                         context,
                         MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
                       ).then((_) {
+                        if (!mounted) return;
                         context.read<ProjectsBloc>().add(LoadProjects());
                       });
                     }
@@ -159,7 +168,7 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
         }
 
         return MobileGenericListScreen(
-          title: _config.title,
+          title: context.tr(_config.title),
           activeModule: AppModule.projects,
           onModuleSelected: (module) {
           },
@@ -172,13 +181,14 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
           onFilterChanged: _onFilterChanged,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          fabText: _config.fabText,
+          emptyMessage: context.tr('Aucun élément trouvé.'),
+          fabText: context.tr(_config.fabText),
           onFabPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MobileProjectFormScreen()),
             ).then((_) {
+              if (!mounted) return;
               context.read<ProjectsBloc>().add(LoadProjects());
             });
           },

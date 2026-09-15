@@ -31,6 +31,7 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../l10n/app_localizations.dart';
 
 enum InventorySheetStatus {
   draft('Validé'),
@@ -39,6 +40,8 @@ enum InventorySheetStatus {
 
   final String label;
   const InventorySheetStatus(this.label);
+
+  String localized(BuildContext context) => context.tr(label);
 
   Color get color {
     switch (this) {
@@ -116,11 +119,15 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   String _getWarehouseName(String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (id == 'default_warehouse') return context.tr('Entrepôt par défaut');
     try {
-      return _warehouses.firstWhere((w) => w.id == id).name;
+      final name = _warehouses.firstWhere((w) => w.id == id).name;
+      if (name.toLowerCase() == 'entrepôt par défaut' || name.toLowerCase() == 'entrepot par defaut') {
+        return context.tr('Entrepôt par défaut');
+      }
+      return name;
     } catch (_) {
-      return 'Entrepôt par défaut';
+      return context.tr('Entrepôt par défaut');
     }
   }
 
@@ -145,7 +152,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
 
   void _previewDocument(InventorySheet entry) {
     final wrapper = DocumentWrapper.fromInventorySheet(entry);
-    final statusLabel = entry.status == 'validated' ? 'Validé' : (entry.status == 'cancelled' ? 'Annulé' : 'Brouillon');
+    final statusLabel = entry.status == 'validated' ? context.tr('Validé') : (entry.status == 'cancelled' ? context.tr('Annulé') : context.tr('Brouillon'));
     final statusColor = entry.status == 'validated' ? AppColors.success : (entry.status == 'cancelled' ? AppColors.error : AppColors.warning);
     Navigator.push(
       context,
@@ -222,7 +229,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "Fiches d'inventaire",
+                      context.tr("Fiches d'inventaire"),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -242,7 +249,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   OutlinedButton.icon(
                     onPressed: () => setState(() => _showMobileFilters = !_showMobileFilters),
                     icon: Icon(_showMobileFilters ? Icons.filter_list_off : Icons.filter_list, size: 18),
-                    label: Text(_showMobileFilters ? 'Masquer filtres' : 'Filtres'),
+                    label: Text(_showMobileFilters ? context.tr('Masquer filtres') : context.tr('Filtres')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -269,7 +276,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   children: [
                     TextField(
                       decoration: InputDecoration(
-                        hintText: 'Rechercher article...',
+                        hintText: context.tr('Rechercher un article...'),
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -299,7 +306,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                             ),
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
-                              const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
+                              DropdownMenuItem<String?>(value: null, child: Text(context.tr('Entrepôt'), style: const TextStyle(fontSize: 12))),
                               ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
@@ -309,7 +316,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
-                              hintText: 'Référence',
+                              hintText: context.tr('Référence'),
                               hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                               prefixIcon: Icon(Icons.numbers, size: 16, color: AppColors.textSecondary),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -350,7 +357,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                               child: Text(
                                 _filterDateRange != null
                                     ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                    : 'Toutes les dates',
+                                    : context.tr('Toutes les dates'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -387,7 +394,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${entries.length} résultat${entries.length > 1 ? 's' : ''}',
+                        '${entries.length} ${entries.length > 1 ? context.tr('résultats') : context.tr('résultat')}',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                       ),
                     ),
@@ -402,7 +409,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         _currentPage = 0;
                       }),
                       icon: const Icon(Icons.clear_all, size: 16),
-                      label: const Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                      label: Text(context.tr('Réinitialiser'), style: const TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(foregroundColor: AppColors.error, padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
@@ -444,9 +451,9 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                                     children: [
                                       Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                                       const SizedBox(height: 12),
-                                      Text("Aucune fiche d'inventaire", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                                      Text(context.tr("Aucune fiche d'inventaire"), style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                                       const SizedBox(height: 4),
-                                      Text("Appuyez sur + pour en créer une", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                      Text(context.tr("Appuyez sur + pour en créer un"), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                                     ],
                                   ),
                                 ),
@@ -575,7 +582,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                       ),
                     ),
                     Text(
-                      '${entry.items.length} article${entry.items.length > 1 ? 's' : ''}',
+                      '${entry.items.length} ${entry.items.length > 1 ? context.tr('articles') : context.tr('article')}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -593,7 +600,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   Widget _buildArticlesDisplay(List<InventorySheetItem> items) {
-    if (items.isEmpty) return Text('0 article', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
     
     final summaryText = items.map((item) {
       final pName = _getProductName(item.productId);
@@ -608,7 +615,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
       showDuration: Duration(seconds: 3),
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
-      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
   }
 
@@ -649,7 +656,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
         borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Text(
-        entryStatus.label,
+        entryStatus.localized(context),
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -673,7 +680,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Fiches d'inventaire",
+                    context.tr("Fiches d'inventaire"),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -681,7 +688,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text("Gérer vos fiches d'inventaire", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr("Gérer vos fiches d'inventaire"), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -689,7 +696,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Créer'),
+                  label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -722,7 +729,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Entrepôt', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -733,8 +740,8 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                               orElse: () => null,
                             );
                             return SearchableSelectorField(
-                              hint: 'Tous les Entrepôts',
-                              selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                              hint: context.tr('Tous les Entrepôts'),
+                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -761,13 +768,13 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Article', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Article'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Rechercher produit...',
+                            hintText: context.tr('Rechercher un produit...'),
                             hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                             prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -792,7 +799,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Période', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      Text(context.tr('Date'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
@@ -821,7 +828,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                                 child: Text(
                                   _filterDateRange != null
                                       ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : 'Toutes les dates',
+                                      : context.tr('Toutes les dates'),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
@@ -855,7 +862,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         _currentPage = 0;
                       }),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
-                      tooltip: 'Réinitialiser les filtres',
+                      tooltip: context.tr('Réinitialiser les filtres'),
                       style: IconButton.styleFrom(
                         foregroundColor: AppColors.error,
                         backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -888,13 +895,13 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   if (state is InventorySheetsLoading || state is InventorySheetsInitial) {
                     return ShimmerTable(
                       headerColumns: [
-                        Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 1, child: Text(context.tr('Surplus'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 1, child: Text(context.tr('Manquant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                       ],
                     );
                   }
@@ -904,7 +911,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   if (state is InventorySheetsLoaded) {
                     if (entries.isEmpty) {
                       return Center(
-                        child: Text("Aucune fiche d'inventaire trouvée", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                        child: Text(context.tr("Aucune fiche d'inventaire trouvée"), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                       );
                     }
 
@@ -925,13 +932,13 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           ),
                           child: Row(
                             children: [
-                              Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Surplus'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Manquant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -956,7 +963,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const SizedBox(width: 8),
                               Container(
                                 height: 28,
@@ -982,10 +989,10 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} ${startIndex + 1} à $endIndex ${context.tr('sur')} $totalItems ${context.tr('résultats')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 12),
@@ -1112,7 +1119,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           children: [
                             Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
                             const SizedBox(width: 8),
-                            const Text('Voir', style: TextStyle(fontSize: 13)),
+                            Text(context.tr('Voir'), style: const TextStyle(fontSize: 13)),
                           ],
                         ),
                       ),
@@ -1177,22 +1184,20 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text("Voulez-vous vraiment supprimer la Fiche d'inventaire ${entry.number} ?"),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${context.tr("Fiches d'inventaire")} ${entry.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
               context.read<InventorySheetsBloc>().add(InventorySheetDeleted(entry.id));
-              // Refresh products list so stock quantities are updated immediately
-              // context.read<ProductsBloc>().add(LoadProducts());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),

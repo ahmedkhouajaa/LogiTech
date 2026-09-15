@@ -23,6 +23,8 @@ import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileSupplierCreditNoteDetailScreen extends StatefulWidget {
   final SupplierCreditNote note;
@@ -101,8 +103,9 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentNote.status);
-    final statusColor = _getStatusColor(currentNote.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('supplier_credit_note', currentNote.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -354,54 +357,20 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
   }
 
   void _showChangeStatusDialog(BuildContext context, SupplierCreditNote note) {
-    String selectedStatus = note.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: ['draft', 'validated', 'refunded', 'cancelled'].map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = note.copyWith(status: selectedStatus);
-                  context.read<SupplierCreditNotesBloc>().add(UpdateSupplierCreditNote(updatedNote));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'supplier_credit_note',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          reason: notes != null && notes.isNotEmpty ? notes : note.reason,
+        );
+        setState(() {
+          currentNote = updatedNote;
+        });
+        context.read<SupplierCreditNotesBloc>().add(UpdateSupplierCreditNote(updatedNote));
+      },
     );
   }
 }

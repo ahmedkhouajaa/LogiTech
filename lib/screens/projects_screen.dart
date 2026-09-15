@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/project.dart';
@@ -12,6 +11,7 @@ import '../widgets/dashboard_card.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../widgets/create_project_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -27,22 +27,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     context.read<ProjectsBloc>().add(LoadProjects());
   }
 
-  void _showCreateDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => BlocProvider.value(
-        value: context.read<ProjectsBloc>(),
-        child: const CreateProjectDialog(),
-      ),
-    );
-  }
   void _editProject(Project? p) {
     if (p != null) {
       final isDefault = p.isDefault || p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut';
       if (isDefault) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être modifié.')),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 2),
           ),
@@ -65,7 +56,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     if (isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          content: Text(context.tr('Cet élément est un élément par défaut et ne peut pas être supprimé.')),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 2),
         ),
@@ -76,12 +67,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Confirmer la suppression', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Voulez-vous vraiment supprimer le projet "${p.name}" ?\nCette action est irréversible.', style: TextStyle(color: AppColors.textSecondary)),
+        title: Text(context.tr('Confirmer la suppression'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('${context.tr('Voulez-vous vraiment supprimer le projet')} "${isDefault ? context.tr('Projet par défaut') : p.name}" ?\n${context.tr('Cette action est irréversible.')}', style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -92,7 +83,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -111,9 +102,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Projets', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  Text(context.tr('Projets'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
-                  Text('Gérez vos projets et suivez leur avancement', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  Text(context.tr('Gérez vos projets et suivez leur avancement'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                 ],
               ),
               const Spacer(),
@@ -121,7 +112,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _editProject(null),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Nouveau Projet', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  label: Text(context.tr('Nouveau Projet'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -157,10 +148,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
                     headerColumns: [
-                      Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Date de Création', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                      SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text(context.tr('Nom'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text(context.tr('Date de Création'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                     ],
                   ),
                 );
@@ -171,11 +162,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Project>(
-                      columns: const ['Nom', 'Statut', 'Date de Création', 'Actions'],
+                      columns: [context.tr('Nom'), context.tr('Statut'), context.tr('Date de Création'), context.tr('Actions')],
                       rows: state.projects,
-                      emptyMessage: 'Aucun projet',
+                      emptyMessage: context.tr('Aucun projet'),
                       cellBuilder: (p) {
                         final isDefault = p.isDefault || p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut';
+                        final displayName = isDefault && (p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut')
+                            ? context.tr('Projet par défaut')
+                            : p.name;
+                        final displayDesc = isDefault && p.description != null && (p.description!.trim().toLowerCase() == 'projet principal par défaut' || p.description!.trim().toLowerCase() == 'projet par défaut')
+                            ? context.tr('Projet principal par défaut')
+                            : p.description;
                         return [
                           DataCell(
                             Row(
@@ -197,7 +194,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(p.name, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                          Text(displayName, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                                           if (isDefault) ...[
                                             SizedBox(width: 6),
                                             Container(
@@ -213,7 +210,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                                   Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
                                                   SizedBox(width: 2),
                                                   Text(
-                                                    'Par défaut',
+                                                    context.tr('Par défaut'),
                                                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
                                                   ),
                                                 ],
@@ -222,8 +219,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                           ],
                                         ],
                                       ),
-                                      if (p.description != null && p.description!.isNotEmpty)
-                                        Text(p.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                      if (displayDesc != null && displayDesc.isNotEmpty)
+                                        Text(displayDesc, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 ),
@@ -261,7 +258,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                         children: [
                                           Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
                                           const SizedBox(width: 8),
-                                          const Text('Voir'),
+                                          Text(context.tr('Voir')),
                                         ],
                                       ),
                                     ),
@@ -277,7 +274,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                           children: [
                                             Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
                                             const SizedBox(width: 8),
-                                            const Text('Modifier'),
+                                            Text(context.tr('Modifier')),
                                           ],
                                         ),
                                       ),
@@ -291,7 +288,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                           children: [
                                             Icon(Icons.delete_outline, size: 18, color: AppColors.error),
                                             const SizedBox(width: 8),
-                                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                            Text(context.tr('Supprimer'), style: TextStyle(color: AppColors.error)),
                                           ],
                                         ),
                                       ),
@@ -305,7 +302,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                         children: [
                                           Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
                                           const SizedBox(width: 8),
-                                          Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                          Text(context.tr('Élément protégé'), style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                                         ],
                                       ),
                                     ),

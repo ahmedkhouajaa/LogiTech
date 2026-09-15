@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
@@ -18,6 +19,7 @@ import 'forms/mobile_return_voucher_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileReturnNotesScreen extends StatefulWidget {
   const MobileReturnNotesScreen({super.key});
@@ -155,8 +157,12 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
 
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final rawStatus = item.status.toLowerCase();
+              final translatedLower = translateStatus(item.status).toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('return_voucher', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (rawStatus != filterLower) return false;
+              if (rawStatus != filterLower && translatedLower != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -166,7 +172,8 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
 
           cards = filteredItems.map((item) {
             String reference = item.returnNumber;
-            String status = item.status;
+            final sInfo = CustomStatusService.instance.getStatusInfo('return_voucher', item.status);
+            String status = sInfo.label;
             String? name = item.customerName ?? item.customerCompany ?? 'Client Inconnu';
             DateTime date = item.dateEmission;
             double amount = item.totalTTC;
@@ -175,6 +182,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: sInfo.color,
               name: name,
               date: date,
               amount: amount,
@@ -248,7 +256,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
               _fetchFilteredReturnNotes();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Payée', 'Annulé'],
+            documentType: 'return_voucher',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredReturnNotes();

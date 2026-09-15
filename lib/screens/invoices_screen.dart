@@ -34,11 +34,13 @@ import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../services/document_numbering_service.dart';
-import 'document_detail_screen.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/custom_status_service.dart';
+import '../widgets/dialogs/change_status_dialog.dart';
+import '../widgets/document_status_filter_dropdown.dart';
+import '../l10n/app_localizations.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 
@@ -56,7 +58,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  InvoiceStatus? _statusFilter;
+  String? _statusFilter;
 
   // Pagination state
   int _rowsPerPage = 20;
@@ -120,17 +122,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         PopupMenuItem(
           value: 'pdf',
           child: Text(
-            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            count > 1 ? '${ctx.tr('Télécharger')} $count documents ( pdf )' : ctx.tr('Télécharger PDF'),
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           ),
         ),
         PopupMenuItem(
           value: 'excel',
-          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Exporter Excel'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
         PopupMenuItem(
           value: 'delete',
-          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          child: Text(ctx.tr('Supprimer la sélection'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ),
       ],
       child: Container(
@@ -145,7 +147,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Plus d\'actions',
+              context.tr('Plus d\'actions'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -297,11 +299,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Factures Client',
+                    context.tr('Factures Client'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   SizedBox(height: 2),
-                  Text('Gérer vos factures', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  Text(context.tr('Gérer vos factures'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -311,7 +313,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ],
               if (PermissionService.instance.canCreate(UserPermissionResources.salesInvoices))
                 AppButton(
-                  label: 'Nouvelle facture',
+                  label: context.tr('Nouvelle facture'),
                   icon: Icons.add_rounded,
                   onPressed: () => Navigator.push(
                   context,
@@ -369,7 +371,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         filteredInvoices = filteredInvoices.where((i) => i.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
       }
       if (_statusFilter != null) {
-        filteredInvoices = filteredInvoices.where((i) => i.status == _statusFilter).toList();
+        filteredInvoices = filteredInvoices.where((i) => i.effectiveStatus == _statusFilter || i.status.name == _statusFilter).toList();
       }
       totalItems = filteredInvoices.length;
     }
@@ -396,7 +398,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               child: BlocBuilder<CustomersBloc, CustomersState>(
                 builder: (context, state) {
                   final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  String selectedCustomerName = 'Tous les clients';
+                  String selectedCustomerName = context.tr('Tous les clients');
                   if (_selectedClientId != null && _selectedClientId != 'all') {
                     final found = customers.firstWhere(
                       (c) => c.id == _selectedClientId,
@@ -431,7 +433,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                           Expanded(
                             child: Text(
                               _selectedClientId == null || _selectedClientId == 'all'
-                                  ? 'Tous les clients'
+                                  ? context.tr('Tous les clients')
                                   : selectedCustomerName,
                               style: TextStyle(
                                 fontSize: 12,
@@ -489,113 +491,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             flex: 2,
             child: _buildFilterField(
               label: 'Statut',
-              child: PopupMenuButton<InvoiceStatus?>(
-                tooltip: 'Filtrer par statut',
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                ),
-                color: AppColors.surface,
-                elevation: 4,
-                offset: const Offset(0, 36),
-                initialValue: _statusFilter,
-                onSelected: (v) {
+              child: DocumentStatusFilterDropdown(
+                documentType: 'invoice',
+                currentStatusFilter: _statusFilter,
+                onStatusSelected: (v) {
                   setState(() => _statusFilter = v);
                   _applyFilters();
                 },
-                itemBuilder: (context) => [
-                  PopupMenuItem<InvoiceStatus?>(
-                    value: null,
-                    height: 34,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Tous',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_statusFilter == null)
-                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                  ...InvoiceStatus.values.map(
-                    (s) => PopupMenuItem<InvoiceStatus?>(
-                      value: s,
-                      height: 34,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              s.label,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: s.color,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_statusFilter == s)
-                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                child: Container(
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _statusFilter == null
-                            ? Text(
-                                'Tous',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  _statusFilter!.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: _statusFilter!.color,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
@@ -615,7 +517,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
                 },
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: 'Réinitialiser les filtres',
+                tooltip: context.tr('Réinitialiser les filtres'),
                 style: IconButton.styleFrom(
                   foregroundColor: AppColors.error,
                   backgroundColor: AppColors.error.withValues(alpha: 0.1),
@@ -669,7 +571,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Sélectionner un client',
+                          context.tr('Sélectionner un client'),
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         IconButton(
@@ -689,7 +591,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         onChanged: (val) => setDialogState(() => search = val),
                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Rechercher un client...',
+                          hintText: context.tr('Rechercher un client...'),
                           hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                           prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
                           filled: true,
@@ -721,7 +623,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       selected: selectedCustomerId == null || selectedCustomerId == 'all',
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
                       title: Text(
-                        'Tous les clients',
+                        context.tr('Tous les clients'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                       ),
                       trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
@@ -739,7 +641,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               padding: EdgeInsets.all(20.0),
                               child: Center(
                                 child: Text(
-                                  'Aucun client trouvé',
+                                  context.tr('Aucun client trouvé'),
                                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                 ),
                               ),
@@ -803,7 +705,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(context.tr(label), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         child,
       ],
@@ -822,7 +724,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          locale: const Locale('fr', 'FR'),
+          locale: Localizations.localeOf(context),
         );
         if (picked != null) onChanged(picked);
       },
@@ -839,7 +741,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                value != null ? formatDateLong(value) : hint,
+                value != null ? formatDateLong(value) : context.tr(hint),
                 style: TextStyle(fontSize: 12, color: value != null ? AppColors.textPrimary : AppColors.textSecondary),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -876,11 +778,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -916,8 +818,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
-                              SizedBox(height: 12),
-                              Text('Aucune facture trouvee', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                              const SizedBox(height: 12),
+                              Text(context.tr('Aucune facture trouvée'), style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                             ],
                           ),
                         )
@@ -962,14 +864,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 10),
-                                      const Text('Reference'),
+                                      Text(context.tr('Référence')),
                                     ],
                                   ),
                                 ),
-                                const DataColumn(label: Text('Client')),
-                                const DataColumn(label: Text('Statut')),
-                                const DataColumn(label: Text('Montant')),
-                                const DataColumn(label: Text('Actions')),
+                                DataColumn(label: Text(context.tr('Client'))),
+                                DataColumn(label: Text(context.tr('Statut'))),
+                                DataColumn(label: Text(context.tr('Montant'))),
+                                DataColumn(label: Text(context.tr('Actions'))),
                               ],
                               rows: pageInvoices.map((inv) => _buildInvoiceRow(inv)).toList(),
                             ),
@@ -1053,7 +955,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         // Statut badge
         DataCell((!inv.isSynced || inv.number.startsWith('BROUILLON-'))
             ? const PendingSyncBadge()
-            : StatusBadge(label: inv.status.label, color: inv.status.color)),
+            : () {
+                final sInfo = CustomStatusService.instance.getStatusInfo('invoice', inv.effectiveStatus);
+                return StatusBadge(label: sInfo.label, color: sInfo.color);
+              }()),
         // Montant
         DataCell(
           Text(
@@ -1145,7 +1050,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Row(
         children: [
           // Rows per page
-          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 8),
           Container(
             height: 28,
@@ -1170,11 +1075,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
           const SizedBox(width: 20),
           // Page info
-          Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
           // Display info
           Text(
-            totalRows == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $startRow à $endRow sur $totalRows résultats',
+            totalRows == 0 ? '${context.tr('Affichage de')} 0 ${context.tr('à')} 0 ${context.tr('sur')} 0 ${context.tr('résultats')}' : '${context.tr('Affichage de')} $startRow ${context.tr('à')} $endRow ${context.tr('sur')} $totalRows ${context.tr('résultats')}',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           const SizedBox(width: 12),
@@ -1276,7 +1181,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 prefix: DocPrefix.creditNote,
               );
               if (seq == null) return;
-              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq);
+              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq, docCollection: 'credit_notes');
               
               final creditNote = CreditNote(
                 id: cnId,
@@ -1352,7 +1257,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Text(context.tr(text), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -1460,82 +1365,19 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _showChangeStatusDialog(BuildContext context, Invoice inv) {
-    InvoiceStatus selectedStatus = inv.status;
-    final notesController = TextEditingController();
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    items: InvoiceStatus.values.map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: s.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() => selectedStatus = v);
-                      }
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  Text('Notes (optionnel):'),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ajouter une note...',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<InvoicesBloc>().add(
-                    UpdateInvoice(inv.copyWith(status: selectedStatus))
-                  );
-                  Navigator.pop(dialogCtx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'invoice',
+      currentStatus: inv.effectiveStatus,
+      onSave: (newStatusKey, notes) async {
+        final enumMatch = InvoiceStatus.values.where((e) => e.name == newStatusKey).firstOrNull;
+        context.read<InvoicesBloc>().add(
+          UpdateInvoice(inv.copyWith(
+            status: enumMatch ?? InvoiceStatus.unpaid,
+            customStatus: enumMatch == null ? newStatusKey : null,
+          )),
+        );
+      },
     );
   }
 }

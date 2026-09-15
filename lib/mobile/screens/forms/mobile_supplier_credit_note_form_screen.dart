@@ -14,6 +14,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -27,6 +28,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/suppliers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -56,6 +58,9 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   String _status = 'draft';
+  String _vehicleRegistration = '';
+  Map<String, dynamic> _customFields = {};
+  String _driverName = '';
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.totalHT);
@@ -107,6 +112,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
       _status = n.status;
       _notes = n.reason ?? '';
       _conditions = n.reason ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => SupplierCreditNoteItem(
         id: i.id,
         supplierCreditNoteId: i.supplierCreditNoteId,
@@ -126,7 +132,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -137,7 +143,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -146,7 +152,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
 
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un fournisseur')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -168,7 +174,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
           setState(() => _isLoading = false);
           return;
         }
-        number = generateDocNumber(DocPrefix.supplierCreditNote, seq);
+        number = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
       }
 
       String? suppName;
@@ -192,6 +198,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
         date: _date,
         status: _status,
         reason: _notes.isNotEmpty ? _notes : null,
+        customFields: _customFields,
         items: _items.map((item) => SupplierCreditNoteItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           supplierCreditNoteId: noteId,
@@ -216,7 +223,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Avoir mis à jour' : 'Avoir créé avec succès'),
+          content: Text(_isEditing ? context.tr('Avoir mis à jour') : context.tr('Avoir créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -275,7 +282,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: widget.isReadOnly ? 'Détails de l\'avoir' : (_isEditing ? 'Modifier l\'avoir' : 'Nouvel avoir'),
+      title: widget.isReadOnly ? 'Détails de l\'avoir fournisseur' : (_isEditing ? 'Modifier l\'avoir fournisseur' : 'Nouvel avoir fournisseur'),
       statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
       statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
       isLoading: _isLoading,
@@ -443,6 +450,36 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                     );
                   },
                 ),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(context.tr('Champs Personnalisés'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 4),
+                      Text(context.tr('Informations supplémentaires'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                      SizedBox(height: 16),
+                      SmartTextInput(
+                        label: 'Matricule du véhicule',
+                        hint: 'Entrer la valeur',
+                        initialValue: _vehicleRegistration,
+                        onChanged: (v) => setState(() => _vehicleRegistration = v),
+                      ),
+                      SizedBox(height: 16),
+                      SmartTextInput(
+                        label: 'Nom du chauffeur',
+                        hint: 'Entrer la valeur',
+                        initialValue: _driverName,
+                        onChanged: (v) => setState(() => _driverName = v),
+                      ),
+                    ],
+                  ),
+                ),
                 SizedBox(height: 24),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
@@ -450,7 +487,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                     label: 'Les prix des articles sont en:',
                     value: _pricingModeHT,
                     options: const [true, false],
-                    labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                    labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                     onChanged: (v) => setState(() => _pricingModeHT = v),
                   ),
                 ),
@@ -472,7 +509,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -494,7 +531,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                         child: OutlinedButton.icon(
                           onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
@@ -506,7 +543,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
                         },
@@ -546,6 +583,14 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'supplier_credit_note',
+          initialValues: _customFields,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(

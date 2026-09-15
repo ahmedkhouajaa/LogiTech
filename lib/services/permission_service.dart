@@ -475,15 +475,42 @@ class PermissionService {
       case 'projects':
       case 'projets':
         return UserPermissionResources.projects;
+      case 'settings_app_modules':
+      case 'app_modules':
+      case 'app_modules_settings':
+      case 'modules_application':
+        return UserPermissionResources.settingsAppModules;
+      case 'settings_personal_info':
+      case 'personal_info':
+      case 'infos_personnelles':
+        return UserPermissionResources.settingsPersonalInfo;
       case 'settings_company_info':
       case 'infos_societe':
+      case 'company_info':
         return UserPermissionResources.settingsCompanyInfo;
+      case 'settings_doc_numbering':
+      case 'document_numbering':
+      case 'numerotation_documents':
+      case 'doc_numbering':
+        return UserPermissionResources.settingsDocNumbering;
       case 'settings_doc_templates':
       case 'modeles_documents':
+      case 'document_templates':
+      case 'doc_templates':
         return UserPermissionResources.settingsDocTemplates;
       case 'import_export':
       case 'importexport':
         return UserPermissionResources.importExport;
+      case 'settings_custom_fields':
+      case 'customfields':
+      case 'custom_fields':
+      case 'champs_personnalises':
+        return UserPermissionResources.settingsCustomFields;
+      case 'settings_custom_statuses':
+      case 'customstatuses':
+      case 'custom_statuses':
+      case 'statuts_personnalises':
+        return UserPermissionResources.settingsCustomStatuses;
       case 'user_management':
       case 'usermanagement':
       case 'gestion_utilisateurs':
@@ -683,8 +710,18 @@ class PermissionService {
         return UserPermissionResources.projects;
       case AppModule.companyInfo:
         return UserPermissionResources.settingsCompanyInfo;
+      case AppModule.personalInfo:
+        return UserPermissionResources.settingsPersonalInfo;
+      case AppModule.appModulesSettings:
+        return UserPermissionResources.settingsAppModules;
+      case AppModule.documentNumbering:
+        return UserPermissionResources.settingsDocNumbering;
       case AppModule.documentTemplates:
         return UserPermissionResources.settingsDocTemplates;
+      case AppModule.customFields:
+        return UserPermissionResources.settingsCustomFields;
+      case AppModule.customStatuses:
+        return UserPermissionResources.settingsCustomStatuses;
       case AppModule.importExport:
         return UserPermissionResources.importExport;
       case AppModule.userManagement:
@@ -703,12 +740,20 @@ class PermissionService {
     if (module == AppModule.userManagement) return false;
 
     if (module == AppModule.settings) {
-      return canRead(UserPermissionResources.settingsCompanyInfo) ||
+      return canRead(UserPermissionResources.settingsAppModules) ||
+             canRead(UserPermissionResources.settingsPersonalInfo) ||
+             canRead(UserPermissionResources.settingsCompanyInfo) ||
+             canRead(UserPermissionResources.settingsDocNumbering) ||
              canRead(UserPermissionResources.settingsDocTemplates) ||
+             canRead(UserPermissionResources.settingsCustomFields) ||
+             canRead(UserPermissionResources.settingsCustomStatuses) ||
              canRead(UserPermissionResources.importExport);
     }
     if (module == AppModule.reports) {
       return canRead(UserPermissionResources.dashboard);
+    }
+    if (module == AppModule.support) {
+      return true;
     }
 
     final resKey = getResourceKeyForModule(module);

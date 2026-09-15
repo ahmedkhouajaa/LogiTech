@@ -15,6 +15,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -24,6 +25,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../screens/suppliers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
@@ -57,6 +59,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   String _status = 'draft';
+  Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -112,6 +115,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       _status = n.status;
       _notes = n.notes ?? '';
       _conditions = n.conditionsGenerales ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => ReceivingVoucherItem(
         id: i.id,
         voucherId: i.voucherId,
@@ -132,7 +136,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -143,7 +147,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -152,7 +156,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un fournisseur')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -176,7 +180,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber(DocPrefix.receivingVoucher, seq);
+          number = generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers');
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -209,6 +213,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
         timbreFiscal: _timbreFiscal,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => ReceivingVoucherItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           voucherId: voucherId,
@@ -246,7 +251,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Bon mis à jour' : 'Bon créé avec succès'),
+          content: Text(_isEditing ? context.tr('Bon mis à jour') : context.tr('Bon créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -343,7 +348,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: widget.isReadOnly ? 'Détails du bon' : (_isEditing ? 'Modifier le bon' : 'Nouveau bon'),
+      title: widget.isReadOnly ? 'Détails du bon de réception' : (_isEditing ? 'Modifier le bon de réception' : 'Nouveau bon de réception'),
       statusLabel: _getStatusLabel(_status),
       statusColor: _getStatusColor(_status),
       isLoading: _isLoading,
@@ -518,7 +523,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                     label: 'Les prix des articles sont en:',
                     value: _pricingModeHT,
                     options: const [true, false],
-                    labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                    labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                     onChanged: (v) => setState(() => _pricingModeHT = v),
                   ),
                 ),
@@ -540,7 +545,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -562,7 +567,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                         child: OutlinedButton.icon(
                           onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
@@ -574,7 +579,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                        tooltip: 'Créer un nouvel article',
+                        tooltip: context.tr('Créer un nouvel article'),
                         onPressed: () async {
                           final newProd = await Navigator.push(
                             context,
@@ -636,6 +641,14 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: 'receiving_voucher',
+          initialValues: _customFields,
+          isMobile: true,
+          readOnly: widget.isReadOnly,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(

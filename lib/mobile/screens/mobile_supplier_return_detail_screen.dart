@@ -22,6 +22,8 @@ import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
+import '../../widgets/dialogs/change_status_dialog.dart';
 
 class MobileSupplierReturnDetailScreen extends StatefulWidget {
   final SupplierReturn returnNote;
@@ -43,8 +45,9 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = translateStatus(currentReturn.status);
-    final statusColor = _getStatusColor(currentReturn.status);
+    final sInfo = CustomStatusService.instance.getStatusInfo('supplier_return', currentReturn.status);
+    final statusLabel = sInfo.label;
+    final statusColor = sInfo.color;
 
     final infoSections = [
       PremiumInfoSection(
@@ -281,54 +284,20 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
   }
 
   void _showChangeStatusDialog(BuildContext context, SupplierReturn note) {
-    String selectedStatus = note.status;
-
-    showDialog(
+    showDocumentChangeStatusDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text('Changer le statut'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nouveau statut:'),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: selectedStatus,
-                    decoration: InputDecoration(border: OutlineInputBorder()),
-                    isExpanded: true,
-                    items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
-                    )).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedStatus = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  final updatedNote = note.copyWith(status: selectedStatus);
-                  context.read<SupplierReturnsBloc>().add(UpdateSupplierReturn(updatedNote));
-                  Navigator.pop(dialogCtx);
-                },
-                child: Text('Enregistrer'),
-              ),
-            ],
-          );
-        },
-      ),
+      documentType: 'supplier_return',
+      currentStatus: note.status,
+      onSave: (newStatusKey, notes) async {
+        final updatedNote = note.copyWith(
+          status: newStatusKey,
+          reason: notes != null && notes.isNotEmpty ? notes : note.reason,
+        );
+        setState(() {
+          currentReturn = updatedNote;
+        });
+        context.read<SupplierReturnsBloc>().add(UpdateSupplierReturn(updatedNote));
+      },
     );
   }
 }

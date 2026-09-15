@@ -20,6 +20,7 @@ import '../../utils/offline_action_helper.dart';
 import '../../services/permission_service.dart';
 import '../../services/sync_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileDeliveryNotesScreen extends StatefulWidget {
   const MobileDeliveryNotesScreen({super.key});
@@ -175,8 +176,11 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLower = item.status.toLowerCase();
               final translatedLower = translateStatus(item.status).toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('delivery_note', item.status);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLower != filterLower && translatedLower != filterLower) return false;
+              if (statusLower != filterLower && translatedLower != filterLower && sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -185,9 +189,11 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
           isEmpty = filteredItems.isEmpty;
 
           cards = filteredItems.map((item) {
+            final sInfo = CustomStatusService.instance.getStatusInfo('delivery_note', item.status);
             return MobileGenericCard(
               reference: item.number,
-              status: item.status,
+              status: sInfo.label,
+              statusColor: sInfo.color,
               name: item.customerName ?? 'Client Inconnu',
               date: item.date,
               amount: item.totalTTC,
@@ -262,7 +268,7 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
               _fetchFilteredNotes();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Livré', 'Facturé', 'Annulé'],
+            documentType: 'delivery_note',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredNotes();

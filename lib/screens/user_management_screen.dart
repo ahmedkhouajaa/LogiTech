@@ -6,6 +6,7 @@ import '../blocs/user_management/user_management_state.dart';
 import '../models/user_management_model.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 import '../services/permission_service.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../widgets/shimmer_effect.dart';
@@ -81,7 +82,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (user.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          content: Text(context.tr('Le propriétaire de l\'entreprise ne peut pas être modifié.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -91,7 +92,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (user.isAdmin && !PermissionService.instance.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          content: Text(context.tr('Seul le propriétaire de l\'entreprise peut gérer un administrateur.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -110,7 +111,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (user.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Impossible de supprimer le propriétaire de l\'entreprise.'),
+          content: Text(context.tr('Impossible de supprimer le propriétaire de l\'entreprise.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -131,12 +132,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment retirer "${user.name}" de cette entreprise ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment retirer')} "${user.name}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -152,7 +153,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -212,7 +213,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   Row(
                     children: [
                       Text(
-                        'Gestion des Utilisateurs',
+                        context.tr('Gestion des Utilisateurs'),
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -241,7 +242,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ElevatedButton.icon(
                       onPressed: _navigateToAddUser,
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Ajouter un Utilisateur', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      label: Text(context.tr('Ajouter un Utilisateur'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
@@ -302,7 +303,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(left: 6),
                           child: ChoiceChip(
-                            label: Text(role, style: TextStyle(fontSize: 11.5, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                            label: Text(context.tr(role), style: TextStyle(fontSize: 11.5, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
                             selected: isSelected,
                             selectedColor: AppColors.primary.withValues(alpha: 0.15),
                             backgroundColor: AppColors.surface,
@@ -326,7 +327,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: _loadUsers,
-                      tooltip: 'Actualiser la liste',
+                      tooltip: context.tr('Actualiser la liste'),
                     ),
                   ],
                 ),
@@ -339,11 +340,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ? ShimmerTable(
                         rowCount: 12,
                         headerColumns: [
-                          Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                          Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Rôle', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-                          Expanded(flex: 2, child: Text('Numéro de Téléphone', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                          Expanded(flex: 2, child: Text('Entreprises', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                          SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                          Expanded(flex: 3, child: Text(context.tr('Nom'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                          Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Rôle'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                          Expanded(flex: 2, child: Text(context.tr('Numéro de Téléphone'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                          Expanded(flex: 2, child: Text(context.tr('Entreprises'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                          SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                         ],
                         rowBuilder: (index) => ShimmerTableRow.custom(
                           isEven: index % 2 == 0,
@@ -412,11 +413,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                                    Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Rôle', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
-                                    Expanded(flex: 2, child: Text('Numéro de Téléphone', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                                    Expanded(flex: 2, child: Text('Entreprises', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                                    SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                                    Expanded(flex: 3, child: Text(context.tr('Nom'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                                    Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Rôle'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                                    Expanded(flex: 2, child: Text(context.tr('Numéro de Téléphone'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                                    Expanded(flex: 2, child: Text(context.tr('Entreprises'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                                    SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                                   ],
                                 ),
                               ),
@@ -513,7 +514,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                         borderRadius: BorderRadius.circular(4),
                                                       ),
                                                       child: Text(
-                                                        user.isAdmin ? 'Administrateur' : 'Collaborateur',
+                                                        user.isAdmin ? context.tr('Administrateur') : context.tr('Collaborateur'),
                                                         style: TextStyle(
                                                           color: user.isAdmin ? Colors.white : AppColors.textPrimary,
                                                           fontSize: 11,
@@ -566,7 +567,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                         // Rule 1: Propriétaire cannot be edited or deleted by ANY user
                                                         if (user.isOwner) {
                                                           return Tooltip(
-                                                            message: 'Propriétaire de l\'entreprise (Profil protégé)',
+                                                            message: context.tr('Propriétaire de l\'entreprise (Profil protégé)'),
                                                             child: Container(
                                                               width: 28,
                                                               height: 28,
@@ -587,7 +588,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                         // Rule 2: Regular Admin cannot edit or delete another Admin (only Propriétaire can)
                                                         if (user.isAdmin && !isCurrentUserOwner) {
                                                           return Tooltip(
-                                                            message: 'Seul le propriétaire peut gérer un administrateur',
+                                                            message: context.tr('Seul le propriétaire peut gérer un administrateur'),
                                                             child: Container(
                                                               width: 28,
                                                               height: 28,
@@ -620,14 +621,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                             }
                                                           },
                                                           itemBuilder: (ctx) => [
-                                                            const PopupMenuItem(
+                                                            PopupMenuItem(
                                                               value: 'edit',
                                                               height: 34,
                                                               child: Row(
                                                                 children: [
-                                                                  Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
-                                                                  SizedBox(width: 8),
-                                                                  Text('Modifier les accès', style: TextStyle(fontSize: 12)),
+                                                                  const Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(context.tr('Modifier les accès'), style: const TextStyle(fontSize: 12)),
                                                                 ],
                                                               ),
                                                             ),
@@ -638,8 +639,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                               child: Row(
                                                                 children: [
                                                                   Icon(Icons.delete_outline, size: 15, color: AppColors.error),
-                                                                  SizedBox(width: 8),
-                                                                  Text('Retirer de l\'entreprise', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                                                                  const SizedBox(width: 8),
+                                                                  Text(context.tr('Retirer de l\'entreprise'), style: TextStyle(color: AppColors.error, fontSize: 12)),
                                                                 ],
                                                               ),
                                                             ),
@@ -663,7 +664,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 color: AppColors.background,
                                 child: Row(
                                   children: [
-                                    Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                     const SizedBox(width: 8),
                                     SizedBox(
                                       height: 28,
@@ -687,10 +688,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 20),
-                                    Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    Text('${context.tr('Page')} ${_currentPage + 1} ${context.tr('sur')} $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                     const Spacer(),
                                     Text(
-                                      totalCount == 0 ? '0 résultats' : 'Affichage de ${startIdx + 1} à $endIdx sur $totalCount résultats',
+                                      totalCount == 0 ? context.tr('0 résultat') : '${context.tr('Affichage de')} ${startIdx + 1} ${context.tr('à')} $endIdx ${context.tr('sur')} $totalCount ${context.tr('résultats')}',
                                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     ),
                                     const SizedBox(width: 12),

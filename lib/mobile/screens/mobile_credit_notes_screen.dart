@@ -17,6 +17,7 @@ import 'mobile_credit_note_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../services/custom_status_service.dart';
 
 class MobileCreditNotesScreen extends StatefulWidget {
   const MobileCreditNotesScreen({super.key});
@@ -150,8 +151,18 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
 
             if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
               final statusLabel = item.status.label.toLowerCase();
+              final statusName = item.status.name.toLowerCase();
+              final effStatus = item.effectiveStatus.toLowerCase();
+              final cStatus = (item.customStatus ?? '').toLowerCase();
+              final sInfo = CustomStatusService.instance.getStatusInfo('credit_note', item.effectiveStatus);
               final filterLower = _selectedStatus!.toLowerCase();
-              if (statusLabel != filterLower) return false;
+              if (statusLabel != filterLower &&
+                  statusName != filterLower &&
+                  effStatus != filterLower &&
+                  cStatus != filterLower &&
+                  sInfo.label.toLowerCase() != filterLower) {
+                return false;
+              }
             }
 
             return true;
@@ -161,7 +172,8 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
 
           cards = filteredItems.map((item) {
             final reference = item.number;
-            final status = item.status.label;
+            final sInfo = CustomStatusService.instance.getStatusInfo('credit_note', item.effectiveStatus, fallbackLabel: item.status.label, fallbackColor: item.status.color);
+            final status = sInfo.label;
             final name = item.customerName ?? 'Client Inconnu';
             final date = item.date;
             final amount = item.totalTTC;
@@ -169,6 +181,7 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
             return MobileGenericCard(
               reference: reference,
               status: status,
+              statusColor: sInfo.color,
               name: name,
               date: date,
               amount: amount,
@@ -243,7 +256,7 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
               _fetchFilteredCreditNotes();
             },
             selectedStatus: _selectedStatus,
-            statusOptions: const ['Tous', 'Brouillon', 'Créé', 'Validé', 'Annulé'],
+            documentType: 'credit_note',
             onStatusChanged: (s) {
               setState(() => _selectedStatus = s);
               _fetchFilteredCreditNotes();

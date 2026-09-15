@@ -6,6 +6,7 @@ import '../../../blocs/products/products_bloc.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import '../../../widgets/searchable_dropdown_field.dart';
+import '../../../l10n/app_localizations.dart';
 import 'mobile_smart_fields.dart';
 
 class MobileArticleFormResult {
@@ -118,7 +119,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
     if (_productName.isEmpty) {
       setState(() => _hasAttemptedSubmit = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -172,7 +173,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.initialData == null ? 'Ajouter un article' : 'Modifier l\'article',
+                  context.tr(widget.initialData == null ? 'Ajouter un article' : 'Modifier l\'article'),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
@@ -192,26 +193,33 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Designation
-                  Text('Désignation', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text(context.tr('Désignation'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: BlocBuilder<ProductsBloc, ProductsState>(
                           builder: (context, state) {
-                            final products = state is ProductsLoaded ? state.products : <Product>[];
-                            final selectedProduct = products.cast<Product?>().firstWhere((p) => p?.id == _productId || p?.name == _productName, orElse: () => null);
+                            final allProducts = state is ProductsLoaded ? state.products : <Product>[];
+                            final selectedProduct = allProducts.cast<Product?>().firstWhere((p) => p?.id == _productId || p?.name == _productName, orElse: () => null);
+                            final products = allProducts.where((p) => widget.isPurchase ? p.isForPurchase : p.isForSale).toList();
                             final displayName = selectedProduct != null ? selectedProduct.name : (_productName.isNotEmpty ? _productName : null);
 
                             return SmartSearchableSelector(
                               label: '',
-                              hint: 'Rechercher un article...',
+                              hint: context.tr('Rechercher un article...'),
                               selectedText: displayName,
                               isHighlighted: true,
                               hasError: _hasAttemptedSubmit && _productName.isEmpty,
-                              errorText: (_hasAttemptedSubmit && _productName.isEmpty) ? 'Veuillez sélectionner un article' : null,
+                              errorText: (_hasAttemptedSubmit && _productName.isEmpty) ? context.tr('Veuillez sélectionner un article') : null,
                               onTap: () async {
-                                final res = await showProductSelectDialog(context, products, selectedProductId: _productId, warehouseId: widget.warehouseId);
+                                final res = await showProductSelectDialog(
+                                  context,
+                                  products,
+                                  selectedProductId: _productId,
+                                  warehouseId: widget.warehouseId,
+                                  destinationFilter: widget.isPurchase ? 'Achat' : 'Vente',
+                                );
                                 if (res != null && mounted) {
                                   final sel = products.firstWhere((p) => p.id == res);
                                   final price = widget.isPurchase ? sel.purchasePrice : sel.sellingPrice;
@@ -340,7 +348,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Total HT', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                      Text(context.tr('Total HT'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                       SizedBox(height: 4),
                       Text(
                         formatCurrencyDT(_computedTotalHT),
@@ -358,7 +366,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                     child: Text(
-                      widget.initialData == null ? 'Ajouter' : 'Enregistrer',
+                      context.tr(widget.initialData == null ? 'Ajouter' : 'Enregistrer'),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),

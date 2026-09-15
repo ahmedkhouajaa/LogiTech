@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 
 class SupplierReturnItem extends Equatable {
@@ -98,6 +99,7 @@ class SupplierReturn extends Equatable {
   final String? receivingVoucherId;
   final DateTime date;
   final String? reason;
+  final Map<String, dynamic>? customFields;
   final String status; // 'draft', 'validated', 'cancelled'
   final String? firebaseUid;
   final bool isDeleted;
@@ -116,6 +118,7 @@ class SupplierReturn extends Equatable {
     this.receivingVoucherId,
     required this.date,
     this.reason,
+    this.customFields,
     required this.status,
     this.firebaseUid,
     required this.isDeleted,
@@ -135,6 +138,8 @@ class SupplierReturn extends Equatable {
       'receiving_voucher_id': receivingVoucherId,
       'date': date.toIso8601String(),
       'reason': reason,
+      'custom_fields': customFields,
+      'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
       'status': status,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
@@ -157,6 +162,16 @@ class SupplierReturn extends Equatable {
       receivingVoucherId: map['receiving_voucher_id']?.toString(),
       date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
       reason: map['reason']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       status: map['status']?.toString() ?? 'draft',
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
@@ -175,6 +190,7 @@ class SupplierReturn extends Equatable {
     String? receivingVoucherId,
     DateTime? date,
     String? reason,
+    Map<String, dynamic>? customFields,
     String? status,
     String? firebaseUid,
     bool? isDeleted,
@@ -191,6 +207,7 @@ class SupplierReturn extends Equatable {
       receivingVoucherId: receivingVoucherId ?? this.receivingVoucherId,
       date: date ?? this.date,
       reason: reason ?? this.reason,
+      customFields: customFields ?? this.customFields,
       status: status ?? this.status,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,

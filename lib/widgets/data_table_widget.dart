@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/permission_service.dart';
 import '../utils/constants.dart';
+import '../l10n/app_localizations.dart';
 
 /// A generic reusable data table with search, sorting, and row actions.
 class DataTableWidget<T> extends StatefulWidget {
@@ -58,7 +59,7 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
             children: [
               Icon(Icons.inbox_outlined, size: 48, color: AppColors.textTertiary),
               const SizedBox(height: 12),
-              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
+              Text(context.tr(widget.emptyMessage), style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
             ],
           ),
         ),
@@ -92,10 +93,10 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
           horizontalMargin: 16,
           columns: [
             ...widget.columns.asMap().entries.map((e) => DataColumn(
-              label: Text(e.value),
+              label: Text(context.tr(e.value)),
               onSort: (i, asc) => setState(() { _sortColumnIndex = i; _sortAscending = asc; }),
             )),
-            if (hasActions) const DataColumn(label: Text('Actions')),
+            if (hasActions) DataColumn(label: Text(context.tr('Actions'))),
           ],
           rows: _pageRows.map((row) {
             final cells = widget.cellBuilder(row);
@@ -184,7 +185,7 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
       ),
       child: Row(
         children: [
-          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 8),
           Container(
             height: 28,
@@ -217,10 +218,10 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
             ),
           ),
           const SizedBox(width: 20),
-          Text('Page ${_page + 1} sur $_totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('${context.tr('Page')} ${_page + 1} ${context.tr('sur')} $_totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
           Text(
-            widget.rows.isEmpty ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $startItem à $endItem sur ${widget.rows.length} résultats',
+            widget.rows.isEmpty ? '0 ${context.tr('sur')} 0' : '$startItem - $endItem ${context.tr('sur')} ${widget.rows.length}',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
           const SizedBox(width: 12),

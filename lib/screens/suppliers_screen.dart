@@ -16,6 +16,7 @@ import '../services/contact_import_export_service.dart';
 import '../widgets/import_export/contact_import_dialog.dart';
 import 'supplier_detail_screen.dart';
 import '../widgets/supplier_history_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -62,7 +63,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Fournisseurs', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          Text(context.tr('Fournisseurs'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           if (totalCount != null) ...[
                             const SizedBox(width: 10),
                             Container(
@@ -128,7 +129,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
                       const SizedBox(width: 6),
                       Text(
-                        'Actions',
+                        context.tr('Actions'),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 13,
@@ -216,7 +217,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _showDialog(context, null),
                   icon: const Icon(Icons.factory_rounded, size: 18, color: Colors.white),
-                  label: const Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  label: Text(context.tr('Nouveau Fournisseur'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -953,7 +954,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
+                      context.tr(widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur'),
                       style: TextStyle(
                         fontSize: isMobile ? 16 : 20,
                         fontWeight: FontWeight.bold,
@@ -967,13 +968,13 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
-                      tooltip: 'Fermer',
+                      tooltip: context.tr('Fermer'),
                     ),
                   ] else ...[
                     OutlinedButton.icon(
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                      label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                      label: Text(context.tr('Retour'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -984,7 +985,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     ElevatedButton.icon(
                       onPressed: _save,
                       icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                      label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      label: Text(context.tr(widget.existing == null ? 'Creer' : 'Enregistrer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
@@ -1012,10 +1013,10 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                 indicatorWeight: 3,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                tabs: const [
-                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
-                  Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
-                  Tab(text: 'Financier & Notes', icon: Icon(Icons.account_balance_wallet_outlined, size: 20)),
+                tabs: [
+                  Tab(text: context.tr('Informations'), icon: Icon(Icons.info_outline_rounded, size: 20)),
+                  Tab(text: context.tr('Adresses'), icon: Icon(Icons.location_on_outlined, size: 20)),
+                  Tab(text: context.tr('Financier & Notes'), icon: Icon(Icons.account_balance_wallet_outlined, size: 20)),
                 ],
               ),
             ),
@@ -1035,7 +1036,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                         children: [
                           // Section 1: Type d'Entreprise
                           Text(
-                            "Type d'Entreprise",
+                            context.tr("Type d'Entreprise"),
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                           ),
                           SizedBox(height: 8),
@@ -1419,7 +1420,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           ? OutlinedButton.icon(
                               onPressed: () => _tabController.animateTo(_tabController.index - 1),
                               icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                              label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                              label: Text(context.tr('Précédent'), style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -1443,7 +1444,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  Text(context.tr('Suivant'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                   SizedBox(width: 8),
                                   Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
                                 ],
@@ -1452,7 +1453,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           : ElevatedButton.icon(
                               onPressed: _save,
                               icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                              label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              label: Text(context.tr('Terminer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -1748,7 +1749,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(
                 fontSize: isMobile ? 13 : 14,
                 fontWeight: FontWeight.bold,
@@ -1771,7 +1772,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
       initialDate: DateTime.now().subtract(Duration(days: 365 * 30)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      locale: Locale('fr'),
+      locale: Localizations.localeOf(context),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(

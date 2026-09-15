@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../blocs/stock/stock_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
@@ -83,7 +84,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                   Padding(
                     padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Text(
-                      'Vue d\'ensemble du Stock',
+                      context.tr('Vue d\'ensemble du Stock'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -142,7 +143,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 });
               },
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              label: Text(context.tr('Nouvel ajustement'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               backgroundColor: AppColors.primary,
             )
           : null,
@@ -162,7 +163,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               children: [
                 Expanded(
                   child: _KpiCard(
-                    title: 'Valeur du stock',
+                    title: context.tr('Valeur du stock'),
                     value: formatCurrencyCompact(state.totalStockValue),
                     icon: Icons.inventory_rounded,
                     gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
@@ -171,7 +172,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 SizedBox(width: 12),
                 Expanded(
                   child: _KpiCard(
-                    title: 'Entrepôts',
+                    title: context.tr('Entrepôts'),
                     value: state.warehouses.length.toString(),
                     icon: Icons.warehouse_rounded,
                     gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
@@ -184,7 +185,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               children: [
                 Expanded(
                   child: _KpiCard(
-                    title: 'Mouvements',
+                    title: context.tr('Mouvements'),
                     value: state.movements.length.toString(),
                     icon: Icons.swap_horiz_rounded,
                     gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
@@ -193,7 +194,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 SizedBox(width: 12),
                 Expanded(
                   child: _KpiCard(
-                    title: 'Alertes stock bas',
+                    title: context.tr('Alertes stock bas'),
                     value: lowCount.toString(),
                     icon: Icons.warning_rounded,
                     gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
@@ -221,7 +222,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.error),
               SizedBox(width: 8),
               Text(
-                'Produits en stock bas',
+                context.tr('Produits en stock bas'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               Spacer(),
@@ -233,7 +234,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                   border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  '${lowStockProducts.length} alertes',
+                  '${lowStockProducts.length} ${context.tr('alertes')}',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
                 ),
               ),
@@ -325,12 +326,12 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Niveaux de Stock Actuels',
+                      context.tr('Niveaux de Stock Actuels'),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
                     SizedBox(height: 2),
                     Text(
-                      '${filteredItems.length} produits',
+                      '${filteredItems.length} ${context.tr('produits')}',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                   ],
@@ -346,23 +347,23 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 },
                 offset: const Offset(0, 40),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'pdf',
                     child: Row(
                       children: [
                         Icon(Icons.picture_as_pdf, size: 18),
                         SizedBox(width: 8),
-                        Text('Exporter en PDF'),
+                        Text(context.tr('Exporter en PDF')),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'excel',
                     child: Row(
                       children: [
                         Icon(Icons.table_chart, size: 18),
                         SizedBox(width: 8),
-                        Text('Exporter en Excel'),
+                        Text(context.tr('Exporter en Excel')),
                       ],
                     ),
                   ),
@@ -378,7 +379,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     children: [
                       Icon(Icons.download_rounded, size: 16, color: AppColors.textPrimary),
                       SizedBox(width: 6),
-                      Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                      Text(context.tr('Exporter'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -393,7 +394,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
           child: TextField(
             onChanged: (v) => setState(() => _searchQuery = v),
             decoration: InputDecoration(
-              hintText: 'Rechercher un produit...',
+              hintText: context.tr('Rechercher un produit...'),
               hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
               prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
               filled: true,
@@ -435,7 +436,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       Icon(Icons.tune_rounded, size: 16, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
                       SizedBox(width: 6),
                       Text(
-                        'Filtres',
+                        context.tr('Filtres'),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
                       ),
                       if (hasActiveFilters) ...[
@@ -474,7 +475,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       children: [
                         Icon(Icons.clear_all, size: 14, color: AppColors.error),
                         SizedBox(width: 4),
-                        Text('Réinitialiser', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+                        Text(context.tr('Réinitialiser'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
                       ],
                     ),
                   ),
@@ -510,7 +511,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           SizedBox(height: 4),
                           SizedBox(
                             height: 40,
@@ -529,7 +530,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                               ),
                               style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                               items: [
-                                const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem<String?>(value: null, child: Text(context.tr('Tous'), style: TextStyle(fontSize: 12))),
                                 ...warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                               ],
                               onChanged: (v) => setState(() => _filterWarehouseId = v),
@@ -543,7 +544,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text(context.tr('Destination'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           SizedBox(height: 4),
                           SizedBox(
                             height: 40,
@@ -561,10 +562,10 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                                 fillColor: Color(0xFFFAFAFB),
                               ),
                               style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                              items: const [
-                                DropdownMenuItem(value: 'tous', child: Text('Toutes', style: TextStyle(fontSize: 12))),
-                                DropdownMenuItem(value: 'vente', child: Text('Vente', style: TextStyle(fontSize: 12))),
-                                DropdownMenuItem(value: 'achat', child: Text('Achat', style: TextStyle(fontSize: 12))),
+                              items: [
+                                DropdownMenuItem(value: 'tous', child: Text(context.tr('Toutes'), style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'vente', child: Text(context.tr('Vente'), style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'achat', child: Text(context.tr('Achat'), style: TextStyle(fontSize: 12))),
                               ],
                               onChanged: (v) => setState(() => _filterDestination = v ?? 'tous'),
                             ),
@@ -582,14 +583,14 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text(context.tr('Référence'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           SizedBox(height: 4),
                           SizedBox(
                             height: 40,
                             child: TextField(
                               onChanged: (v) => setState(() => _filterReference = v),
                               decoration: InputDecoration(
-                                hintText: 'Rechercher réf...',
+                                hintText: context.tr('Rechercher réf...'),
                                 hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                                 prefixIcon: Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
                                 prefixIconConstraints: BoxConstraints(minWidth: 32),
@@ -610,7 +611,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Statut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text(context.tr('Statut'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           SizedBox(height: 4),
                           SizedBox(
                             height: 40,
@@ -629,9 +630,9 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                               ),
                               style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                               items: [
-                                DropdownMenuItem(value: 'tous', child: Text('Tous', style: TextStyle(fontSize: 12))),
-                                DropdownMenuItem(value: 'en_stock', child: Text('En Stock', style: TextStyle(fontSize: 12, color: AppColors.success))),
-                                DropdownMenuItem(value: 'rupture', child: Text('En Rupture', style: TextStyle(fontSize: 12, color: AppColors.error))),
+                                DropdownMenuItem(value: 'tous', child: Text(context.tr('Tous'), style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'en_stock', child: Text(context.tr('En Stock'), style: TextStyle(fontSize: 12, color: AppColors.success))),
+                                DropdownMenuItem(value: 'rupture', child: Text(context.tr('En Rupture'), style: TextStyle(fontSize: 12, color: AppColors.error))),
                               ],
                               onChanged: (v) => setState(() => _filterStatus = v ?? 'tous'),
                             ),
@@ -654,7 +655,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 children: [
                   Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                   SizedBox(height: 8),
-                  Text('Aucun produit trouvé.', style: TextStyle(color: AppColors.textSecondary)),
+                  Text(context.tr('Aucun produit trouvé.'), style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -807,7 +808,7 @@ class _LowStockCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Min: ${formatQuantity(product.minStockQty)}',
+                  '${context.tr('Min')}: ${formatQuantity(product.minStockQty)}',
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
               ],
@@ -831,7 +832,7 @@ class _StockLevelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isInStock = item.quantity > 0;
     final statusColor = isInStock ? AppColors.success : AppColors.error;
-    final statusText = isInStock ? 'En Stock' : 'En Rupture';
+    final statusText = isInStock ? context.tr('En Stock') : context.tr('En Rupture');
 
     return Card(
       elevation: 0,

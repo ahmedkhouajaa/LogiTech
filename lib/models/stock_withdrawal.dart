@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 class StockWithdrawal {
@@ -18,6 +19,7 @@ class StockWithdrawal {
   final String? driverName;
   final String? notes;
   final String? conditionsGenerales;
+  final Map<String, dynamic>? customFields;
   final String? createdBy;
   final String? warehouseId;
   final String? firebaseUid;
@@ -47,6 +49,7 @@ class StockWithdrawal {
     this.driverName,
     this.notes,
     this.conditionsGenerales,
+    this.customFields,
     this.createdBy,
     this.warehouseId,
     this.firebaseUid,
@@ -161,6 +164,7 @@ class StockWithdrawal {
       driverName: driverName ?? this.driverName,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      customFields: customFields ?? this.customFields,
       createdBy: createdBy ?? this.createdBy,
       warehouseId: warehouseId ?? this.warehouseId,
       firebaseUid: firebaseUid ?? this.firebaseUid,
@@ -193,6 +197,8 @@ class StockWithdrawal {
         'warehouse_id': warehouseId,
         'notes': notes,
         'conditions': conditionsGenerales,
+        'custom_fields': customFields,
+        'custom_fields_json': customFields != null ? jsonEncode(customFields) : null,
         'total_ht': totalHTAfterDiscount,
         'total_tva': totalTVA,
         'total_ttc': totalTTC,
@@ -230,6 +236,16 @@ class StockWithdrawal {
       driverName: map['driver_name']?.toString(),
       notes: map['notes']?.toString(),
       conditionsGenerales: map['conditions']?.toString() ?? map['conditions_generales']?.toString(),
+      customFields: () {
+        if (map['custom_fields'] is Map) {
+          return Map<String, dynamic>.from(map['custom_fields'] as Map);
+        } else if (map['custom_fields_json'] != null) {
+          try {
+            return Map<String, dynamic>.from(jsonDecode(map['custom_fields_json'].toString()) as Map);
+          } catch (_) {}
+        }
+        return null;
+      }(),
       createdBy: map['created_by']?.toString() ?? map['createdBy']?.toString(),
       warehouseId: map['warehouse_id']?.toString() ?? map['warehouseId']?.toString(),
       firebaseUid: map['firebase_uid']?.toString(),

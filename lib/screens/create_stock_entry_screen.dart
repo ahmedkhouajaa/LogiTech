@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_entries/stock_entries_bloc.dart';
 import '../services/connectivity_service.dart';
@@ -13,8 +12,8 @@ import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_entry.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
-import '../utils/offline_action_helper.dart';
 import '../utils/helpers.dart';
+import '../l10n/app_localizations.dart';
 import '../database/database_helper.dart';
 
 import '../models/stock_movement.dart' show Warehouse;
@@ -92,13 +91,13 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     // No online check for create actions — offline creation is allowed
     if (!_formKey.currentState!.validate()) return;
     if (_warehouseId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Veuillez sélectionner un entrepôt')), backgroundColor: AppColors.error));
       return;
     }
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -106,7 +105,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -285,7 +284,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
           SizedBox(width: 12),
           Expanded(
             child: Text(
-              widget.existing == null ? "Créer un bon d'entrée" : "Modifier le bon d'entrée",
+              context.tr(widget.existing == null ? "Créer un bon d'entrée" : "Modifier le bon d'entrée"),
               style: TextStyle(
                 fontSize: _isMobile ? 18 : 22,
                 fontWeight: FontWeight.bold,
@@ -335,7 +334,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
             ),
           ),
           SizedBox(width: 12),
@@ -349,7 +348,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 elevation: 0,
               ),
-              child: Text('Valider', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],
@@ -362,7 +361,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final dateField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        Text(context.tr('Date'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         SizedBox(height: 8),
         InkWell(
           onTap: _selectDate,
@@ -375,7 +374,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(DateFormat('d MMMM yyyy', 'fr').format(_date), style: TextStyle(fontSize: 13)),
+                Text(formatDateLong(_date, Localizations.localeOf(context).languageCode), style: TextStyle(fontSize: 13)),
                 Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
               ],
             ),
@@ -392,8 +391,8 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final warehouseName = selectedWarehouse?.name;
 
     final warehouseField = SmartSearchableSelector(
-      label: 'Entrepôt',
-      hint: 'Sélectionner un entrepôt',
+      label: context.tr('Entrepôt'),
+      hint: context.tr('Sélectionner un entrepôt'),
       selectedText: warehouseName,
       onTap: () async {
         final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId ?? defaultWh?.id);
@@ -406,13 +405,13 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final reasonField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         SizedBox(height: 8),
         TextFormField(
           controller: _reasonController,
           maxLines: 2,
           decoration: InputDecoration(
-            hintText: "Raison de l'opération...",
+            hintText: context.tr("Raison de l'opération..."),
             hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
@@ -424,13 +423,13 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final notesField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         SizedBox(height: 8),
         TextFormField(
           controller: _notesController,
           maxLines: 2,
           decoration: InputDecoration(
-            hintText: 'Notes additionnelles...',
+            hintText: context.tr('Notes additionnelles...'),
             hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
@@ -448,7 +447,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Informations', style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            Text(context.tr('Informations'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
             SizedBox(height: 16),
             if (_isMobile) ...[
               dateField,
@@ -508,7 +507,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Articles', style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    Text(context.tr('Articles'), style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                     SizedBox(height: 24),
 
                     // Items List
@@ -543,7 +542,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                             }
                           },
                           icon: Icon(Icons.add, size: 16),
-                          label: Text('Ajouter une ligne'),
+                          label: Text(context.tr('Ajouter une ligne')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
                             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
@@ -552,7 +551,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                         SizedBox(width: 8),
                         IconButton(
                           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                          tooltip: 'Créer un nouvel article',
+                          tooltip: context.tr('Créer un nouvel article'),
                           onPressed: () {
                             if (_isMobile) {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
@@ -654,7 +653,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
           // Product selector + delete
           Row(
             children: [
-              Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              Text(context.tr('Produit'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
               Spacer(),
               IconButton(
                 icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
@@ -693,7 +692,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                               child: Text(
                                 item.productId.isNotEmpty
                                     ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name
-                                    : 'Sélectionner un article',
+                                    : context.tr('Sélectionner un article'),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary,
@@ -709,7 +708,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
                   Padding(
                     padding: EdgeInsets.only(top: 4.0),
-                    child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                    child: Text(context.tr('Ce produit est déjà ajouté dans une autre ligne'), style: TextStyle(color: AppColors.error, fontSize: 11)),
                   ),
               ],
             ),
@@ -724,7 +723,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('En stock', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    Text(context.tr('En stock'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     SizedBox(height: 4),
                     Container(
                       height: 40,
@@ -744,7 +743,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Qté à entrer', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    Text(context.tr('Qté à entrer'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     SizedBox(height: 4),
                     SizedBox(
                       height: 40,
@@ -767,7 +766,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                     if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
                       Padding(
                         padding: EdgeInsets.only(top: 4.0),
-                        child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                        child: Text(context.tr('Ce produit est déjà ajouté dans une autre ligne'), style: TextStyle(color: AppColors.error, fontSize: 11)),
                       ),
                   ],
                 ),
@@ -777,7 +776,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Qté finale', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    Text(context.tr('Qté finale'), style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     SizedBox(height: 4),
                     Container(
                       height: 40,
@@ -811,13 +810,13 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 padding: EdgeInsets.only(bottom: 8.0, right: 40.0), // 40 for delete button
                 child: Row(
                   children: [
-                    Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
+                    Expanded(flex: 3, child: Text(context.tr('Produit'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
                     SizedBox(width: 16),
-                    Expanded(flex: 1, child: Text('Qte en stock', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
+                    Expanded(flex: 1, child: Text(context.tr('Qte en stock'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
                     SizedBox(width: 16),
-                    Expanded(flex: 1, child: Text('Qte a entrer', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
+                    Expanded(flex: 1, child: Text(context.tr('Qte a entrer'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
                     SizedBox(width: 16),
-                    Expanded(flex: 1, child: Text('Qte finale', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
+                    Expanded(flex: 1, child: Text(context.tr('Qte finale'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
                   ],
                 ),
               ),
@@ -840,10 +839,10 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                             );
                             final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
                             return SearchableSelectorField(
-                              hint: 'Sélectionner un article',
+                              hint: context.tr('Sélectionner un article'),
                               selectedText: selectedProd?.name,
                               hasError: isMissing,
-                              errorText: isMissing ? 'Veuillez sélectionner un article' : null,
+                              errorText: isMissing ? context.tr('Veuillez sélectionner un article') : null,
                               onTap: () async {
                                 final stockMap = <String, double>{};
                                 for (var p in products) {
@@ -867,7 +866,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                         if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
                           Padding(
                             padding: EdgeInsets.only(top: 4.0),
-                            child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                            child: Text(context.tr('Ce produit est déjà ajouté dans une autre ligne'), style: TextStyle(color: AppColors.error, fontSize: 11)),
                           ),
                       ],
                     ),

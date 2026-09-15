@@ -6,6 +6,7 @@ import '../../blocs/user_management/user_management_state.dart';
 import '../../models/user_management_model.dart';
 import '../../services/enterprise_service.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../screens/add_edit_user_screen.dart';
 import '../../services/permission_service.dart';
 import '../widgets/mobile_user_card.dart';
@@ -74,7 +75,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
     if (user.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          content: Text(context.tr('Le propriétaire de l\'entreprise ne peut pas être modifié.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -84,7 +85,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
     if (user.isAdmin && !PermissionService.instance.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          content: Text(context.tr('Seul le propriétaire de l\'entreprise peut gérer un administrateur.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -103,7 +104,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
     if (user.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Impossible de supprimer le propriétaire de l\'entreprise.'),
+          content: Text(context.tr('Impossible de supprimer le propriétaire de l\'entreprise.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -113,7 +114,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
     if (user.isAdmin && !PermissionService.instance.isOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Seul le propriétaire de l\'entreprise peut retirer un administrateur.'),
+          content: Text(context.tr('Seul le propriétaire de l\'entreprise peut retirer un administrateur.')),
           backgroundColor: AppColors.error,
         ),
       );
@@ -124,12 +125,12 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment retirer "${user.name}" de cette entreprise ?'),
+        title: Text(context.tr('Confirmer la suppression')),
+        content: Text('${context.tr('Voulez-vous vraiment retirer')} "${user.name}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annuler'),
+            child: Text(context.tr('Annuler')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -145,7 +146,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Supprimer'),
+            child: Text(context.tr('Supprimer')),
           ),
         ],
       ),
@@ -168,15 +169,15 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
         backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 1,
-        title: const Text(
-          'Gestion des utilisateurs',
+        title: Text(
+          context.tr('Gestion des utilisateurs'),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loadUsers,
-            tooltip: 'Actualiser',
+            tooltip: context.tr('Actualiser'),
           ),
         ],
       ),
@@ -193,7 +194,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
             backgroundColor: const Color(0xFF2563EB),
             foregroundColor: Colors.white,
             icon: const Icon(Icons.person_add_rounded),
-            label: const Text('Ajouter', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: Text(context.tr('Ajouter'), style: TextStyle(fontWeight: FontWeight.bold)),
           );
         },
       ),
@@ -245,7 +246,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
                           onChanged: _onSearchChanged,
                           style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                           decoration: InputDecoration(
-                            hintText: 'Rechercher par nom, email...',
+                            hintText: context.tr('Rechercher par nom, email...'),
                             hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                             prefixIcon: Icon(Icons.search_rounded, size: 20, color: AppColors.textTertiary),
                             filled: true,
@@ -302,7 +303,7 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '$totalCount user${totalCount > 1 ? 's' : ''}',
+                              '$totalCount ${context.tr('utilisateur(s)')}',
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -331,12 +332,12 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
                                     Icon(Icons.people_outline_rounded, size: 56, color: AppColors.textTertiary),
                                     const SizedBox(height: 12),
                                     Text(
-                                      'Aucun utilisateur',
+                                      context.tr('Aucun utilisateur'),
                                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      'Appuyez sur le bouton + pour inviter un collaborateur.',
+                                      context.tr('Appuyez sur le bouton + pour inviter un collaborateur.'),
                                       textAlign: TextAlign.center,
                                       style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                                     ),

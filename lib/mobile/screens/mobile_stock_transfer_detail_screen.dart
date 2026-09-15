@@ -5,6 +5,7 @@ import '../../blocs/products/products_bloc.dart';
 import '../../models/stock_transfer.dart';
 import '../../models/product.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
@@ -85,29 +86,29 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
 
     final infoSections = [
       PremiumInfoSection(
-        title: 'Informations Générales',
+        title: context.tr('Informations Générales'),
         icon: Icons.info_outline,
         fields: [
           PremiumInfoField(
-            label: 'Entrepôt Source',
+            label: context.tr('Entrepôt Source'),
             value: srcName,
             icon: Icons.warehouse_outlined,
             isHighlight: true,
           ),
           PremiumInfoField(
-            label: 'Entrepôt Destination',
+            label: context.tr('Entrepôt Destination'),
             value: destName,
             icon: Icons.input_outlined,
             isHighlight: true,
           ),
           PremiumInfoField(
-            label: 'Date de transfert',
+            label: context.tr('Date de transfert'),
             value: formatDateTimeLong(currentTransfer.date),
             icon: Icons.calendar_today_outlined,
           ),
           if (currentTransfer.reason != null && currentTransfer.reason!.isNotEmpty)
             PremiumInfoField(
-              label: 'Motif',
+              label: context.tr('Motif'),
               value: currentTransfer.reason!,
               icon: Icons.assignment_outlined,
             ),
@@ -168,19 +169,19 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                 }
 
                 if (canRead) {
-                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, context.tr('Voir'));
                 }
                 if (canUpdate) {
-                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, context.tr('Modifier'));
                 }
                 if (canDelete) {
-                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  addItem('delete', Icons.delete_outline, AppColors.error, context.tr('Supprimer'));
                 }
                 if (canRead) {
-                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
-                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  addItem('print', Icons.print_outlined, AppColors.primary, context.tr('Imprimer'));
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, context.tr('Télécharger PDF'));
+                  addItem('email', Icons.email_outlined, AppColors.primary, context.tr('Envoyer par email'));
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, context.tr('Envoyer par WhatsApp'));
                 }
 
                 return entries;
@@ -189,7 +190,7 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
           ],
         ),
         body: PremiumDetailShell(
-          documentType: 'Bon de Transfert',
+          documentType: context.tr('Bon de Transfert'),
           referenceNumber: currentTransfer.number,
           statusLabel: statusLabel,
           statusColor: statusColor,
@@ -255,7 +256,7 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Action non implémentée'))));
     }
   }
 

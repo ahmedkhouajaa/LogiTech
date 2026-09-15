@@ -6,11 +6,10 @@ import '../blocs/product_settings/product_settings_bloc.dart';
 import '../blocs/product_settings/product_settings_event.dart';
 import '../blocs/product_settings/product_settings_state.dart';
 import '../models/product_family.dart';
-import '../services/sync_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../utils/constants.dart';
-import '../widgets/custom_app_bar.dart';
+import '../l10n/app_localizations.dart';
 
 class ProductSettingsScreen extends StatefulWidget {
   const ProductSettingsScreen({super.key});
@@ -61,9 +60,9 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Paramètres des articles', style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text(context.tr('Paramètres des articles'), style: TextStyle(fontSize: isMobile ? 20 : 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
-              Text('Gérer les familles et sous-familles d\'articles', style: TextStyle(color: AppColors.textSecondary, fontSize: isMobile ? 12 : 14)),
+              Text(context.tr('Gérer les familles et sous-familles d\'articles'), style: TextStyle(color: AppColors.textSecondary, fontSize: isMobile ? 12 : 14)),
             ],
           ),
         ),
@@ -101,7 +100,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Ajouter une nouvelle famille',
+                            context.tr('Ajouter une nouvelle famille'),
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                           ),
                           const SizedBox(height: 12),
@@ -111,7 +110,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                     TextField(
                                       controller: _familyCtrl,
                                       decoration: InputDecoration(
-                                        hintText: 'Nom de la famille (ex: Informatique, Mobilier...)',
+                                        hintText: context.tr('Nom de la famille (ex: Informatique, Mobilier...)'),
                                         filled: true,
                                         fillColor: AppColors.surfaceAlt,
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
@@ -125,7 +124,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                       child: ElevatedButton.icon(
                                         onPressed: _handleAddFamily,
                                         icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                        label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                        label: Text(context.tr('Ajouter une famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppColors.primary,
                                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -141,7 +140,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                       child: TextField(
                                         controller: _familyCtrl,
                                         decoration: InputDecoration(
-                                          hintText: 'Nom de la famille (ex: Informatique, Mobilier...)',
+                                          hintText: context.tr('Nom de la famille (ex: Informatique, Mobilier...)'),
                                           filled: true,
                                           fillColor: AppColors.surfaceAlt,
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
@@ -155,7 +154,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                     ElevatedButton.icon(
                                       onPressed: _handleAddFamily,
                                       icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                      label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      label: Text(context.tr('Ajouter une famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.primary,
                                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -218,12 +217,12 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                 Icon(Icons.category_outlined, size: 48, color: AppColors.textSecondary.withOpacity(0.5)),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Aucune famille enregistrée',
+                                  context.tr('Aucune famille enregistrée'),
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Saisissez un nom ci-dessus pour créer votre première famille d\'articles.',
+                                  context.tr('Saisissez un nom ci-dessus pour créer votre première famille d\'articles.'),
                                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                                   textAlign: TextAlign.center,
                                 ),
@@ -308,7 +307,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
                     Text(
-                      '${subFamilies.length} sous-famille(s)',
+                      '${subFamilies.length} ${context.tr('sous-famille(s)')}',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
@@ -316,17 +315,17 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
               ),
               IconButton(
                 icon: Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 20),
-                tooltip: 'Supprimer la famille',
+                tooltip: context.tr('Supprimer la famille'),
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Confirmer la suppression'),
-                      content: Text('Voulez-vous vraiment supprimer la famille "${family.name}" ainsi que toutes ses sous-familles ?'),
+                      title: Text(context.tr('Confirmer la suppression')),
+                      content: Text('${context.tr('Voulez-vous vraiment supprimer cette famille ainsi que toutes ses sous-familles ?')} ("${family.name}")'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Annuler'),
+                          child: Text(context.tr('Annuler')),
                         ),
                         ElevatedButton(
                           onPressed: () {
@@ -334,7 +333,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                             Navigator.pop(ctx);
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                          child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                          child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),
@@ -348,7 +347,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 12),
-            Text('Sous-familles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            Text(context.tr('Sous-familles'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             ...subFamilies.map((subFam) => Container(
               margin: const EdgeInsets.symmetric(vertical: 4),
@@ -369,12 +368,12 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Confirmer la suppression'),
-                          content: Text('Voulez-vous vraiment supprimer la sous-famille "${subFam.name}" ?'),
+                          title: Text(context.tr('Confirmer la suppression')),
+                          content: Text('${context.tr('Voulez-vous vraiment supprimer cette sous-famille ?')} ("${subFam.name}")'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Annuler'),
+                              child: Text(context.tr('Annuler')),
                             ),
                             ElevatedButton(
                               onPressed: () {
@@ -382,7 +381,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                 Navigator.pop(ctx);
                               },
                               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                              child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                              child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
@@ -405,7 +404,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                     TextField(
                       controller: _getSubFamilyCtrl(family.id),
                       decoration: InputDecoration(
-                        hintText: 'Nom de la nouvelle sous-famille',
+                        hintText: context.tr('Nom de la nouvelle sous-famille'),
                         filled: true,
                         fillColor: AppColors.surfaceAlt,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
@@ -424,7 +423,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Ajouter la sous-famille', style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text(context.tr('Ajouter la sous-famille'), style: const TextStyle(fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ],
@@ -435,7 +434,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                       child: TextField(
                         controller: _getSubFamilyCtrl(family.id),
                         decoration: InputDecoration(
-                          hintText: 'Nom de la nouvelle sous-famille',
+                          hintText: context.tr('Nom de la nouvelle sous-famille'),
                           filled: true,
                           fillColor: AppColors.surfaceAlt,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
@@ -454,7 +453,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
-                      child: const Text('Ajouter la sous-famille', style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: Text(context.tr('Ajouter la sous-famille'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),

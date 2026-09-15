@@ -9,6 +9,7 @@ import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
@@ -130,23 +131,23 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
 
     final infoSections = [
       PremiumInfoSection(
-        title: 'Informations Générales',
+        title: context.tr('Informations Générales'),
         icon: Icons.info_outline,
         fields: [
           PremiumInfoField(
-            label: 'Entrepôt',
+            label: context.tr('Entrepôt'),
             value: warehouseName,
             icon: Icons.warehouse_outlined,
             isHighlight: true,
           ),
           PremiumInfoField(
-            label: 'Date d\'entrée',
+            label: context.tr('Date d\'entrée'),
             value: formatDateTimeLong(currentEntry.date),
             icon: Icons.calendar_today_outlined,
           ),
           if (currentEntry.reason != null && currentEntry.reason!.isNotEmpty)
             PremiumInfoField(
-              label: 'Motif',
+              label: context.tr('Motif'),
               value: currentEntry.reason!,
               icon: Icons.description_outlined,
             ),
@@ -176,11 +177,11 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
 
     final totals = <PremiumTotalRow>[
       PremiumTotalRow(
-        label: 'Total HT',
+        label: context.tr('Total HT'),
         amount: totalAmount,
       ),
       PremiumTotalRow(
-        label: 'Total TTC',
+        label: context.tr('Total TTC'),
         amount: totalAmount,
         isGrandTotal: true,
       ),
@@ -225,19 +226,19 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
                 }
 
                 if (canRead) {
-                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, context.tr('Voir'));
                 }
                 if (canUpdate) {
-                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, context.tr('Modifier'));
                 }
                 if (canDelete) {
-                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  addItem('delete', Icons.delete_outline, AppColors.error, context.tr('Supprimer'));
                 }
                 if (canRead) {
-                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
-                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  addItem('print', Icons.print_outlined, AppColors.primary, context.tr('Imprimer'));
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, context.tr('Télécharger PDF'));
+                  addItem('email', Icons.email_outlined, AppColors.primary, context.tr('Envoyer par email'));
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, context.tr('Envoyer par WhatsApp'));
                 }
 
                 return entries;
@@ -246,9 +247,9 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
           ],
         ),
         body: PremiumDetailShell(
-          documentType: 'Bon d\'Entrée',
+          documentType: context.tr('Bon d\'Entrée'),
           referenceNumber: currentEntry.number,
-          statusLabel: 'Validé',
+          statusLabel: context.tr('Validé'),
           statusColor: AppColors.success,
           infoSections: infoSections,
           articles: articles,
@@ -302,7 +303,7 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Action non implémentée'))));
     }
   }
 

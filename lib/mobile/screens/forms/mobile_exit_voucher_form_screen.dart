@@ -16,6 +16,7 @@ import '../../../../blocs/warehouses/warehouses_bloc.dart';
 import '../../../../blocs/warehouses/warehouses_state.dart';
 import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
+import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
@@ -28,6 +29,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -62,6 +64,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
+  Map<String, dynamic> _customFields = {};
   double _globalDiscountPercent = 0;
   StockWithdrawalStatus _status = StockWithdrawalStatus.draft;
 
@@ -126,6 +129,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       _conditions = n.conditionsGenerales ?? '';
       _vehicleRegistration = n.vehicleRegistration ?? '';
       _driverName = n.driverName ?? '';
+      _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
       _items = n.items.map((i) => StockWithdrawalItem(
         id: i.id,
         withdrawalId: i.withdrawalId,
@@ -146,7 +150,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez ajouter au moins un article')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -158,14 +162,14 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
 
     if (hasEmptyArticle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un article pour chaque ligne')), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Veuillez sélectionner un client')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -193,7 +197,11 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
             setState(() => _isLoading = false);
             return;
           }
-          number = generateDocNumber(widget.isExitVoucher ? 'BS' : 'BP', seq);
+          number = generateDocNumber(
+            widget.isExitVoucher ? 'BS' : 'BP',
+            seq,
+            docCollection: widget.isExitVoucher ? 'bons_sortie' : 'bons_prelevement',
+          );
         } else {
           number = OfflineDocumentService.generateDraftNumber();
         }
@@ -230,6 +238,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
         driverName: _driverName.isNotEmpty ? _driverName : null,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        customFields: _customFields,
         items: _items.map((item) => StockWithdrawalItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           withdrawalId: noteId,
@@ -283,7 +292,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       if (mounted) {
         nav.pop();
         messenger.showSnackBar(SnackBar(
-          content: Text(_isEditing ? 'Bon mis à jour' : 'Bon créé avec succès'),
+          content: Text(_isEditing ? context.tr('Bon mis à jour') : context.tr('Bon créé avec succès')),
           backgroundColor: AppColors.success,
         ));
       }
@@ -518,18 +527,20 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Champs Personnalisés', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      Text(context.tr('Champs Personnalisés'), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       SizedBox(height: 4),
-                      Text('Informations supplémentaires', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                      Text(context.tr('Informations supplémentaires'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                       SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Matricule du véhicule',
+                        hint: 'Entrer la valeur',
                         initialValue: _vehicleRegistration,
                         onChanged: (v) => setState(() => _vehicleRegistration = v),
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Nom du chauffeur',
+                        hint: 'Entrer la valeur',
                         initialValue: _driverName,
                         onChanged: (v) => setState(() => _driverName = v),
                       ),
@@ -541,7 +552,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                   label: 'Les prix des articles sont en:',
                   value: _pricingModeHT,
                   options: const [true, false],
-                  labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                  labelBuilder: (v) => v ? context.tr('Hors taxes') : context.tr('Taxe incluse'),
                   onChanged: (v) => setState(() => _pricingModeHT = v),
                 ),
               ],
@@ -562,7 +573,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                     padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    child: Text(context.tr('Aucun article ajouté'), style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -583,7 +594,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                       child: OutlinedButton.icon(
                         onPressed: () => _showArticleForm(),
                         icon: Icon(Icons.add_rounded),
-                        label: Text('Ajouter une ligne'),
+                        label: Text(context.tr('Ajouter une ligne')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: BorderSide(color: AppColors.primary),
@@ -595,7 +606,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                     SizedBox(width: 8),
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-                      tooltip: 'Créer un nouvel article',
+                      tooltip: context.tr('Créer un nouvel article'),
                       onPressed: () async {
                         final newProd = await Navigator.push(
                           context,
@@ -656,6 +667,13 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
             onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
             totalTTC: _totalTTC,
           ),
+        ),
+        
+        CustomFieldsFormSection(
+          documentType: widget.isExitVoucher ? 'exit_voucher' : 'stock_withdrawal',
+          initialValues: _customFields,
+          isMobile: true,
+          onChanged: (vals) => setState(() => _customFields = vals),
         ),
         
         MobileFormSection(
