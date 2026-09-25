@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import '../widgets/data_table_widget.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/treasury_transaction.dart';
@@ -26,7 +26,11 @@ class TreasuryAccountsScreen extends StatefulWidget {
 }
 
 class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
-  String _search = '';
+  final String _search = '';
+  int _currentPage = 0;
+  int _rowsPerPage = 20;
+  String _sortColumn = 'name';
+  bool _sortAscending = true;
 
   @override
   void initState() {
@@ -201,8 +205,36 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
               if (state is TreasuryAccountsError) return AppErrorWidget(message: state.message);
               if (state is TreasuryAccountsLoaded) {
                 final filtered = _search.isEmpty
-                    ? state.accounts
-                    : state.accounts.where((a) => a.name.toLowerCase().contains(_search)).toList();
+                    ? List<TreasuryAccount>.from(state.accounts)
+                    : state.accounts.where((a) => a.name.toLowerCase().contains(_search.toLowerCase())).toList();
+
+                // Sort
+                filtered.sort((a, b) {
+                  int cmp;
+                  switch (_sortColumn) {
+                    case 'type':
+                      cmp = a.type.compareTo(b.type);
+                      break;
+                    case 'balance':
+                      cmp = a.balance.compareTo(b.balance);
+                      break;
+                    case 'name':
+                    default:
+                      cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+                      break;
+                  }
+                  return _sortAscending ? cmp : -cmp;
+                });
+
+                final totalPages = (filtered.length / _rowsPerPage).ceil() == 0 ? 1 : (filtered.length / _rowsPerPage).ceil();
+                if (_currentPage >= totalPages) {
+                  _currentPage = 0;
+                }
+                final startIndex = _currentPage * _rowsPerPage;
+                final endIndex = (startIndex + _rowsPerPage).clamp(0, filtered.length);
+                final paginatedAccounts = filtered.isEmpty ? <TreasuryAccount>[] : filtered.sublist(startIndex, endIndex);
+                final startItem = filtered.isEmpty ? 0 : startIndex + 1;
+                final endItem = endIndex;
 
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -212,88 +244,326 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: DataTableWidget<TreasuryAccount>(
-                      columns: [context.tr('Nom du Compte'), context.tr('Type'), context.tr('Solde')],
-                      rows: filtered,
-                      emptyMessage: 'Aucun compte trouve',
-                      cellBuilder: (acc) {
-                        final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
-                        return [
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(acc.name, style: TextStyle(fontWeight: FontWeight.w600)),
-                                if (isDefault) ...[
-                                  SizedBox(width: 8),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-                                    ),
-                                    child: Row(
+                    child: Column(
+                      children: [
+                        // Table header
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceAlt,
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+                            border: Border(bottom: BorderSide(color: AppColors.border)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (_sortColumn == 'name') {
+                                        _sortAscending = !_sortAscending;
+                                      } else {
+                                        _sortColumn = 'name';
+                                        _sortAscending = true;
+                                      }
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        context.tr('Nom du Compte'),
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        _sortColumn == 'name'
+                                            ? (_sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded)
+                                            : Icons.unfold_more_rounded,
+                                        size: 14,
+                                        color: _sortColumn == 'name' ? AppColors.primary : AppColors.textTertiary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (_sortColumn == 'type') {
+                                        _sortAscending = !_sortAscending;
+                                      } else {
+                                        _sortColumn = 'type';
+                                        _sortAscending = true;
+                                      }
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        context.tr('Type'),
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        _sortColumn == 'type'
+                                            ? (_sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded)
+                                            : Icons.unfold_more_rounded,
+                                        size: 14,
+                                        color: _sortColumn == 'type' ? AppColors.primary : AppColors.textTertiary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (_sortColumn == 'balance') {
+                                        _sortAscending = !_sortAscending;
+                                      } else {
+                                        _sortColumn = 'balance';
+                                        _sortAscending = true;
+                                      }
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        context.tr('Solde'),
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        _sortColumn == 'balance'
+                                            ? (_sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded)
+                                            : Icons.unfold_more_rounded,
+                                        size: 14,
+                                        color: _sortColumn == 'balance' ? AppColors.primary : AppColors.textTertiary,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 60,
+                                child: Text(
+                                  context.tr('Actions'),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Table body
+                        Expanded(
+                          child: paginatedAccounts.isEmpty
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(40),
+                                    child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
-                                        SizedBox(width: 2),
+                                        Icon(Icons.inbox_outlined, size: 48, color: AppColors.textTertiary),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          context.tr('Par défaut'),
-                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                          context.tr('Aucun compte trouve'),
+                                          style: TextStyle(color: AppColors.textTertiary, fontSize: 14),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ],
-                            ),
+                                )
+                              : ListView.separated(
+                                  itemCount: paginatedAccounts.length,
+                                  separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border),
+                                  itemBuilder: (context, index) {
+                                    final acc = paginatedAccounts[index];
+                                    final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
+                                    final canCreateTx = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions);
+                                    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts);
+                                    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts);
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    acc.name,
+                                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isDefault) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                                                        const SizedBox(width: 2),
+                                                        Text(
+                                                          context.tr('Par défaut'),
+                                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              acc.type == 'bank' ? context.tr('Compte Bancaire') : context.tr('Caisse'),
+                                              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              formatCurrencyDT(acc.balance),
+                                              style: TextStyle(
+                                                color: acc.balance < 0 ? AppColors.error : AppColors.success,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 60,
+                                            child: Align(
+                                              alignment: Alignment.centerRight,
+                                              child: PopupMenuButton<String>(
+                                                icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                                                onSelected: (val) => _handleAction(context, val, acc, state.accounts),
+                                                itemBuilder: (_) {
+                                                  final entries = <PopupMenuEntry<String>>[];
+
+                                                  if (canCreateTx) {
+                                                    entries.add(_buildMenuItem('depot', Icons.file_upload_outlined, context.tr('Dépôt')));
+                                                    entries.add(const PopupMenuDivider(height: 1));
+                                                    entries.add(_buildMenuItem('transfer', Icons.swap_horiz_outlined, context.tr('Transférer')));
+                                                  }
+
+                                                  if (!isDefault) {
+                                                    if (canUpdate) {
+                                                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                                      entries.add(_buildMenuItem('edit', Icons.edit_outlined, context.tr('Modifier')));
+                                                    }
+                                                    if (canDelete) {
+                                                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                                      entries.add(_buildMenuItem('delete', Icons.delete_outline, context.tr('Supprimer'), isDestructive: true));
+                                                    }
+                                                  }
+
+                                                  if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                                  entries.add(_buildMenuItem('recalc', Icons.sync_rounded, context.tr('Recalculer le solde')));
+
+                                                  return entries;
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+
+                        // Pagination footer
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            border: Border(top: BorderSide(color: AppColors.border)),
+                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.lg)),
                           ),
-                          DataCell(Text(acc.type == 'bank' ? context.tr('Compte Bancaire') : context.tr('Caisse'))),
-                          DataCell(
-                            Text(
-                              formatCurrencyDT(acc.balance),
-                              style: TextStyle(
-                                color: acc.balance < 0 ? AppColors.error : AppColors.success,
-                                fontWeight: FontWeight.bold,
+                          child: Row(
+                            children: [
+                              Text(context.tr('Lignes'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              const SizedBox(width: 8),
+                              Container(
+                                height: 28,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(6),
+                                  color: AppColors.surface,
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _rowsPerPage,
+                                    style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                    icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                                    items: [20, 50, 100].map((int value) {
+                                      return DropdownMenuItem<int>(
+                                        value: value,
+                                        child: Text(value.toString(), style: const TextStyle(fontSize: 12)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          _rowsPerPage = newValue;
+                                          _currentPage = 0;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 16),
+                              Text(
+                                '${context.tr("Page")} ${_currentPage + 1} ${context.tr("sur")} $totalPages',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${filtered.isEmpty ? 0 : startItem} - $endItem ${context.tr("sur")} ${filtered.length}',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                onPressed: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right, size: 18),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                onPressed: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
+                              ),
+                            ],
                           ),
-                        ];
-                      },
-                      customActionsBuilder: (acc) {
-                        final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
-                        final canCreateTx = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions);
-                        final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts);
-                        final canDelete = PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts);
-
-                        return PopupMenuButton<String>(
-                          icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                          onSelected: (val) => _handleAction(context, val, acc, state.accounts),
-                          itemBuilder: (_) {
-                            final entries = <PopupMenuEntry<String>>[];
-
-                            if (canCreateTx) {
-                              entries.add(_buildMenuItem('depot', Icons.file_upload_outlined, context.tr('Dépôt')));
-                              entries.add(const PopupMenuDivider(height: 1));
-                              entries.add(_buildMenuItem('transfer', Icons.swap_horiz_outlined, context.tr('Transférer')));
-                            }
-
-                            if (!isDefault) {
-                              if (canUpdate) {
-                                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                                entries.add(_buildMenuItem('edit', Icons.edit_outlined, context.tr('Modifier')));
-                              }
-                              if (canDelete) {
-                                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                                entries.add(_buildMenuItem('delete', Icons.delete_outline, context.tr('Supprimer'), isDestructive: true));
-                              }
-                            }
-
-                            return entries;
-                          },
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -390,6 +660,51 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
           ),
         );
         break;
+      case 'recalc':
+        _recalculateBalance(context, account);
+        break;
+    }
+  }
+
+  Future<void> _recalculateBalance(BuildContext context, TreasuryAccount account) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('treasury_transactions')
+          .where('accountId', isEqualTo: account.id)
+          .get();
+
+      double total = 0.0;
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        if (data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1') continue;
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+        final type = data['type'] as String?;
+        if (type == 'income') {
+          total += amount;
+        } else if (type == 'expense') {
+          total -= amount;
+        }
+      }
+
+      await FirebaseFirestore.instance.collection('treasury_accounts').doc(account.id).update({
+        'balance': total,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+
+      if (context.mounted) {
+        context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${context.tr('Solde recalculé avec succès')} : ${formatCurrencyDT(total)}'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${context.tr('Erreur lors du recalcul')} : $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
   }
 }

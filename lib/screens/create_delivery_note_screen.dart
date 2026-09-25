@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,8 @@ import '../models/delivery_note.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -26,6 +29,9 @@ import '../widgets/dashboard_card.dart';
 import 'customers_screen.dart';
 import 'create_article_screen.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../widgets/document_tax_settings_dialog.dart';
+import '../services/trial_service.dart';
+
 class CreateDeliveryNoteScreen extends StatefulWidget {
   final DeliveryNote? existing;
   const CreateDeliveryNoteScreen({super.key, this.existing});
@@ -51,8 +57,12 @@ class _CreateDeliveryNoteScreenState
   final _conditionsCtrl = TextEditingController();
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   DeliveryNoteStatus _status = DeliveryNoteStatus.draft;
 
   // Custom fields
@@ -90,10 +100,46 @@ class _CreateDeliveryNoteScreenState
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
+
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
   double get _totalTTC =>
-      _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+      _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
+  }
 
   @override
   void initState() {
@@ -102,6 +148,11 @@ class _CreateDeliveryNoteScreenState
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -113,7 +164,13 @@ class _CreateDeliveryNoteScreenState
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields?['withTimbreFiscal'] == true;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (n.customFields!['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _status = DeliveryNoteStatus.values.firstWhere(
         (e) => e.name == n.status,
         orElse: () => DeliveryNoteStatus.draft,
@@ -140,6 +197,7 @@ class _CreateDeliveryNoteScreenState
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     _vehicleCtrl.dispose();
@@ -149,6 +207,9 @@ class _CreateDeliveryNoteScreenState
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     _formKey.currentState?.validate();
 
@@ -236,7 +297,15 @@ class _CreateDeliveryNoteScreenState
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       conditionsGenerales:
           _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,
-      customFields: _customFields,
+      customFields: {
+        ...?_customFields,
+        'withFodec': _withFodec,
+        'fodecAmount': _fodecAmount,
+        'fodecRate': 1.0,
+        'withTimbreFiscal': _withTimbreFiscal,
+        'activeCustomTaxes': _activeCustomTaxes,
+        'customTaxesTotal': _customTaxesTotal,
+      },
       items: _items.map((item) => DeliveryNoteItem(
         id: item.id,
         deliveryNoteId: noteId,
@@ -357,7 +426,7 @@ class _CreateDeliveryNoteScreenState
           SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
           SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -410,7 +479,7 @@ class _CreateDeliveryNoteScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -707,7 +776,7 @@ class _CreateDeliveryNoteScreenState
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -829,7 +898,7 @@ class _CreateDeliveryNoteScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -1332,10 +1401,17 @@ class _CreateDeliveryNoteScreenState
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine('Sous-total HT:',
                 formatCurrencyDT(_totalHTAfterDiscount)),
@@ -1350,7 +1426,20 @@ class _CreateDeliveryNoteScreenState
                   '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               SizedBox(height: 6),
             ],
-                  InkWell(
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
+              ),
+            ),
+            InkWell(
               onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 2),
@@ -1380,8 +1469,6 @@ class _CreateDeliveryNoteScreenState
             ),
             Divider(),
             SizedBox(height: 4),
-      
-          
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1398,7 +1485,6 @@ class _CreateDeliveryNoteScreenState
               ],
             ),
             SizedBox(height: 8),
-            
           ],
         ),
       ),
@@ -1423,83 +1509,92 @@ class _CreateDeliveryNoteScreenState
 
   // ── Notes Section ──────────────────────────────────────────────────
   Widget _buildNotesSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Notes'),
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _notesCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Visible sur le document final'),
-                  hintStyle: TextStyle(
-                      color: AppColors.textTertiary, fontSize: 13),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(
-                          color: AppColors.primary, width: 1.5)),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Notes'),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _notesCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Visible sur le document final'),
+                    hintStyle: TextStyle(
+                        color: AppColors.textTertiary, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(
+                            color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Conditions Generales'),
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _conditionsCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Conditions generales pour ce document'),
-                  hintStyle: TextStyle(
-                      color: AppColors.textTertiary, fontSize: 13),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide: BorderSide(
-                          color: AppColors.primary, width: 1.5)),
+          SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Conditions Générales'),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _conditionsCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Conditions générales pour ce document'),
+                    hintStyle: TextStyle(
+                        color: AppColors.textTertiary, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(
+                            color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

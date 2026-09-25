@@ -4,8 +4,9 @@ import '../services/document_numbering_service.dart';
 
 // ─── Currency Formatting ──────────────────────────────────────────
 String formatCurrency(double amount, {String symbol = 'TND'}) {
-  final formatter = NumberFormat('#,##0.00', 'fr_FR');
-  return '${formatter.format(amount)} $symbol';
+  final formatter = NumberFormat('#,##0.000', 'fr_FR');
+  final formatted = formatter.format(amount);
+  return symbol.isNotEmpty ? '$formatted $symbol' : formatted;
 }
 
 String formatCurrencyCompact(double amount) {

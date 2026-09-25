@@ -52,7 +52,7 @@ class ResetDeliveryNotesPagination extends DeliveryNotesEvent {
   final DateTime? dateTo;
   final String? status;
 
-  ResetDeliveryNotesPagination({
+  const ResetDeliveryNotesPagination({
     this.searchQuery,
     this.customerId,
     this.dateFrom,
@@ -157,13 +157,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   }
 
   Future<void> _onLoad(LoadDeliveryNotes event, Emitter<DeliveryNotesState> emit) async {
-    emit(DeliveryNotesLoading());
-    try {
-      final notes = await _db.getDeliveryNotes();
-      emit(DeliveryNotesLoaded(notes, totalCount: notes.length));
-    } catch (e) {
-      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
-    }
+    await _onLoadFirstDeliveryNotes(const LoadFirstDeliveryNotes(), emit);
   }
 
   Future<void> _onLoadFirstDeliveryNotes(LoadFirstDeliveryNotes event, Emitter<DeliveryNotesState> emit) async {
@@ -305,27 +299,11 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   }
 
   Future<void> _onFilter(FilterDeliveryNotes event, Emitter<DeliveryNotesState> emit) async {
-    try {
-      final allNotes = await _db.getDeliveryNotes(
-        status: event.status,
-        startDate: event.dateFrom,
-        endDate: event.dateTo,
-      );
-
-      var filtered = allNotes;
-      if (event.clientId != null && event.clientId!.isNotEmpty) {
-        filtered = filtered.where((n) => n.customerId == event.clientId).toList();
-      }
-
-      emit(DeliveryNotesLoaded(
-        filtered,
-        clientFilter: event.clientId,
-        dateFromFilter: event.dateFrom,
-        dateToFilter: event.dateTo,
-        statusFilter: event.status,
-      ));
-    } catch (e) {
-      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
-    }
+    await _onLoadFirstDeliveryNotes(LoadFirstDeliveryNotes(
+      customerId: event.clientId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ), emit);
   }
 }

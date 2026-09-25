@@ -12,14 +12,15 @@ import '../mobile/screens/forms/mobile_product_form_screen.dart';
 
 class ArticleSelectionModal extends StatefulWidget {
   final String? warehouseId;
-  const ArticleSelectionModal({super.key, this.warehouseId});
+  final bool excludeServices;
+  const ArticleSelectionModal({super.key, this.warehouseId, this.excludeServices = false});
 
-  static Future<Product?> show(BuildContext context, {String? warehouseId}) {
+  static Future<Product?> show(BuildContext context, {String? warehouseId, bool excludeServices = false}) {
     return showModalBottomSheet<Product>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => ArticleSelectionModal(warehouseId: warehouseId),
+      builder: (ctx) => ArticleSelectionModal(warehouseId: warehouseId, excludeServices: excludeServices),
     );
   }
 
@@ -191,7 +192,11 @@ class _ArticleSelectionModalState extends State<ArticleSelectionModal> {
                     }
 
                     if (state is ProductsLoaded) {
-                      if (state.products.isEmpty) {
+                      final filteredProducts = widget.excludeServices
+                          ? state.products.where((p) => !p.isService).toList()
+                          : state.products;
+
+                      if (filteredProducts.isEmpty) {
                         return const MobileEmptyState(message: 'Aucun article trouvé.');
                       }
 
@@ -208,7 +213,9 @@ class _ArticleSelectionModalState extends State<ArticleSelectionModal> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                '${state.totalCount} résultats',
+                                widget.excludeServices
+                                    ? '${filteredProducts.length} résultats'
+                                    : '${state.totalCount} résultats',
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                               ),
                             ),
@@ -216,16 +223,16 @@ class _ArticleSelectionModalState extends State<ArticleSelectionModal> {
                           Expanded(
                             child: ListView.builder(
                               controller: _scrollController,
-                              itemCount: state.products.length + (state.isLoadingMore ? 1 : 0),
+                              itemCount: filteredProducts.length + (state.isLoadingMore ? 1 : 0),
                               itemBuilder: (context, index) {
-                                if (index == state.products.length) {
+                                if (index == filteredProducts.length) {
                                   return const Padding(
                                     padding: EdgeInsets.symmetric(vertical: 16),
                                     child: Center(child: CircularProgressIndicator()),
                                   );
                                 }
 
-                                final rawProduct = state.products[index];
+                                final rawProduct = filteredProducts[index];
                                 final warehouseStock = _getWarehouseStock(rawProduct, stockState);
                                 final displayProduct = rawProduct.copyWith(stockQty: warehouseStock);
 

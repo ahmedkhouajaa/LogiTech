@@ -19,8 +19,8 @@ import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
 import '../widgets/searchable_dropdown_field.dart';
-import '../mobile/widgets/forms/mobile_smart_fields.dart';
 import '../models/stock_movement.dart' show Warehouse;
+import '../services/trial_service.dart';
 
 class CreateStockWithdrawalScreen extends StatefulWidget {
   final StockWithdrawal? existing;
@@ -83,6 +83,9 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   }
 
   Future<void> _save() async {
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     // No online check for create actions — offline creation is allowed
     if (!_formKey.currentState!.validate()) return;
@@ -396,17 +399,23 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
         SizedBox(height: 8),
         InkWell(
           onTap: _selectDate,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            height: 48,
+            padding: EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-              borderRadius: BorderRadius.circular(4),
+              color: AppColors.surfaceAlt,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(formatDateLong(_date, Localizations.localeOf(context).languageCode), style: TextStyle(fontSize: 13)),
-                Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                Text(
+                  formatDateLong(_date, Localizations.localeOf(context).languageCode),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
               ],
             ),
           ),
@@ -421,16 +430,22 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
     final selectedWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => defaultWh);
     final warehouseName = selectedWarehouse?.name;
 
-    final warehouseField = SmartSearchableSelector(
-      label: context.tr('Entrepôt'),
-      hint: context.tr('Sélectionner un entrepôt'),
-      selectedText: warehouseName,
-      onTap: () async {
-        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId ?? defaultWh?.id);
-        if (res != null && mounted) {
-          setState(() => _warehouseId = res);
-        }
-      },
+    final warehouseField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        SizedBox(height: 8),
+        SearchableSelectorField(
+          hint: context.tr('Sélectionner un entrepôt'),
+          selectedText: warehouseName,
+          onTap: () async {
+            final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId ?? defaultWh?.id);
+            if (res != null && mounted) {
+              setState(() => _warehouseId = res);
+            }
+          },
+        ),
+      ],
     );
 
     final reasonField = Column(
@@ -442,10 +457,12 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           controller: _reasonController,
           maxLines: 2,
           decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
             hintText: context.tr("Raison de l'opération..."),
             hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           ),
         ),
       ],
@@ -460,10 +477,12 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           controller: _notesController,
           maxLines: 2,
           decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
             hintText: context.tr('Notes additionnelles...'),
             hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           ),
         ),
       ],
@@ -472,7 +491,10 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
     return Card(
       elevation: 0,
       color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
+      ),
       child: Padding(
         padding: EdgeInsets.all(_isMobile ? 16.0 : 24.0),
         child: Column(
@@ -524,7 +546,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       builder: (context, state) {
         List<Product> products = [];
         if (state is ProductsLoaded) {
-          products = state.products;
+          products = state.products.where((p) => !p.isService).toList();
         }
 
         return BlocBuilder<StockBloc, StockState>(
@@ -532,7 +554,10 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
             return Card(
               elevation: 0,
               color: AppColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
+              ),
               child: Padding(
                 padding: EdgeInsets.all(24.0),
                 child: Column(
@@ -555,7 +580,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                         OutlinedButton.icon(
                           onPressed: () async {
                             if (_isMobile) {
-                              final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                              final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId, excludeServices: true);
                               if (selectedProduct != null) {
                                 setState(() {
                                   _items.add(StockWithdrawalItem(
@@ -673,9 +698,9 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,18 +733,18 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                           children: [
                             InkWell(
                               onTap: () async {
-                                final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                                final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId, excludeServices: true);
                                 if (selectedProduct != null) {
                                   _updateItemProduct(index, selectedProduct);
                                 }
                               },
                               child: Container(
-                                height: 40,
+                                height: 48,
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: isMissing ? AppColors.error.withValues(alpha: 0.04) : AppColors.surface,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: isMissing ? AppColors.error : AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                                  color: isMissing ? AppColors.error.withValues(alpha: 0.04) : AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(color: isMissing ? AppColors.error : AppColors.border),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -774,9 +799,9 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                       height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                        borderRadius: BorderRadius.circular(4),
+                        color: AppColors.surfaceAlt,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(currentStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
                     ),
@@ -797,10 +822,12 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
+                          filled: true,
+                          fillColor: AppColors.surfaceAlt,
                           contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.blue, width: 2)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                         ),
                         onChanged: (val) {
                           final q = double.tryParse(val) ?? 0;
@@ -822,9 +849,9 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                       height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.05),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                        borderRadius: BorderRadius.circular(4),
+                        color: AppColors.surfaceAlt,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(finalStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: finalStock < 0 ? AppColors.error : Colors.green, fontWeight: FontWeight.bold)),
                     ),
@@ -894,6 +921,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                                   selectedProductId: item.productId,
                                   warehouseId: _warehouseId,
                                   warehouseStockMap: stockMap,
+                                  excludeServices: true,
                                 );
                                 if (res != null) {
                                   final selectedProduct = products.firstWhere((p) => p.id == res);
@@ -917,13 +945,13 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                   Expanded(
                     flex: 1,
                     child: Container(
-                      height: 40,
+                      height: 48,
                       alignment: Alignment.centerRight,
                       padding: EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                        borderRadius: BorderRadius.circular(4),
+                        color: AppColors.surfaceAlt,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(currentStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
                     ),
@@ -934,16 +962,18 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                   Expanded(
                     flex: 1,
                     child: SizedBox(
-                      height: 40,
+                      height: 48,
                       child: TextFormField(
                         controller: _getQtyController(item),
                         textAlign: TextAlign.right,
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: Colors.blue, width: 2)),
+                          filled: true,
+                          fillColor: AppColors.surfaceAlt,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                         ),
                         onChanged: (val) {
                           final q = double.tryParse(val) ?? 0;
@@ -958,13 +988,13 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                   Expanded(
                     flex: 1,
                     child: Container(
-                      height: 40,
+                      height: 48,
                       alignment: Alignment.centerRight,
                       padding: EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.05),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                        borderRadius: BorderRadius.circular(4),
+                        color: AppColors.surfaceAlt,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Text(finalStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: finalStock < 0 ? AppColors.error : Colors.green, fontWeight: FontWeight.bold)),
                     ),

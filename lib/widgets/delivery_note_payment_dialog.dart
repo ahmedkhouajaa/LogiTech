@@ -18,6 +18,8 @@ import '../services/enterprise_service.dart';
 import '../services/firestore_repository.dart';
 import '../services/firestore_pagination_service.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../models/check_traite.dart';
+import '../database/database_helper.dart';
 
 class DeliveryNotePaymentDialog extends StatefulWidget {
   final DeliveryNote deliveryNote;
@@ -32,6 +34,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     with SingleTickerProviderStateMixin {
   int _selectedTab = 0; // 0: Nouveau, 1: Existant, 2: Avoir
   bool _applyWithholdingTax = false;
+  bool _isSaving = false;
   
   // Treasury accounts loaded directly from DB
   List<TreasuryAccount> _treasuryAccounts = [];
@@ -47,7 +50,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   String? _selectedAccountId;
   final _referenceCtrl = TextEditingController();
   DateTime _paymentDate = DateTime.now();
+  DateTime _maturityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
+
+  String? get _selectedAccountName {
+    if (_selectedAccountId == null) return null;
+    final acc = _treasuryAccounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+    return acc?.name;
+  }
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -63,9 +73,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
 
   static const _paymentMethods = [
     {'value': 'especes', 'label': 'Espèces', 'icon': Icons.payments_outlined},
+    {'value': 'virement_bancaire', 'label': 'Virement bancaire', 'icon': Icons.account_balance_outlined},
+    {'value': 'versement_bancaire', 'label': 'Versement bancaire', 'icon': Icons.move_to_inbox_outlined},
     {'value': 'cheque', 'label': 'Chèque', 'icon': Icons.description_outlined},
-    {'value': 'virement', 'label': 'Virement', 'icon': Icons.account_balance_outlined},
-    {'value': 'carte', 'label': 'Carte', 'icon': Icons.credit_card_outlined},
+    {'value': 'traite', 'label': 'Traite', 'icon': Icons.receipt_long_outlined},
+    {'value': 'carte', 'label': 'Carte Bancaire', 'icon': Icons.credit_card_outlined},
+    {'value': 'autre', 'label': 'Autre', 'icon': Icons.more_horiz_rounded},
   ];
 
   @override
@@ -90,10 +103,6 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         setState(() {
           _treasuryAccounts = accounts;
           _isLoadingAccounts = false;
-          if (_selectedAccountId == null && _treasuryAccounts.isNotEmpty) {
-            final defAcc = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first);
-            _selectedAccountId = defAcc.id;
-          }
         });
       }
     } catch (e) {
@@ -126,19 +135,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   void _save() async {
     if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
-    if (_selectedAccountId == null) {
-      if (_treasuryAccounts.isNotEmpty) {
-        _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;
-      } else {
-        final state = context.read<TreasuryAccountsBloc>().state;
-        if (state is TreasuryAccountsLoaded && state.accounts.isNotEmpty) {
-          _selectedAccountId = state.accounts.firstWhere((a) => a.isDefault, orElse: () => state.accounts.first).id;
-        }
-      }
-    }
+    final isChequeOrTraite = _paymentMethod == 'cheque' || _paymentMethod == 'traite';
 
-    if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+    if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
+      ));
       return;
     }
 
@@ -150,94 +153,146 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
 
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
-    final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
+    setState(() => _isSaving = true);
 
+    try {
+      if (isChequeOrTraite) {
+        // 1. Create CheckTraite record with statut = 'en_attente'
+        final refText = _referenceCtrl.text.trim();
+        final docNum = refText.isNotEmpty
+            ? refText
+            : '${_paymentMethod == 'traite' ? 'TR' : 'CHQ'}-${now.millisecondsSinceEpoch % 1000000}';
+        final checkTraite = CheckTraite(
+          documentNumber: docNum,
+          type: _paymentMethod,
+          entityType: 'client',
+          partyId: widget.deliveryNote.customerId,
+          partyName: widget.deliveryNote.customerName ?? '',
+          amount: parsedAmount,
+          issueDate: _paymentDate,
+          maturityDate: _maturityDate,
+          status: 'en_attente',
+          compteTresorerieId: _selectedAccountId,
+          compteTresorerieName: _selectedAccountName,
+          documentType: 'bon_livraison',
+          documentId: widget.deliveryNote.id,
+          documentRef: widget.deliveryNote.number,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+        );
+        await DatabaseHelper.instance.insertCheckTraite(checkTraite);
 
-    final payment = Payment(
-      id: const Uuid().v4(),
-      paymentNumber: paymentNumber,
-      direction: 'encaissement',
-      contactId: widget.deliveryNote.customerId,
-      contactType: 'customer',
-      contactName: widget.deliveryNote.customerName,
-      amount: parsedAmount,
-      method: _paymentMethod,
-      accountId: _selectedAccountId,
-      reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
-      paymentDate: _paymentDate,
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      status: 'paid',
-      
-      createdAt: now,
-      updatedAt: now,
-    );
+        // 2. Do NOT update amountPaid. DO update delivery note status to en_attente_confirmation
+        final updatedDeliveryNote = widget.deliveryNote.copyWith(
+          status: 'en_attente_confirmation',
+        );
+        await DatabaseHelper.instance.updateDeliveryNote(updatedDeliveryNote);
+        context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedDeliveryNote));
+        await FirestoreRepository.instance.saveDocument('delivery_notes', updatedDeliveryNote.id, {
+          ...updatedDeliveryNote.toMap(),
+          'status': 'en_attente_confirmation',
+          'custom_status': 'en_attente_confirmation',
+        });
+      } else {
+        final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-    await FirestoreRepository.instance.savePayment(payment);
-    db.add(AddPayment(payment));
+        final payment = Payment(
+          id: const Uuid().v4(),
+          paymentNumber: paymentNumber,
+          direction: 'encaissement',
+          contactId: widget.deliveryNote.customerId,
+          contactType: 'customer',
+          contactName: widget.deliveryNote.customerName,
+          amount: parsedAmount,
+          method: _paymentMethod,
+          accountId: _selectedAccountId,
+          reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
+          paymentDate: _paymentDate,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+          status: 'paid',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-    // Create TreasuryTransaction to increase caisse
-    final treasuryTx = TreasuryTransaction(
-      id: const Uuid().v4(),
-      transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-      accountId: _selectedAccountId!,
-      amount: parsedAmount,
-      type: 'income',
-      category: 'Paiement Client',
-      dateTransaction: _paymentDate,
-      description: 'Paiement de la facture ${widget.deliveryNote.number}',
-      paymentId: payment.id,
-      createdAt: now,
-      updatedAt: now,
-    );
-    context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+        db.add(AddPayment(payment));
 
-    // Update DeliveryNote status and amount paid
-    double taxAmount = _applyWithholdingTax ? ((widget.deliveryNote.totalTTC + widget.deliveryNote.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
+        if (_selectedAccountId != null && _selectedAccountId!.isNotEmpty) {
+          final treasuryTx = TreasuryTransaction(
+            id: const Uuid().v4(),
+            transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
+            accountId: _selectedAccountId!,
+            amount: parsedAmount,
+            type: 'income',
+            category: 'Paiement Client',
+            dateTransaction: _paymentDate,
+            description: 'Paiement du bon de livraison ${widget.deliveryNote.number}',
+            paymentId: payment.id,
+            createdAt: now,
+            updatedAt: now,
+          );
+          context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+        }
 
-    if (_applyWithholdingTax && taxAmount > 0) {
-      final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
-      
-      final rsPayment = Payment(
-        id: const Uuid().v4(),
-        paymentNumber: rsPaymentNumber,
-        direction: 'encaissement',
-        contactId: widget.deliveryNote.customerId,
-        contactType: 'customer',
-        contactName: widget.deliveryNote.customerName,
-        amount: taxAmount,
-        method: 'retenue_source',
-        reference: widget.deliveryNote.number,
-        paymentDate: _withholdingTaxDate,
-        notes: 'Retenue à la source ($_withholdingTaxRate%)',
-        status: 'paid',
+        // Update DeliveryNote status and amount paid
+        double taxAmount = _applyWithholdingTax ? ((widget.deliveryNote.totalTTC + widget.deliveryNote.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
+
+        if (_applyWithholdingTax && taxAmount > 0) {
+          final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
+          
+          final rsPayment = Payment(
+            id: const Uuid().v4(),
+            paymentNumber: rsPaymentNumber,
+            direction: 'encaissement',
+            contactId: widget.deliveryNote.customerId,
+            contactType: 'customer',
+            contactName: widget.deliveryNote.customerName,
+            amount: taxAmount,
+            method: 'retenue_source',
+            reference: widget.deliveryNote.number,
+            paymentDate: _withholdingTaxDate,
+            notes: 'Retenue à la source ($_withholdingTaxRate%)',
+            status: 'paid',
+            createdAt: now.add(const Duration(seconds: 1)),
+            updatedAt: now.add(const Duration(seconds: 1)),
+          );
+          
+          db.add(AddPayment(rsPayment));
+        }
+
+        double newAmountPaid = 0.0 + parsedAmount + taxAmount;
+        String newStatus = widget.deliveryNote.status;
+        double totalDue = widget.deliveryNote.totalTTC;
         
-        createdAt: now.add(const Duration(seconds: 1)),
-        updatedAt: now.add(const Duration(seconds: 1)),
-      );
-      
-      await FirestoreRepository.instance.savePayment(rsPayment);
-      db.add(AddPayment(rsPayment));
+        if (newAmountPaid >= totalDue - 0.01) {
+          newStatus = 'paid';
+        } else if (newAmountPaid > 0) {
+          newStatus = 'partial';
+        }
+
+        final updatedDeliveryNote = widget.deliveryNote.copyWith(
+          status: newStatus,
+        );
+        await DatabaseHelper.instance.updateDeliveryNote(updatedDeliveryNote);
+        context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedDeliveryNote));
+        await FirestoreRepository.instance.saveDocument('delivery_notes', updatedDeliveryNote.id, {
+          ...updatedDeliveryNote.toMap(),
+          'status': newStatus,
+          'custom_status': newStatus,
+        });
+      }
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur lors de l\'enregistrement: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
-
-    double newAmountPaid = 0.0 + parsedAmount + taxAmount;
-    
-    String newStatus = widget.deliveryNote.status;
-    double totalDue = widget.deliveryNote.totalTTC;
-    
-    if (newAmountPaid >= totalDue - 0.01) { // 0.01 tolerance for floating point issues
-      newStatus = 'paid';
-    } else if (newAmountPaid > 0) {
-      newStatus = 'partial';
-    }
-
-    final updatedDeliveryNote = widget.deliveryNote.copyWith(
-      status: newStatus,
-    );
-    context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedDeliveryNote));
-    await FirestoreRepository.instance.saveDocument('delivery_notes', updatedDeliveryNote.id, updatedDeliveryNote.toMap());
-
-    Navigator.pop(context, true);
   }
 
   @override
@@ -434,6 +489,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         chipColor = AppColors.warning;
         label = 'Partiel';
         break;
+      case 'en_attente_confirmation':
+        chipColor = const Color(0xFFF59E0B);
+        label = 'En attente de paiement';
+        break;
+      case 'impayee':
+        chipColor = AppColors.error;
+        label = 'Impayé';
+        break;
       case 'delivered':
         chipColor = AppColors.primary;
         label = 'Livré';
@@ -447,15 +510,24 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         label = translateStatus(status);
     }
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppRadius.full),
         border: Border.all(color: chipColor.withOpacity(0.3)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: chipColor),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (status == 'en_attente_confirmation') ...[
+            Icon(Icons.access_time_rounded, size: 12, color: chipColor),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: chipColor),
+          ),
+        ],
       ),
     );
   }
@@ -722,60 +794,67 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 10),
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
             'Mode de paiement',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
           ),
         ),
-        Row(
-          children: _paymentMethods.map((method) {
-            final isSelected = _paymentMethod == method['value'];
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _paymentMethod = method['value'] as String),
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: 200),
-                  margin: EdgeInsets.symmetric(horizontal: 3),
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                      width: isSelected ? 1.5 : 1,
-                    ),
-                    boxShadow: isSelected ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _paymentMethods.map((method) {
+              final isSelected = _paymentMethod == method['value'];
+              return Container(
+                width: 92,
+                margin: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () => setState(() => _paymentMethod = method['value'] as String),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.border,
+                        width: isSelected ? 1.5 : 1,
                       ),
-                    ] : AppShadows.sm,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        method['icon'] as IconData,
-                        size: 22,
-                        color: isSelected ? AppColors.surface : AppColors.textSecondary,
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        method['label'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? AppColors.surface : AppColors.textSecondary,
+                      boxShadow: isSelected ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                      ] : AppShadows.sm,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          method['icon'] as IconData,
+                          size: 20,
+                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          method['label'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -837,6 +916,56 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
           ),
           SizedBox(height: 16),
 
+          // Reference field
+          _buildMobileFormField(
+            'Référence',
+            Icons.tag,
+            TextField(
+              controller: _referenceCtrl,
+              decoration: _mobileInputDecoration('Saisir la référence'),
+            ),
+          ),
+          if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Date d\'Échéance *',
+              Icons.event_available_outlined,
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _maturityDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (d != null) setState(() => _maturityDate = d);
+                },
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: AppColors.surfaceAlt.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: 16),
+
           // Payment date
           _buildMobileFormField(
             'Date de paiement',
@@ -874,18 +1003,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
               ),
             ),
           ),
-          SizedBox(height: 16),
-
-          // Reference
-          _buildMobileFormField(
-            'Référence externe',
-            Icons.tag,
-            TextField(
-              controller: _referenceCtrl,
-              decoration: _mobileInputDecoration('Saisir la référence'),
-            ),
-          ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
 
           // Notes
           _buildMobileFormField(
@@ -1299,9 +1417,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                           decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                           items: const [
                                             DropdownMenuItem(value: 'especes', child: Text('Espèces')),
+                                            DropdownMenuItem(value: 'virement_bancaire', child: Text('Virement bancaire')),
+                                            DropdownMenuItem(value: 'versement_bancaire', child: Text('Versement bancaire')),
                                             DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                                            DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                                            DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                                            DropdownMenuItem(value: 'traite', child: Text('Traite')),
+                                            DropdownMenuItem(value: 'carte', child: Text('Carte Bancaire')),
+                                            DropdownMenuItem(value: 'autre', child: Text('Autre')),
                                           ],
                                           onChanged: (v) => setState(() => _paymentMethod = v!),
                                         )),
@@ -1319,7 +1440,9 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _buildFormField('Compte de trésorerie *', BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                                        child: _buildFormField(
+                                          'Compte de trésorerie *',
+                                          BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                           builder: (context, state) {
                                             final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
                                             String? displayName;
@@ -1338,13 +1461,42 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                           },
                                         )),
                                       ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildFormField(
+                                          'Référence',
+                                          TextField(
+                                            controller: _referenceCtrl,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Saisir la référence',
+                                              border: OutlineInputBorder(),
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  SizedBox(height: 16),
-                                  _buildFormField('Référence externe', TextField(
-                                    controller: _referenceCtrl,
-                                    decoration: InputDecoration(hintText: 'Saisir la référence', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                  )),
+                                  if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+                                    SizedBox(height: 16),
+                                    _buildFormField('Date d\'Échéance *', InkWell(
+                                      onTap: () async {
+                                        final d = await showDatePicker(context: context, initialDate: _maturityDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
+                                        if (d != null) setState(() => _maturityDate = d);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate)),
+                                            Icon(Icons.event_available, size: 16, color: AppColors.primary),
+                                          ],
+                                        ),
+                                      ),
+                                    )),
+                                  ],
                                   SizedBox(height: 16),
                                   _buildFormField('Date de paiement', InkWell(
                                     onTap: () async {

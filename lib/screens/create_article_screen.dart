@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/products/products_bloc.dart';
@@ -7,10 +8,12 @@ import '../blocs/product_settings/product_settings_state.dart';
 import '../blocs/product_settings/product_settings_event.dart';
 import '../models/product.dart';
 import '../models/product_family.dart';
+import '../models/product_category.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 import '../l10n/app_localizations.dart';
+import '../services/trial_service.dart';
 
 class CreateArticleScreen extends StatefulWidget {
   final Product? existing;
@@ -33,6 +36,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
   String _destination = 'Vente et Achat';
   String _productType = 'produit';
   double _tvaRate = 19;
+  static const List<double> _defaultTvaRates = [0.0, 7.0, 13.0, 19.0];
+  final List<double> _tvaRates = [0.0, 7.0, 13.0, 19.0];
   String _unit = 'Piece';
   String? _family; 
   String? _subFamily;
@@ -60,33 +65,6 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     {'value': 'Heure', 'label': 'Heure', 'code': 'h'},
     {'value': 'Jour', 'label': 'Jour', 'code': 'j'},
     {'value': 'Forfait', 'label': 'Forfait', 'code': 'forf'},
-  ];
-
-  static const List<String> _categoryOptions = [
-    'Standard',
-    'Premium',
-    'Informatique',
-    'Bureautique',
-    'Alimentation',
-    'Électronique',
-    'Outillage',
-    'Mobilier',
-    'Services',
-    'Divers',
-  ];
-
-  static const List<String> _brandOptions = [
-    'Samsung',
-    'Apple',
-    'Dell',
-    'HP',
-    'Logitech',
-    'Lenovo',
-    'Asus',
-    'Xiaomi',
-    'Sony',
-    'Canon',
-    'Autre',
   ];
 
   static const List<String> _priceListOptions = [
@@ -130,6 +108,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       }
     }
     _tvaRate = p?.tvaRate ?? 19;
+    if (!_tvaRates.contains(_tvaRate)) {
+      _tvaRates.add(_tvaRate);
+      _tvaRates.sort();
+    }
     
     // Safely load unit
     String rawUnit = p?.unit ?? 'Piece';
@@ -167,6 +149,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     IconData? itemIcon,
     bool allowCustom = false,
     T Function(String)? onAddCustom,
+    VoidCallback? onAddNew,
+    String? addNewLabel,
   }) async {
     return showDialog<T?>(
       context: context,
@@ -195,7 +179,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header: Title & Close Button
+                    // Header: Title, Optional Add & Close Button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -209,6 +193,29 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                             ),
                           ),
                         ),
+                        if (onAddNew != null) ...[
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              onAddNew();
+                            },
+                            icon: Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                            label: Text(
+                              addNewLabel ?? 'Ajouter',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 22),
@@ -251,6 +258,43 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                     const SizedBox(height: 12),
                     Divider(height: 1, color: AppColors.border),
                     const SizedBox(height: 8),
+
+                    // Quick add inside dropdown dialog
+                    if (onAddNew != null) ...[
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onAddNew();
+                        },
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  addNewLabel ?? 'Ajouter',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     // Items List
                     Flexible(
@@ -390,7 +434,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         ),
         child: Row(
           children: [
@@ -421,6 +465,686 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ─── ADD FAMILY / SUBFAMILY DIALOGS ─────────────────────────────────────────
+  Future<void> _showAddFamilyDialog(BuildContext context) async {
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.surface,
+          child: Container(
+            width: 440,
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.folder_open_rounded, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            dialogCtx.tr('Nouvelle Famille'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    dialogCtx.tr('Nom de la famille'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: textCtrl,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: dialogCtx.tr('Nom de la famille (ex: Informatique, Mobilier...)'),
+                      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return dialogCtx.tr('Veuillez entrer un nom');
+                      }
+                      return null;
+                    },
+                    onFieldSubmitted: (_) => _submitFamily(dialogCtx, textCtrl, formKey),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _submitFamily(dialogCtx, textCtrl, formKey),
+                        icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                        label: Text(dialogCtx.tr('Créer la famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitFamily(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newFam = ProductFamily(
+      id: const Uuid().v4(),
+      name: name,
+    );
+    context.read<ProductSettingsBloc>().add(AddFamily(newFam));
+    setState(() {
+      _family = newFam.id;
+      _subFamily = null;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Famille "$name" créée et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddSubFamilyDialog(BuildContext context, List<ProductFamily> rootFamilies, String? selectedParentId) async {
+    if (rootFamilies.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('Veuillez d\'abord créer au moins une famille principale')),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _showAddFamilyDialog(context);
+      return;
+    }
+
+    String parentId = selectedParentId ?? rootFamilies.first.id;
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            final parentFamily = rootFamilies.where((f) => f.id == parentId).firstOrNull;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 440,
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.subdirectory_arrow_right_rounded, color: AppColors.primary, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                dialogCtx.tr('Nouvelle Sous-famille'),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        dialogCtx.tr('Famille parente'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: parentId,
+                            isExpanded: true,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                            items: rootFamilies.map((f) {
+                              return DropdownMenuItem<String>(
+                                value: f.id,
+                                child: Text(f.name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() => parentId = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Nom de la sous-famille'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: textCtrl,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: dialogCtx.tr('Nom de la nouvelle sous-famille'),
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return dialogCtx.tr('Veuillez entrer un nom');
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) => _submitSubFamily(dialogCtx, textCtrl, formKey, parentId, parentFamily?.name),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _submitSubFamily(dialogCtx, textCtrl, formKey, parentId, parentFamily?.name),
+                            icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                            label: Text(dialogCtx.tr('Créer la sous-famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _submitSubFamily(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey, String parentId, String? parentName) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newSub = ProductFamily(
+      id: const Uuid().v4(),
+      name: name,
+      parentId: parentId,
+    );
+    context.read<ProductSettingsBloc>().add(AddSubFamily(newSub));
+    setState(() {
+      _family = parentId;
+      _subFamily = newSub.id;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sous-famille "$name" liée à "${parentName ?? ''}" et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddCategoryDialog(BuildContext context) async {
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.surface,
+          child: Container(
+            width: 440,
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.category_outlined, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            dialogCtx.tr('Nouvelle Catégorie'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    dialogCtx.tr('Nom de la catégorie'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: textCtrl,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: dialogCtx.tr('ex: Téléphonie, Accessoires...'),
+                      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return dialogCtx.tr('Veuillez entrer un nom');
+                      }
+                      return null;
+                    },
+                    onFieldSubmitted: (_) => _submitCategory(dialogCtx, textCtrl, formKey),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _submitCategory(dialogCtx, textCtrl, formKey),
+                        icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                        label: Text(dialogCtx.tr('Créer la catégorie'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitCategory(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newCat = ProductCategory(
+      id: const Uuid().v4(),
+      name: name,
+    );
+    context.read<ProductSettingsBloc>().add(AddCategory(newCat));
+    setState(() {
+      _category = newCat.name;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Catégorie "$name" créée et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddBrandDialog(BuildContext context, List<ProductCategory> categories, String? selectedCategoryName) async {
+    if (categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('Veuillez d\'abord créer au moins une catégorie')),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _showAddCategoryDialog(context);
+      return;
+    }
+
+    String parentCatName = selectedCategoryName ?? categories.first.name;
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 440,
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.branding_watermark_outlined, color: AppColors.primary, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                dialogCtx.tr('Nouvelle Marque'),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        dialogCtx.tr('Catégorie parente'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: categories.any((c) => c.name == parentCatName) ? parentCatName : categories.first.name,
+                            isExpanded: true,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                            items: categories.map((c) {
+                              return DropdownMenuItem<String>(
+                                value: c.name,
+                                child: Text(c.name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() => parentCatName = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Nom de la marque'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: textCtrl,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: dialogCtx.tr('Nom de la nouvelle marque'),
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return dialogCtx.tr('Veuillez entrer un nom');
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) => _submitBrand(dialogCtx, textCtrl, formKey, parentCatName),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _submitBrand(dialogCtx, textCtrl, formKey, parentCatName),
+                            icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                            label: Text(dialogCtx.tr('Créer la marque'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _submitBrand(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey, String parentCategoryName) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newBrand = ProductBrand(
+      id: const Uuid().v4(),
+      name: name,
+      categoryId: parentCategoryName,
+    );
+    context.read<ProductSettingsBloc>().add(AddBrand(newBrand));
+    setState(() {
+      _category = parentCategoryName;
+      _brand = newBrand.name;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Marque "$name" liée à "$parentCategoryName" et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -666,7 +1390,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,24 +1500,23 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 24),
           Text('TVA', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _buildTvaButton(0),
-              SizedBox(width: 12),
-              _buildTvaButton(7),
-              SizedBox(width: 12),
-              _buildTvaButton(13),
-              SizedBox(width: 12),
-              _buildTvaButton(19),
-              SizedBox(width: 12),
+              ..._tvaRates.map((rate) => _buildTvaButton(rate)),
               OutlinedButton.icon(
-                onPressed: () {},
-                icon: Icon(Icons.add, size: 16),
-                label: Text('Ajouter TVA'),
+                onPressed: _showAddTvaDialog,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Ajouter TVA'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                 ),
               ),
             ],
@@ -809,7 +1532,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -901,7 +1624,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -912,6 +1635,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             builder: (context, state) {
               List<ProductFamily> rootFamilies = [];
               List<ProductFamily> subFamilies = [];
+              List<ProductCategory> categories = [];
+              List<ProductBrand> brands = [];
 
               if (state is ProductSettingsLoaded) {
                 rootFamilies = state.rootFamilies;
@@ -925,151 +1650,179 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                     _subFamily = null;
                   }
                 }
+
+                categories = state.categories;
+                if (_category != null) {
+                  brands = state.getBrandsForCategory(_category!);
+                } else {
+                  brands = state.brands;
+                }
               }
 
               final selectedFamily = rootFamilies.where((f) => f.id == _family).firstOrNull;
               final selectedSubFamily = subFamilies.where((sf) => sf.id == _subFamily).firstOrNull;
 
-              return Row(
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        SizedBox(height: 6),
-                        _buildDialogSelectorField(
-                          text: selectedFamily?.name,
-                          hint: 'Sélectionner',
-                          prefixIcon: Icons.account_tree_outlined,
-                          onTap: () async {
-                            final res = await _showSearchableSelectDialog<ProductFamily>(
-                              title: 'Sélectionner une famille',
-                              searchHint: 'Rechercher une famille...',
-                              items: rootFamilies,
-                              itemTitle: (f) => f.name,
-                              filter: (f, q) => f.name.toLowerCase().contains(q),
-                              isSelected: (f) => f.id == _family,
-                              itemIcon: Icons.folder_open_rounded,
-                            );
-                            if (res != null) {
-                              setState(() {
-                                _family = res.id;
-                                _subFamily = null;
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: 24),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                        SizedBox(height: 6),
-                        _buildDialogSelectorField(
-                          text: selectedSubFamily?.name,
-                          hint: _family == null ? 'Choisir famille' : 'Sélectionner',
-                          prefixIcon: Icons.subdirectory_arrow_right_rounded,
-                          onTap: _family == null
-                              ? () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Veuillez d\'abord sélectionner une famille'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(context.tr('Famille'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            SizedBox(height: 6),
+                            _buildDialogSelectorField(
+                              text: selectedFamily?.name,
+                              hint: context.tr('Sélectionner'),
+                              prefixIcon: Icons.account_tree_outlined,
+                              onTap: () async {
+                                final res = await _showSearchableSelectDialog<ProductFamily>(
+                                  title: context.tr('Sélectionner une famille'),
+                                  searchHint: context.tr('Rechercher une famille...'),
+                                  items: rootFamilies,
+                                  itemTitle: (f) => f.name,
+                                  filter: (f, q) => f.name.toLowerCase().contains(q),
+                                  isSelected: (f) => f.id == _family,
+                                  itemIcon: Icons.folder_open_rounded,
+                                  onAddNew: () => _showAddFamilyDialog(context),
+                                  addNewLabel: context.tr('Ajouter une famille'),
+                                );
+                                if (res != null) {
+                                  setState(() {
+                                    _family = res.id;
+                                    _subFamily = null;
+                                  });
                                 }
-                              : () async {
-                                  final res = await _showSearchableSelectDialog<ProductFamily>(
-                                    title: 'Sélectionner une sous-famille',
-                                    searchHint: 'Rechercher une sous-famille...',
-                                    items: subFamilies,
-                                    itemTitle: (sf) => sf.name,
-                                    filter: (sf, q) => sf.name.toLowerCase().contains(q),
-                                    isSelected: (sf) => sf.id == _subFamily,
-                                    itemIcon: Icons.account_tree_outlined,
-                                  );
-                                  if (res != null) {
-                                    setState(() => _subFamily = res.id);
-                                  }
-                                },
+                              },
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(context.tr('Sous-famille'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            SizedBox(height: 6),
+                            _buildDialogSelectorField(
+                              text: selectedSubFamily?.name,
+                              hint: _family == null ? context.tr('Choisir famille') : context.tr('Sélectionner'),
+                              prefixIcon: Icons.subdirectory_arrow_right_rounded,
+                              onTap: _family == null
+                                  ? () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(context.tr('Veuillez d\'abord sélectionner une famille')),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  : () async {
+                                      final res = await _showSearchableSelectDialog<ProductFamily>(
+                                        title: context.tr('Sélectionner une sous-famille'),
+                                        searchHint: context.tr('Rechercher une sous-famille...'),
+                                        items: subFamilies,
+                                        itemTitle: (sf) => sf.name,
+                                        filter: (sf, q) => sf.name.toLowerCase().contains(q),
+                                        isSelected: (sf) => sf.id == _subFamily,
+                                        itemIcon: Icons.account_tree_outlined,
+                                        onAddNew: () => _showAddSubFamilyDialog(context, rootFamilies, _family),
+                                        addNewLabel: context.tr('Ajouter une sous-famille'),
+                                      );
+                                      if (res != null) {
+                                        setState(() => _subFamily = res.id);
+                                      }
+                                    },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(context.tr('Catégorie'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            SizedBox(height: 6),
+                            _buildDialogSelectorField(
+                              text: _category,
+                              hint: context.tr('Sélectionner'),
+                              prefixIcon: Icons.folder_outlined,
+                              onTap: () async {
+                                final res = await _showSearchableSelectDialog<ProductCategory>(
+                                  title: context.tr('Sélectionner une catégorie'),
+                                  searchHint: context.tr('Rechercher une catégorie...'),
+                                  items: categories,
+                                  itemTitle: (c) => c.name,
+                                  filter: (c, q) => c.name.toLowerCase().contains(q),
+                                  isSelected: (c) => c.name == _category,
+                                  itemIcon: Icons.category_outlined,
+                                  onAddNew: () => _showAddCategoryDialog(context),
+                                  addNewLabel: context.tr('Ajouter une catégorie'),
+                                );
+                                if (res != null) {
+                                  setState(() {
+                                    _category = res.name;
+                                    final validBrands = state is ProductSettingsLoaded ? state.getBrandsForCategory(res.name) : [];
+                                    if (_brand != null && !validBrands.any((b) => b.name.toLowerCase() == _brand!.toLowerCase())) {
+                                      _brand = null;
+                                    }
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(context.tr('Marque'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            SizedBox(height: 6),
+                            _buildDialogSelectorField(
+                              text: _brand,
+                              hint: context.tr('Sélectionner'),
+                              prefixIcon: Icons.branding_watermark_outlined,
+                              onTap: () async {
+                                final res = await _showSearchableSelectDialog<ProductBrand>(
+                                  title: context.tr('Sélectionner une marque'),
+                                  searchHint: context.tr('Rechercher une marque...'),
+                                  items: brands,
+                                  itemTitle: (b) => b.name,
+                                  itemSubtitle: (b) => (b.categoryId != null && b.categoryId!.isNotEmpty) ? '${context.tr('Catégorie')}: ${b.categoryId}' : '',
+                                  filter: (b, q) => b.name.toLowerCase().contains(q),
+                                  isSelected: (b) => b.name == _brand,
+                                  itemIcon: Icons.branding_watermark_outlined,
+                                  onAddNew: () => _showAddBrandDialog(context, categories, _category),
+                                  addNewLabel: context.tr('Ajouter une marque'),
+                                );
+                                if (res != null) {
+                                  setState(() {
+                                    _brand = res.name;
+                                    if (res.categoryId != null && _category == null) {
+                                      _category = res.categoryId;
+                                    }
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               );
             },
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    SizedBox(height: 6),
-                    _buildDialogSelectorField(
-                      text: _category,
-                      hint: 'Sélectionner',
-                      prefixIcon: Icons.folder_outlined,
-                      onTap: () async {
-                        final res = await _showSearchableSelectDialog<String>(
-                          title: 'Sélectionner une catégorie',
-                          searchHint: 'Rechercher une catégorie...',
-                          items: _categoryOptions,
-                          itemTitle: (c) => c,
-                          filter: (c, q) => c.toLowerCase().contains(q),
-                          isSelected: (c) => c == _category,
-                          itemIcon: Icons.category_outlined,
-                          allowCustom: true,
-                          onAddCustom: (q) => q,
-                        );
-                        if (res != null) {
-                          setState(() => _category = res);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Marque', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    SizedBox(height: 6),
-                    _buildDialogSelectorField(
-                      text: _brand,
-                      hint: 'Sélectionner',
-                      prefixIcon: Icons.branding_watermark_outlined,
-                      onTap: () async {
-                        final res = await _showSearchableSelectDialog<String>(
-                          title: 'Sélectionner une marque',
-                          searchHint: 'Rechercher une marque...',
-                          items: _brandOptions,
-                          itemTitle: (b) => b,
-                          filter: (b, q) => b.toLowerCase().contains(q),
-                          isSelected: (b) => b == _brand,
-                          itemIcon: Icons.branding_watermark_outlined,
-                          allowCustom: true,
-                          onAddCustom: (q) => q,
-                        );
-                        if (res != null) {
-                          setState(() => _brand = res);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
           SizedBox(height: 16),
           Row(
@@ -1120,12 +1873,39 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
   }
 
   Widget _buildStockSection() {
+    if (_productType == 'service') {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, size: 48, color: AppColors.primary),
+            const SizedBox(height: 16),
+            Text(
+              context.tr('Article de type Service'),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              context.tr('Les services sont des prestations intangibles : ils ne possèdent pas de stock physique, n\'entrent pas dans les mouvements de stock et ne déclenchent aucune alerte de rupture.'),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1163,7 +1943,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
@@ -1189,7 +1969,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
@@ -1211,7 +1991,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
@@ -1269,24 +2049,269 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     );
   }
 
+  Future<void> _showAddTvaDialog() async {
+    final tvaCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Icon(Icons.percent_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Ajouter un taux de TVA',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 380,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Saisissez la valeur du taux de TVA en pourcentage (ex: 9 pour 9%).',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: tvaCtrl,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Taux de TVA (%)',
+                          hintText: 'Ex: 9',
+                          suffixText: '%',
+                          suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Veuillez saisir un taux de TVA';
+                          }
+                          final parsed = double.tryParse(val.trim().replaceAll(',', '.'));
+                          if (parsed == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          if (parsed < 0 || parsed > 100) {
+                            return 'Le taux doit être entre 0% et 100%';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          if (formKey.currentState!.validate()) {
+                            final val = double.parse(tvaCtrl.text.trim().replaceAll(',', '.'));
+                            Navigator.of(dialogCtx).pop(val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Suggestions rapides :',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [9.0, 10.0, 14.0, 20.0]
+                            .where((r) => !_tvaRates.contains(r))
+                            .map((r) {
+                          return ActionChip(
+                            label: Text('${r.toInt()}%'),
+                            labelStyle: TextStyle(fontSize: 12, color: AppColors.primary),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                            onPressed: () {
+                              tvaCtrl.text = r.toInt().toString();
+                              if (formKey.currentState!.validate()) {
+                                Navigator.of(dialogCtx).pop(r);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      final val = double.parse(tvaCtrl.text.trim().replaceAll(',', '.'));
+                      Navigator.of(dialogCtx).pop(val);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: const Text('Ajouter'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        if (!_tvaRates.contains(result)) {
+          _tvaRates.add(result);
+          _tvaRates.sort();
+        }
+        _tvaRate = result;
+      });
+    }
+  }
+
+  void _removeTvaRate(double rate) {
+    final rateLabel = rate == rate.roundToDouble() ? '${rate.toInt()}%' : '${rate.toStringAsFixed(1)}%';
+    final wasSelected = _tvaRate == rate;
+    setState(() {
+      _tvaRates.remove(rate);
+      if (wasSelected) {
+        _tvaRate = _tvaRates.contains(19.0) ? 19.0 : (_tvaRates.isNotEmpty ? _tvaRates.first : 0.0);
+      }
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Taux de TVA $rateLabel supprimé'),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Annuler',
+          textColor: AppColors.primaryLight,
+          onPressed: () {
+            setState(() {
+              if (!_tvaRates.contains(rate)) {
+                _tvaRates.add(rate);
+                _tvaRates.sort();
+              }
+              if (wasSelected) {
+                _tvaRate = rate;
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildTvaButton(double rate) {
     final isSelected = _tvaRate == rate;
+    final isCustom = !_defaultTvaRates.contains(rate);
+    final rateLabel = rate == rate.roundToDouble() ? '${rate.toInt()}%' : '${rate.toStringAsFixed(1)}%';
+
     return InkWell(
       onTap: () => setState(() => _tvaRate = rate),
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCustom ? 16 : 24,
+          vertical: 12,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 2 : 1,
+          ),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: Text(
-          '${rate.toInt()}%',
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              rateLabel,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+              ),
+            ),
+            if (isCustom) ...[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => _removeTvaRate(rate),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : AppColors.border.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 13,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -1294,6 +2319,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
 
   Future<void> _save() async {
     if (_isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     
     setState(() => _isSaving = true);
@@ -1317,9 +2345,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         purchasePrice: (_destination == 'Vente') ? 0 : (double.tryParse(_purchCtrl.text) ?? 0),
         sellingPrice: (_destination == 'Achat') ? 0 : (double.tryParse(_sellCtrl.text) ?? 0),
         tvaRate: _tvaRate,
-        allowNegativeStock: _allowNegativeStock,
-        lowStockAlert: _lowStockAlert,
-        highStockAlert: _highStockAlert,
+        allowNegativeStock: _productType == 'service' ? false : _allowNegativeStock,
+        lowStockAlert: _productType == 'service' ? false : _lowStockAlert,
+        highStockAlert: _productType == 'service' ? false : _highStockAlert,
+        stockQty: _productType == 'service' ? 0.0 : (widget.existing?.stockQty ?? 0.0),
+        minStockQty: _productType == 'service' ? 0.0 : (widget.existing?.minStockQty ?? 0.0),
         barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
         privateNotes: _privateNotesCtrl.text.trim().isEmpty ? null : _privateNotesCtrl.text.trim(),
         isActive: widget.existing?.isActive ?? true,

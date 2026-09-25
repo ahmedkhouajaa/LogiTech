@@ -8,10 +8,10 @@ import '../services/sync_service.dart';
 
 
 
-import '../database/database_helper.dart';
 import '../models/stock_movement.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../blocs/products/products_bloc.dart';
+import '../widgets/dialogs/print_blank_inventory_dialog.dart';
 
 import '../models/inventory_sheet.dart';
 import '../models/inventory_sheet_item.dart';
@@ -19,7 +19,6 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_inventory_sheet_screen.dart';
 import '../models/document_wrapper.dart';
-import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
@@ -29,7 +28,6 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../l10n/app_localizations.dart';
 
@@ -151,7 +149,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   void _previewDocument(InventorySheet entry) {
-    final wrapper = DocumentWrapper.fromInventorySheet(entry);
+    final wrapper = DocumentWrapper.fromInventorySheet(entry, _getWarehouseName(entry.warehouseId));
     final statusLabel = entry.status == 'validated' ? context.tr('Validé') : (entry.status == 'cancelled' ? context.tr('Annulé') : context.tr('Brouillon'));
     final statusColor = entry.status == 'validated' ? AppColors.success : (entry.status == 'cancelled' ? AppColors.error : AppColors.warning);
     Navigator.push(
@@ -257,6 +255,18 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
+                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: () => PrintBlankInventoryDialog.show(context),
+                    icon: const Icon(Icons.print_outlined, size: 16),
+                    label: Text(context.tr('Fiche vierge')),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -295,7 +305,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           child: DropdownButtonFormField(
                             dropdownColor: AppColors.surfaceAlt,
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            value: _filterWarehouseId,
+                            initialValue: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -600,7 +610,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   Widget _buildArticlesDisplay(List<InventorySheetItem> items) {
-    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
     
     final summaryText = items.map((item) {
       final pName = _getProductName(item.productId);
@@ -616,23 +626,6 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
       child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-    );
-  }
-
-  Widget _buildInfoItem(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textTertiary),
-        SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 
@@ -692,13 +685,26 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                 ],
               ),
               const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () => PrintBlankInventoryDialog.show(context),
+                icon: const Icon(Icons.print_outlined, size: 18),
+                label: Text(context.tr("Imprimer fiche d'inventaire vierge")),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                  backgroundColor: AppColors.surface,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+              ),
+              const SizedBox(width: 10),
               if (PermissionService.instance.canCreate(UserPermissionResources.stockInventorySheets))
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context),
                   icon: const Icon(Icons.add, size: 18),
                   label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -739,9 +745,8 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                               (w) => w?.id == _filterWarehouseId,
                               orElse: () => null,
                             );
-                            return SearchableSelectorField(
-                              hint: context.tr('Tous les Entrepôts'),
-                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
+                            final isSelected = _filterWarehouseId != null;
+                            return InkWell(
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -753,6 +758,35 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                                   setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                 }
                               },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isSelected
+                                            ? (selectedWh?.name ?? context.tr('Tous les Entrepôts'))
+                                            : context.tr('Tous les Entrepôts'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isSelected
+                                              ? AppColors.textPrimary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -775,11 +809,15 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: context.tr('Rechercher un produit...'),
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                           ),
                           style: const TextStyle(fontSize: 12),
                           onChanged: (v) => setState(() {
@@ -803,8 +841,8 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
-                        child: OutlinedButton(
-                          onPressed: () async {
+                        child: InkWell(
+                          onTap: () async {
                             final range = await CustomDateRangePicker.show(
                               context,
                               initialRange: _filterDateRange,
@@ -813,35 +851,38 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                               setState(() => _filterDateRange = range);
                             }
                           },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            height: 32,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            backgroundColor: AppColors.surface,
-                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _filterDateRange != null
-                                      ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : context.tr('Toutes les dates'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _filterDateRange != null
+                                        ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
+                                        : context.tr('Toutes les dates'),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              if (_filterDateRange != null)
-                                InkWell(
-                                  onTap: () => setState(() => _filterDateRange = null),
-                                  child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
-                                ),
-                            ],
+                                if (_filterDateRange != null)
+                                  InkWell(
+                                    onTap: () => setState(() => _filterDateRange = null),
+                                    child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1054,10 +1095,12 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
       return diff < 0 ? sum + diff.abs() : sum;
     });
 
-    return Container(
-      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
+    return InkWell(
+      onTap: () => _previewDocument(entry),
+      child: Container(
+        color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
         children: [
           Expanded(
             flex: 2,
@@ -1065,11 +1108,11 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDateTimeLong(entry.inventoryDate), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(formatDateTimeLong(entry.inventoryDate), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 2,
-            child: Text(_getWarehouseName(entry.warehouseId), style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+            child: Text(_getWarehouseName(entry.warehouseId), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
           ),
           Expanded(
             flex: 1,
@@ -1077,11 +1120,11 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
           ),
           Expanded(
             flex: 1,
-            child: Text(totalSurplus > 0 ? '+${totalSurplus.toStringAsFixed(1)}' : '—', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: totalSurplus > 0 ? AppColors.success : AppColors.textSecondary)),
+            child: Text(totalSurplus > 0 ? '+${totalSurplus.toStringAsFixed(1)}' : '—', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: totalSurplus > 0 ? AppColors.success : AppColors.textPrimary)),
           ),
           Expanded(
             flex: 1,
-            child: Text(totalMissing > 0 ? '-${totalMissing.toStringAsFixed(1)}' : '—', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: totalMissing > 0 ? AppColors.error : AppColors.textSecondary)),
+            child: Text(totalMissing > 0 ? '-${totalMissing.toStringAsFixed(1)}' : '—', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: totalMissing > 0 ? AppColors.error : AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
@@ -1162,46 +1205,9 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _pageButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        padding: EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(4),
-          color: AppColors.surface,
-        ),
-        child: Icon(icon, size: 20, color: enabled ? AppColors.textPrimary : AppColors.textTertiary),
-      ),
-    );
-  }
-
-  void _confirmDelete(InventorySheet entry) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.tr('Confirmer la suppression')),
-        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${context.tr("Fiches d'inventaire")} ${entry.number} ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<InventorySheetsBloc>().add(InventorySheetDeleted(entry.id));
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text(context.tr('Supprimer')),
-          ),
-        ],
-      ),
-    );
-  }
 }
 

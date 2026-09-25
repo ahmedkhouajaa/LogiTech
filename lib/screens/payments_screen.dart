@@ -1092,6 +1092,16 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
       return;
     }
 
+    if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('Veuillez sélectionner un compte de trésorerie')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
     // Generate a unique payment number
@@ -1622,7 +1632,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.tr('Compte de trésorerie'),
+                      Text('${context.tr('Compte de trésorerie')} *',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1633,14 +1643,6 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                           final tAccounts = tState is TreasuryAccountsLoaded
                               ? tState.accounts
                               : <TreasuryAccount>[];
-
-                          if (_selectedAccountId == null && tAccounts.isNotEmpty) {
-                            final defaultAcc = tAccounts.firstWhere(
-                              (a) => a.isDefault,
-                              orElse: () => tAccounts.first,
-                            );
-                            _selectedAccountId = defaultAcc.id;
-                          }
 
                           final selectedAccount = tAccounts.cast<TreasuryAccount?>().firstWhere(
                             (a) => a?.id == _selectedAccountId,

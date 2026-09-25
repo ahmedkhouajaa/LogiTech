@@ -156,7 +156,6 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
         data['id'] = doc.id;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
         if (isDel) {
-          doc.reference.delete().catchError((_) {});
           continue;
         }
         data['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
@@ -442,7 +441,7 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
     }
 
     try {
-      await FirestoreRepository.instance.deleteDocument('fournisseurs', trimmedId);
+      await FirestoreRepository.instance.softDeleteDocument('fournisseurs', trimmedId);
       await DatabaseHelper.instance.deleteSupplier(trimmedId);
     } catch (e) {
       print("Failed to delete supplier in Firestore: $e");
@@ -484,20 +483,10 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
       ));
     }
 
-    // 2. Batch delete in chunks of 400
+    // 2. Soft-delete suppliers to send to Corbeille
     try {
-      const chunkSize = 400;
-      for (var i = 0; i < idsToDelete.length; i += chunkSize) {
-        final end = (i + chunkSize < idsToDelete.length) ? i + chunkSize : idsToDelete.length;
-        final chunk = idsToDelete.sublist(i, end);
-        final batch = FirebaseFirestore.instance.batch();
-        for (final id in chunk) {
-          batch.delete(FirebaseFirestore.instance.collection('fournisseurs').doc(id));
-        }
-        await batch.commit();
-      }
-
       for (final id in idsToDelete) {
+        await FirestoreRepository.instance.softDeleteDocument('fournisseurs', id);
         await DatabaseHelper.instance.deleteSupplier(id);
       }
     } catch (e) {

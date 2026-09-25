@@ -202,6 +202,7 @@ class DeliveryNote {
         'devis_id': devisId,
         'date': date.toIso8601String(),
         'status': status,
+        'custom_status': status,
         'pricing_mode': pricingMode,
         'global_discount_percent': globalDiscountPercent,
         'global_discount_amount': globalDiscountAmount,
@@ -245,7 +246,9 @@ class DeliveryNote {
       projectName: map['project_name']?.toString(),
       devisId: map['devis_id']?.toString(),
       date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
-      status: map['status']?.toString() ?? 'draft',
+      status: (map['custom_status'] != null && map['custom_status'].toString().isNotEmpty)
+          ? map['custom_status'].toString()
+          : (map['status']?.toString() ?? 'draft'),
       pricingMode: map['pricing_mode']?.toString() ?? 'ht',
       globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
       globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,

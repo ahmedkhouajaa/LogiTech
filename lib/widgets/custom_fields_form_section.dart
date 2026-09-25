@@ -139,7 +139,7 @@ class _CustomFieldsFormSectionState extends State<CustomFieldsFormSection> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(

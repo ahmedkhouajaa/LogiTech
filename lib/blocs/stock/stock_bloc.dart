@@ -88,6 +88,8 @@ class StockBloc extends Bloc<StockEvent, StockState> {
         final snap = await query.get();
         for (var doc in snap.docs) {
           final data = doc.data() as Map<String, dynamic>;
+          final pType = (data['product_type'] ?? data['productType'])?.toString().toLowerCase();
+          if (pType == 'service') continue;
           final qty = (data['stock_qty'] as num?)?.toDouble() ?? (data['stock'] as num?)?.toDouble() ?? 0.0;
           final price = (data['purchase_price'] as num?)?.toDouble() ?? (data['sale_price'] as num?)?.toDouble() ?? 0.0;
           totalStockValue += (qty * price);

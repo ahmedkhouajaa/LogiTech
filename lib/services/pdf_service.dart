@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -16,12 +17,47 @@ import '../utils/file_download_helper.dart';
 import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../utils/company_logo_helper.dart';
+import '../utils/support_image_reader.dart';
 import '../models/custom_field_definition.dart';
 import 'custom_fields_service.dart';
 
 class PdfService {
   static final PdfService instance = PdfService._();
   PdfService._();
+
+  // ── Font cache ────────────────────────────────────────────────────────────
+  // Google fonts are downloaded over the network the first time they are
+  // requested. Caching them as static fields means subsequent PDF generations
+  // are essentially instant (no network round-trip).
+  pw.Font? _cachedFontRegular;
+  pw.Font? _cachedFontBold;
+
+  /// Call this once after the app starts (e.g. in main.dart after runApp)
+  /// to pre-download fonts in the background so the first PDF is fast too.
+  Future<void> warmup() async {
+    try {
+      await _getFonts();
+    } catch (_) {}
+  }
+
+  Future<(pw.Font, pw.Font)> _getFonts() async {
+    if (_cachedFontRegular != null && _cachedFontBold != null) {
+      return (_cachedFontRegular!, _cachedFontBold!);
+    }
+    try {
+      // Try loading Google Fonts with a 2.5s timeout. If offline or timeout, fall back to built-in Helvetica.
+      final regular = await PdfGoogleFonts.robotoRegular().timeout(const Duration(milliseconds: 2500));
+      final bold = await PdfGoogleFonts.robotoBold().timeout(const Duration(milliseconds: 2500));
+      _cachedFontRegular = regular;
+      _cachedFontBold = bold;
+      return (regular, bold);
+    } catch (_) {
+      // Offline fallback: Use standard built-in PDF fonts (requires NO internet connection)
+      return (pw.Font.helvetica(), pw.Font.helveticaBold());
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
 
   Future<Uint8List> generateDocumentBytes(DocumentWrapper document, {DocumentTemplate? template}) async {
     final companySettings = await DatabaseHelper.instance.getCompanySettings();
@@ -64,6 +100,7 @@ class PdfService {
         item.customFields['designation'] = product.name;
         item.customFields['unit'] = product.unit;
         item.customFields['purchasePrice'] = product.purchasePrice;
+        item.customFields['category'] = product.category;
       }
     }
 
@@ -111,11 +148,24 @@ class PdfService {
     }
 
     // Fallback: If document has custom fields that weren't matched in definitions,
-    // still display them if not explicitly disabled
+    // still display them if not explicitly disabled.
+    // Internal system keys that should NEVER appear on the PDF:
+    const internalPdfBlocklist = {
+      'activecustomtaxes', 'customtaxestotal', 'fodecamount', 'fodecrate',
+      'withfodec', 'with_fodec', 'withtimbrefiscal', 'with_timbrefiscal',
+      'timbrefiscal', 'timbre_fiscal', 'fodec', 'tva', 'tvarate',
+      'customfields', 'documenttype', 'documenttitle', 'doctype',
+      'customerid', 'supplierid', 'projectid', 'warehouseid',
+      'createdat', 'updatedat', 'deletedat', 'issuedat', 'duedat',
+      'createdby', 'updatedby', 'status', 'paidamount', 'remainingamount',
+      'totalht', 'totalttc', 'totaltva', 'totalremise',
+      'remiseglobale', 'remise', 'discount',
+    };
     document.customFields.forEach((k, v) {
       if (v != null && v.toString().trim().isNotEmpty) {
         final lowerK = k.trim().toLowerCase();
         if (!seenLabels.contains(lowerK) &&
+            !internalPdfBlocklist.contains(lowerK) &&
             customFieldsToggles[k] != false &&
             k != 'customFields' &&
             !k.startsWith('_')) {
@@ -131,20 +181,43 @@ class PdfService {
       return await CanvasPdfGenerator.generateDocumentBytes(document, canvasDoc);
     }
 
-    // Load fonts
-    final fontRegular = await PdfGoogleFonts.robotoRegular();
-    final fontBold = await PdfGoogleFonts.robotoBold();
+    // Load fonts (cached after first download)
+    final (fontRegular, fontBold) = await _getFonts();
 
-    // Check if this is an internal warehouse stock document (Bons de sortie in Ventes are commercial documents)
-    final isStockDoc = document.documentType == 'stock_entry' ||
-        document.documentType == 'stock_withdrawal' ||
-        document.documentType == 'stock_transfer' ||
-        document.documentType == 'inventory_sheet' ||
-        document.documentTitle == "BON D'ENTRÉE" ||
-        document.documentTitle == "BON DE PRÉLÈVEMENT" ||
+    // Check if this is an inventory sheet
+    final isInventorySheet = document.documentType == 'inventory_sheet' ||
+        document.documentTitle == "FICHE D'INVENTAIRE" ||
+        document.documentTitle == "Fiche d'inventaire";
+    if (isInventorySheet) {
+      return await _buildInventorySheetDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
+    }
+
+    // Check if this is a stock transfer
+    final isStockTransfer = document.documentType == 'stock_transfer' ||
         document.documentTitle == "BON DE TRANSFERT" ||
-        document.documentTitle == "FICHE D'INVENTAIRE";
-    if (isStockDoc) {
+        document.documentTitle == "Bon de Transfert";
+    if (isStockTransfer) {
+      return await _buildStockTransferDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
+    }
+
+    // Check if this is a stock withdrawal (Bon de prélèvement)
+    final isStockWithdrawal = document.documentType == 'stock_withdrawal' ||
+        document.documentTitle.toUpperCase().contains("PRÉLÈVEMENT") ||
+        document.documentTitle.toUpperCase().contains("PRELEVEMENT");
+    if (isStockWithdrawal) {
+      return await _buildStockWithdrawalDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
+    }
+
+    // Check if this is a stock entry (Bon d'entrée)
+    final isStockEntry = document.documentType == 'stock_entry' ||
+        document.documentTitle.toUpperCase().contains("ENTRÉE") ||
+        document.documentTitle.toUpperCase().contains("ENTREE");
+    if (isStockEntry) {
+      return await _buildStockEntryDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
+    }
+
+    // Fallback for any other custom stock document
+    if (document.documentType == 'stock_movement' || document.documentType == 'stock_adjustment') {
       return await _buildStockDocument(document, companySettings, fontRegular, fontBold, config, customFieldsToPrint);
     }
 
@@ -849,6 +922,8 @@ class PdfService {
             _buildTotalRow('Total HT', formatCurrency(document.totalHT, symbol: currency)),
           if (showTaxes)
             _buildTotalRow('Total TVA', formatCurrency(document.totalTva, symbol: currency)),
+          if (document.fodecAmount > 0)
+            _buildTotalRow('FODEC (1%)', formatCurrency(document.fodecAmount, symbol: currency)),
           if (showTimbre && document.stampTax > 0)
             _buildTotalRow('Droit de Timbre', formatCurrency(document.stampTax, symbol: currency)),
           if (showTTC) ...[
@@ -1469,6 +1544,1674 @@ class PdfService {
         ],
       ),
     );
+  }
+
+  /// Helper to safely load company logo bytes from Base64 or local storage
+  Future<Uint8List?> _loadCompanyLogoBytes(CompanySettings settings) async {
+    final logoData = (settings.logoPath != null && settings.logoPath!.trim().isNotEmpty)
+        ? settings.logoPath
+        : EnterpriseService.instance.currentEnterprise?.logoUrl;
+    if (logoData == null || logoData.trim().isEmpty) return null;
+
+    var bytes = CompanyLogoHelper.decodeBase64Logo(logoData);
+    if (bytes == null || bytes.isEmpty) {
+      try {
+        bytes = await SupportImageReader.readFileBytes(logoData);
+      } catch (_) {}
+    }
+    return (bytes != null && bytes.isNotEmpty) ? bytes : null;
+  }
+
+  /// Helper widget to render company logo or a placeholder in stock documents
+  pw.Widget _buildPdfCompanyLogo(Uint8List? logoBytes, pw.Font fontRegular, {double width = 44, double height = 44}) {
+    if (logoBytes != null && logoBytes.isNotEmpty) {
+      return pw.Container(
+        width: width,
+        height: height,
+        child: pw.Image(
+          pw.MemoryImage(logoBytes),
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    }
+    return pw.Container(
+      width: width,
+      height: height,
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#F1F5F9'),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1'), width: 0.8),
+      ),
+      child: pw.Center(
+        child: pw.Text(
+          'Logo',
+          style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#94A3B8')),
+        ),
+      ),
+    );
+  }
+
+  /// Dedicated PDF layout for inventory sheets (Fiches d'inventaire)
+  Future<Uint8List> _buildInventorySheetDocument(
+    DocumentWrapper document,
+    CompanySettings settings,
+    pw.Font fontRegular,
+    pw.Font fontBold, [
+    Map<String, dynamic>? templateConfig,
+    List<Map<String, String>>? customFieldsToPrint,
+  ]) async {
+    final pdf = pw.Document();
+    final logoBytes = await _loadCompanyLogoBytes(settings);
+
+    String warehouseName = document.customData['warehouseName']?.toString() ?? '';
+    final warehouseId = document.customData['warehouseId']?.toString();
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      if (warehouseId != null && warehouseId.isNotEmpty) {
+        try {
+          final whs = await DatabaseHelper.instance.getWarehouses();
+          for (final w in whs) {
+            if (w.id == warehouseId && w.name.isNotEmpty) {
+              warehouseName = w.name;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      if (document.notes != null && document.notes!.trim().isNotEmpty && document.notes!.length < 50) {
+        warehouseName = document.notes!.trim();
+      } else {
+        warehouseName = 'Entrepôt par défaut';
+      }
+    }
+
+    final creationDateStr = DateFormat('dd/MM/yyyy').format(document.date);
+    DateTime? invDate = document.customData['inventoryDate'] as DateTime?;
+    final String inventoryDateStr;
+    if (invDate != null) {
+      inventoryDateStr = DateFormat('dd/MM/yyyy').format(invDate);
+    } else {
+      inventoryDateStr = creationDateStr;
+    }
+
+    final status = (document.customData['status']?.toString() ?? 'draft').toLowerCase();
+
+    // Group items by category/family
+    final Map<String, List<DocumentItemWrapper>> groupedItems = {};
+    for (final item in document.items) {
+      final cat = (item.customFields['category'] as String?)?.trim();
+      final family = (cat != null && cat.isNotEmpty) ? cat : 'Famille par défaut';
+      groupedItems.putIfAbsent(family, () => []).add(item);
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) {
+          final List<pw.Widget> content = [];
+
+          // Top divider
+          content.add(pw.Container(height: 1, color: PdfColor.fromHex('#E2E8F0')));
+          content.add(pw.SizedBox(height: 14));
+
+          // Document Title + Company Name Row
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    _buildPdfCompanyLogo(logoBytes, fontRegular),
+                    pw.SizedBox(width: 10),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 16,
+                            color: PdfColor.fromHex('#1E293B'),
+                          ),
+                        ),
+                        if (settings.phone != null && settings.phone!.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Tél: ${settings.phone}',
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Fiche d'inventaire",
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 20,
+                        color: PdfColor.fromHex('#0F172A'),
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.RichText(
+                      text: pw.TextSpan(
+                        children: [
+                          pw.TextSpan(
+                            text: 'Référence : ',
+                            style: pw.TextStyle(
+                              font: fontBold,
+                              fontSize: 10.5,
+                              color: PdfColor.fromHex('#475569'),
+                            ),
+                          ),
+                          pw.TextSpan(
+                            text: document.number,
+                            style: pw.TextStyle(
+                              font: fontRegular,
+                              fontSize: 10.5,
+                              color: PdfColor.fromHex('#334155'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          content.add(pw.SizedBox(height: 8));
+
+          // Status Badge
+          final String badgeText;
+          final PdfColor badgeBg;
+          final PdfColor badgeBorder;
+          final PdfColor badgeTextCol;
+          if (status == 'validated') {
+            badgeText = 'Validé';
+            badgeBg = PdfColor.fromHex('#ECFDF5');
+            badgeBorder = PdfColor.fromHex('#10B981');
+            badgeTextCol = PdfColor.fromHex('#047857');
+          } else if (status == 'cancelled') {
+            badgeText = 'Annulé';
+            badgeBg = PdfColor.fromHex('#FEF2F2');
+            badgeBorder = PdfColor.fromHex('#EF4444');
+            badgeTextCol = PdfColor.fromHex('#B91C1C');
+          } else {
+            badgeText = "En attente d'inventaire";
+            badgeBg = PdfColor.fromHex('#FFFBEB');
+            badgeBorder = PdfColor.fromHex('#F59E0B');
+            badgeTextCol = PdfColor.fromHex('#B45309');
+          }
+
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: pw.BoxDecoration(
+                    color: badgeBg,
+                    border: pw.Border.all(color: badgeBorder, width: 1),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                  ),
+                  child: pw.Text(
+                    badgeText,
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 9,
+                      color: badgeTextCol,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+          content.add(pw.SizedBox(height: 14));
+
+          // Magasin & Date Box
+          content.add(
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Magasin : $warehouseName',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10.5, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 5),
+                      pw.Text(
+                        'Date de création : $creationDateStr',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#475569')),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        "Date d'inventaire : $inventoryDateStr",
+                        style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#475569')),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+          content.add(pw.SizedBox(height: 14));
+
+          int globalIndex = 0;
+          groupedItems.forEach((family, items) {
+            // Family Header banner
+            content.add(
+              pw.Container(
+                margin: const pw.EdgeInsets.only(top: 8, bottom: 6),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#F1F5F9'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+                ),
+                child: pw.Row(
+                  children: [
+                    pw.Container(width: 4, height: 16, color: PdfColor.fromHex('#1A56DB')),
+                    pw.SizedBox(width: 8),
+                    pw.Text(
+                      family,
+                      style: pw.TextStyle(font: fontBold, fontSize: 11.5, color: PdfColor.fromHex('#0F172A')),
+                    ),
+                  ],
+                ),
+              ),
+            );
+
+            // Table of items
+            content.add(
+              pw.Table(
+                border: pw.TableBorder.all(
+                  color: PdfColor.fromHex('#CCCCCC'),
+                  width: 0.8,
+                ),
+                columnWidths: const {
+                  0: pw.FixedColumnWidth(34),   // #
+                  1: pw.FixedColumnWidth(95),   // Reference
+                  2: pw.FlexColumnWidth(3),     // Designation
+                  3: pw.FixedColumnWidth(65),   // Unit
+                  4: pw.FixedColumnWidth(110),  // Qte comptee
+                },
+                children: [
+                  // Table Header
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('#D4D4D8'),
+                    ),
+                    children: [
+                      _buildInventoryHeaderCell('#', fontBold, center: true),
+                      _buildInventoryHeaderCell('Référence', fontBold),
+                      _buildInventoryHeaderCell('Désignation', fontBold),
+                      _buildInventoryHeaderCell('Unité', fontBold, center: true),
+                      _buildInventoryHeaderCell('Qté comptée', fontBold, center: true),
+                    ],
+                  ),
+                  // Table Data Rows
+                  ...items.map((item) {
+                    globalIndex++;
+                    final ref = (item.customFields['reference'] as String?) ??
+                        (item.customFields['ref'] as String?) ??
+                        (item.customFields['code'] as String?) ??
+                        item.reference ??
+                        '';
+                    final name = (item.customFields['designation'] as String?) ?? item.productName;
+                    final unit = (item.customFields['unit'] as String?) ?? item.unit ?? 'Piece';
+
+                    final qty = item.quantity;
+                    final hasQty = qty > 0 || status == 'validated';
+                    final qtyStr = hasQty ? (qty == qty.toInt() ? qty.toInt().toString() : qty.toStringAsFixed(2)) : '';
+
+                    return pw.TableRow(
+                      verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text(
+                            '$globalIndex',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937')),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(
+                            ref,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937')),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(
+                            name,
+                            style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#000000')),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text(
+                            unit,
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937')),
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                          child: pw.Center(
+                            child: pw.Container(
+                              width: 90,
+                              height: 26,
+                              decoration: pw.BoxDecoration(
+                                color: PdfColors.white,
+                                border: pw.Border.all(color: PdfColor.fromHex('#9CA3AF'), width: 1),
+                                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                              ),
+                              child: pw.Center(
+                                child: pw.Text(
+                                  qtyStr,
+                                  style: pw.TextStyle(
+                                    font: fontBold,
+                                    fontSize: 11,
+                                    color: PdfColor.fromHex('#111827'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            );
+
+            content.add(pw.SizedBox(height: 12));
+          });
+
+          // Notes / Observations if present and not merely warehouse name
+          if (document.notes != null &&
+              document.notes!.trim().isNotEmpty &&
+              document.notes!.trim().toLowerCase() != warehouseName.toLowerCase()) {
+            content.add(
+              pw.Container(
+                width: double.infinity,
+                margin: const pw.EdgeInsets.only(top: 8, bottom: 8),
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#FFFBEB'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  border: pw.Border.all(color: PdfColor.fromHex('#FDE68A')),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Notes / Observations :',
+                      style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#92400E')),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      document.notes!.trim(),
+                      style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#78350F')),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Signature Block
+          content.add(pw.SizedBox(height: 28));
+          final countedBy = document.customData['countedBy'] as String?;
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        (countedBy != null && countedBy.trim().isNotEmpty)
+                            ? 'Compté par : ${countedBy.trim()}'
+                            : 'Compté par',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 24),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Nom & Signature de l\'agent',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Visa Responsable Stock',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 24),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Signature',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          return content;
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  pw.Widget _buildInventoryHeaderCell(String text, pw.Font fontBold, {bool center = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      child: pw.Text(
+        text,
+        textAlign: center ? pw.TextAlign.center : pw.TextAlign.left,
+        style: pw.TextStyle(
+          font: fontBold,
+          fontSize: 10,
+          color: PdfColor.fromHex('#111827'),
+        ),
+      ),
+    );
+  }
+
+  /// Dedicated PDF layout for stock transfers (Bons de transfert)
+  Future<Uint8List> _buildStockTransferDocument(
+    DocumentWrapper document,
+    CompanySettings settings,
+    pw.Font fontRegular,
+    pw.Font fontBold, [
+    Map<String, dynamic>? templateConfig,
+    List<Map<String, String>>? customFieldsToPrint,
+  ]) async {
+    final pdf = pw.Document();
+    final logoBytes = await _loadCompanyLogoBytes(settings);
+
+    String sourceWarehouse = document.customData['sourceWarehouseName']?.toString() ?? '';
+    String destWarehouse = document.customData['destinationWarehouseName']?.toString() ?? '';
+
+    if (sourceWarehouse.isEmpty || sourceWarehouse == 'default_warehouse') {
+      final srcId = document.customData['sourceWarehouseId']?.toString();
+      if (srcId != null && srcId.isNotEmpty) {
+        try {
+          final whs = await DatabaseHelper.instance.getWarehouses();
+          for (final w in whs) {
+            if (w.id == srcId && w.name.isNotEmpty) {
+              sourceWarehouse = w.name;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    if (sourceWarehouse.isEmpty || sourceWarehouse == 'default_warehouse') {
+      sourceWarehouse = 'Entrepôt par défaut';
+    }
+
+    if (destWarehouse.isEmpty || destWarehouse == 'default_warehouse') {
+      final destId = document.customData['destinationWarehouseId']?.toString();
+      if (destId != null && destId.isNotEmpty) {
+        try {
+          final whs = await DatabaseHelper.instance.getWarehouses();
+          for (final w in whs) {
+            if (w.id == destId && w.name.isNotEmpty) {
+              destWarehouse = w.name;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    if (destWarehouse.isEmpty || destWarehouse == 'default_warehouse') {
+      destWarehouse = 'Entrepôt Destination';
+    }
+
+    final transferDateStr = DateFormat('dd/MM/yyyy').format(document.date);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) {
+          final List<pw.Widget> content = [];
+
+          // Top divider
+          content.add(pw.Container(height: 1, color: PdfColor.fromHex('#E2E8F0')));
+          content.add(pw.SizedBox(height: 14));
+
+          // Document Title + Company Name Row
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    _buildPdfCompanyLogo(logoBytes, fontRegular),
+                    pw.SizedBox(width: 10),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 16,
+                            color: PdfColor.fromHex('#1E293B'),
+                          ),
+                        ),
+                        if (settings.phone != null && settings.phone!.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Tél: ${settings.phone}',
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Bon de Transfert",
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 20,
+                        color: PdfColor.fromHex('#0F172A'),
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.RichText(
+                      text: pw.TextSpan(
+                        children: [
+                          pw.TextSpan(
+                            text: 'Référence : ',
+                            style: pw.TextStyle(
+                              font: fontBold,
+                              fontSize: 10.5,
+                              color: PdfColor.fromHex('#475569'),
+                            ),
+                          ),
+                          pw.TextSpan(
+                            text: document.number,
+                            style: pw.TextStyle(
+                              font: fontRegular,
+                              fontSize: 10.5,
+                              color: PdfColor.fromHex('#334155'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Transfer Logistics Box
+          content.add(
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              'Entrepôt Source (Départ) :',
+                              style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                            ),
+                            pw.SizedBox(height: 3),
+                            pw.Text(
+                              sourceWarehouse,
+                              style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromHex('#EFF6FF'),
+                          border: pw.Border.all(color: PdfColor.fromHex('#BFDBFE'), width: 1),
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                        ),
+                        child: pw.Text(
+                          'TRANSFERT',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 9.5,
+                            color: PdfColor.fromHex('#1D4ED8'),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            pw.Text(
+                              'Entrepôt Destination (Arrivée) :',
+                              style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                            ),
+                            pw.SizedBox(height: 3),
+                            pw.Text(
+                              destWarehouse,
+                              style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Divider(color: PdfColor.fromHex('#E2E8F0'), height: 16),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Date de transfert : $transferDateStr',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#475569')),
+                      ),
+                      if (document.customData['reason'] != null && document.customData['reason'].toString().isNotEmpty)
+                        pw.Text(
+                          'Motif : ${document.customData['reason']}',
+                          style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#475569')),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Articles Table
+          content.add(
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColor.fromHex('#CCCCCC'),
+                width: 0.8,
+              ),
+              columnWidths: const {
+                0: pw.FixedColumnWidth(34),   // #
+                1: pw.FixedColumnWidth(100),  // Reference
+                2: pw.FlexColumnWidth(4),     // Designation
+                3: pw.FixedColumnWidth(70),   // Unit
+                4: pw.FixedColumnWidth(110),  // Qte transferee
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('#D4D4D8')),
+                  children: [
+                    _buildInventoryHeaderCell('#', fontBold, center: true),
+                    _buildInventoryHeaderCell('Référence', fontBold),
+                    _buildInventoryHeaderCell('Désignation', fontBold),
+                    _buildInventoryHeaderCell('Unité', fontBold, center: true),
+                    _buildInventoryHeaderCell('Qté transférée', fontBold, center: true),
+                  ],
+                ),
+                ...document.items.asMap().entries.map((entry) {
+                  final idx = entry.key + 1;
+                  final item = entry.value;
+                  final ref = (item.customFields['reference'] as String?) ??
+                      (item.customFields['ref'] as String?) ??
+                      (item.customFields['code'] as String?) ??
+                      item.reference ??
+                      '';
+                  final name = (item.customFields['designation'] as String?) ?? item.productName;
+                  final unit = (item.customFields['unit'] as String?) ?? item.unit ?? 'Piece';
+                  final qty = item.quantity;
+                  final qtyStr = qty == qty.toInt() ? '${qty.toInt()} $unit' : '$qty $unit';
+
+                  return pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                        child: pw.Text('$idx', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937'))),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        child: pw.Text(ref, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937'))),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        child: pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#000000'))),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                        child: pw.Text(unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1F2937'))),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        child: pw.Text(qtyStr, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontBold, fontSize: 10.5, color: PdfColor.fromHex('#1D4ED8'))),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          );
+
+          // Notes / Observations if present
+          if (document.notes != null && document.notes!.trim().isNotEmpty) {
+            content.add(pw.SizedBox(height: 12));
+            content.add(
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#FFFBEB'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  border: pw.Border.all(color: PdfColor.fromHex('#FDE68A')),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Notes / Observations :', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#92400E'))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.notes!.trim(), style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#78350F'))),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Dual Signatures
+          content.add(pw.SizedBox(height: 32));
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Émis par (Entrepôt Source)',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa expéditeur',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Réceptionné par (Destination)',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa destinataire',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          return content;
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  /// Dedicated PDF layout for stock withdrawals (Bons de prélèvement)
+  Future<Uint8List> _buildStockWithdrawalDocument(
+    DocumentWrapper document,
+    CompanySettings settings,
+    pw.Font fontRegular,
+    pw.Font fontBold, [
+    Map<String, dynamic>? templateConfig,
+    List<Map<String, String>>? customFieldsToPrint,
+  ]) async {
+    final pdf = pw.Document();
+    final logoBytes = await _loadCompanyLogoBytes(settings);
+
+    String warehouseName = document.customData['warehouseName']?.toString() ?? '';
+    final warehouseId = document.customData['warehouseId']?.toString();
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      if (warehouseId != null && warehouseId.isNotEmpty) {
+        try {
+          final whs = await DatabaseHelper.instance.getWarehouses();
+          for (final w in whs) {
+            if (w.id == warehouseId && w.name.isNotEmpty) {
+              warehouseName = w.name;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      warehouseName = 'Entrepôt par défaut';
+    }
+
+    final withdrawalDateStr = DateFormat('dd/MM/yyyy').format(document.date);
+    final String? reason = (document.customData['reason'] != null && document.customData['reason'].toString().trim().isNotEmpty)
+        ? document.customData['reason'].toString().trim()
+        : ((document.conditionsGenerales != null && document.conditionsGenerales!.trim().isNotEmpty)
+            ? document.conditionsGenerales!.trim()
+            : ((document.notes != null && document.notes!.trim().isNotEmpty && document.notes!.length < 100)
+                ? document.notes!.trim()
+                : null));
+
+    final String? demandeur = document.customData['createdBy']?.toString();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) {
+          final List<pw.Widget> content = [];
+
+          // Header
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    _buildPdfCompanyLogo(logoBytes, fontRegular),
+                    pw.SizedBox(width: 10),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 16,
+                            color: PdfColor.fromHex('#1E293B'),
+                          ),
+                        ),
+                        if (settings.phone != null && settings.phone!.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Tél: ${settings.phone}',
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                        if (settings.email != null && settings.email!.isNotEmpty) ...[
+                          pw.SizedBox(height: 1),
+                          pw.Text(
+                            settings.email!,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'BON DE PRÉLÈVEMENT',
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 20,
+                        color: PdfColor.fromHex('#0F172A'),
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Référence : ${document.number}',
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: 11,
+                        color: PdfColor.fromHex('#475569'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Withdrawal Info Card
+          content.add(
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Entrepôt de prélèvement :',
+                            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            warehouseName,
+                            style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                          ),
+                        ],
+                      ),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'Date de prélèvement :',
+                            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            withdrawalDateStr,
+                            style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (reason != null && reason.isNotEmpty) ...[
+                    pw.SizedBox(height: 8),
+                    pw.Container(height: 0.5, color: PdfColor.fromHex('#E2E8F0')),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      children: [
+                        pw.Text(
+                          'Motif : ',
+                          style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                        ),
+                        pw.Expanded(
+                          child: pw.Text(
+                            reason,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (demandeur != null && demandeur.isNotEmpty && demandeur != 'Admin') ...[
+                    pw.SizedBox(height: 6),
+                    pw.Row(
+                      children: [
+                        pw.Text(
+                          'Demandeur / Enregistré par : ',
+                          style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                        ),
+                        pw.Text(
+                          demandeur,
+                          style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Articles Table
+          content.add(
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Table(
+                border: pw.TableBorder(
+                  horizontalInside: pw.BorderSide(color: PdfColor.fromHex('#F1F5F9'), width: 1),
+                  verticalInside: pw.BorderSide(color: PdfColor.fromHex('#E2E8F0'), width: 0.8),
+                ),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(34),
+                  1: const pw.FixedColumnWidth(95),
+                  2: const pw.FlexColumnWidth(3),
+                  3: const pw.FixedColumnWidth(65),
+                  4: const pw.FixedColumnWidth(100),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: PdfColor.fromHex('#F1F5F9')),
+                    children: [
+                      _buildInventoryHeaderCell('#', fontBold, center: true),
+                      _buildInventoryHeaderCell('Référence', fontBold),
+                      _buildInventoryHeaderCell('Désignation', fontBold),
+                      _buildInventoryHeaderCell('Unité', fontBold, center: true),
+                      _buildInventoryHeaderCell('Qté prélevée', fontBold, center: true),
+                    ],
+                  ),
+                  ...document.items.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final item = entry.value;
+                    final isEven = idx % 2 == 0;
+                    final ref = (item.customFields['code'] as String?) ??
+                        (item.customFields['reference'] as String?) ??
+                        item.reference ??
+                        '';
+                    final name = item.productName;
+                    final unit = (item.customFields['unit'] as String?) ?? item.unit ?? 'Piece';
+                    final qty = item.quantity;
+                    final qtyStr = qty == qty.toInt() ? '${qty.toInt()} $unit' : '${qty.toStringAsFixed(2)} $unit';
+
+                    return pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: isEven ? PdfColors.white : PdfColor.fromHex('#F8FAFC'),
+                      ),
+                      verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text('${idx + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#64748B'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(ref.isNotEmpty ? ref : '—', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#475569'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#0F172A'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text(unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(qtyStr, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontBold, fontSize: 10.5, color: PdfColor.fromHex('#1D4ED8'))),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          );
+
+          // Summary box (Totals)
+          final totalQty = document.items.fold(0.0, (s, i) => s + i.quantity);
+          final totalQtyStr = totalQty == totalQty.toInt() ? '${totalQty.toInt()}' : totalQty.toStringAsFixed(2);
+          content.add(pw.SizedBox(height: 12));
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('#F8FAFC'),
+                    border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text('Total articles : ', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                      pw.Text('${document.items.length}', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#0F172A'))),
+                      pw.SizedBox(width: 16),
+                      pw.Text('Total prélevé : ', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                      pw.Text('$totalQtyStr unités', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1D4ED8'))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          // Notes if present and different from reason
+          if (document.notes != null &&
+              document.notes!.trim().isNotEmpty &&
+              document.notes!.trim() != reason) {
+            content.add(pw.SizedBox(height: 12));
+            content.add(
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#FFFBEB'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  border: pw.Border.all(color: PdfColor.fromHex('#FDE68A')),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Notes / Observations :', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#92400E'))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.notes!.trim(), style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#78350F'))),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Dual Signatures
+          content.add(pw.SizedBox(height: 36));
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Demandeur / Bénéficiaire',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa demandeur',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Responsable Stock / Magasinier',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa magasinier',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          return content;
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  /// Dedicated PDF layout for stock entries (Bons d'entrée)
+  Future<Uint8List> _buildStockEntryDocument(
+    DocumentWrapper document,
+    CompanySettings settings,
+    pw.Font fontRegular,
+    pw.Font fontBold, [
+    Map<String, dynamic>? templateConfig,
+    List<Map<String, String>>? customFieldsToPrint,
+  ]) async {
+    final pdf = pw.Document();
+    final logoBytes = await _loadCompanyLogoBytes(settings);
+
+    String warehouseName = document.customData['warehouseName']?.toString() ?? '';
+    final warehouseId = document.customData['warehouseId']?.toString();
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      if (warehouseId != null && warehouseId.isNotEmpty) {
+        try {
+          final whs = await DatabaseHelper.instance.getWarehouses();
+          for (final w in whs) {
+            if (w.id == warehouseId && w.name.isNotEmpty) {
+              warehouseName = w.name;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    if (warehouseName.isEmpty || warehouseName == 'Non spécifié' || warehouseName == 'default_warehouse') {
+      warehouseName = 'Entrepôt par défaut';
+    }
+
+    final entryDateStr = DateFormat('dd/MM/yyyy').format(document.date);
+    final String? reason = (document.customData['reason'] != null && document.customData['reason'].toString().trim().isNotEmpty)
+        ? document.customData['reason'].toString().trim()
+        : ((document.notes != null && document.notes!.trim().isNotEmpty && document.notes!.length < 100 && !document.notes!.toLowerCase().contains('confiance'))
+            ? document.notes!.trim()
+            : null);
+
+    final String? enregistrePar = document.customData['createdBy']?.toString();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) {
+          final List<pw.Widget> content = [];
+
+          // Header
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    _buildPdfCompanyLogo(logoBytes, fontRegular),
+                    pw.SizedBox(width: 10),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 16,
+                            color: PdfColor.fromHex('#1E293B'),
+                          ),
+                        ),
+                        if (settings.phone != null && settings.phone!.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Tél: ${settings.phone}',
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                        if (settings.email != null && settings.email!.isNotEmpty) ...[
+                          pw.SizedBox(height: 1),
+                          pw.Text(
+                            settings.email!,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 9, color: PdfColor.fromHex('#64748B')),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "BON D'ENTRÉE",
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 20,
+                        color: PdfColor.fromHex('#0F172A'),
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Référence : ${document.number}',
+                      style: pw.TextStyle(
+                        font: fontRegular,
+                        fontSize: 11,
+                        color: PdfColor.fromHex('#475569'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Stock Entry Info Card
+          content.add(
+            pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            'Entrepôt de réception (Entrée) :',
+                            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            warehouseName,
+                            style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                          ),
+                        ],
+                      ),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'Date d\'entrée :',
+                            style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                          ),
+                          pw.SizedBox(height: 3),
+                          pw.Text(
+                            entryDateStr,
+                            style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F172A')),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (reason != null && reason.isNotEmpty) ...[
+                    pw.SizedBox(height: 8),
+                    pw.Container(height: 0.5, color: PdfColor.fromHex('#E2E8F0')),
+                    pw.SizedBox(height: 8),
+                    pw.Row(
+                      children: [
+                        pw.Text(
+                          'Motif : ',
+                          style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                        ),
+                        pw.Expanded(
+                          child: pw.Text(
+                            reason,
+                            style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (enregistrePar != null && enregistrePar.isNotEmpty && enregistrePar != 'Admin') ...[
+                    pw.SizedBox(height: 6),
+                    pw.Row(
+                      children: [
+                        pw.Text(
+                          'Enregistré par : ',
+                          style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#64748B')),
+                        ),
+                        pw.Text(
+                          enregistrePar,
+                          style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+          content.add(pw.SizedBox(height: 16));
+
+          // Articles Table
+          content.add(
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Table(
+                border: pw.TableBorder(
+                  horizontalInside: pw.BorderSide(color: PdfColor.fromHex('#F1F5F9'), width: 1),
+                  verticalInside: pw.BorderSide(color: PdfColor.fromHex('#E2E8F0'), width: 0.8),
+                ),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(34),
+                  1: const pw.FixedColumnWidth(95),
+                  2: const pw.FlexColumnWidth(3),
+                  3: const pw.FixedColumnWidth(65),
+                  4: const pw.FixedColumnWidth(100),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: PdfColor.fromHex('#F1F5F9')),
+                    children: [
+                      _buildInventoryHeaderCell('#', fontBold, center: true),
+                      _buildInventoryHeaderCell('Référence', fontBold),
+                      _buildInventoryHeaderCell('Désignation', fontBold),
+                      _buildInventoryHeaderCell('Unité', fontBold, center: true),
+                      _buildInventoryHeaderCell('Qté entrée', fontBold, center: true),
+                    ],
+                  ),
+                  ...document.items.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final item = entry.value;
+                    final isEven = idx % 2 == 0;
+                    final ref = (item.customFields['code'] as String?) ??
+                        (item.customFields['reference'] as String?) ??
+                        item.reference ??
+                        '';
+                    final name = item.productName;
+                    final unit = (item.customFields['unit'] as String?) ?? item.unit ?? 'Piece';
+                    final qty = item.quantity;
+                    final qtyStr = qty == qty.toInt() ? '${qty.toInt()} $unit' : '${qty.toStringAsFixed(2)} $unit';
+
+                    return pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: isEven ? PdfColors.white : PdfColor.fromHex('#F8FAFC'),
+                      ),
+                      verticalAlignment: pw.TableCellVerticalAlignment.middle,
+                      children: [
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text('${idx + 1}', textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColor.fromHex('#64748B'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(ref.isNotEmpty ? ref : '—', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#475569'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#0F172A'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                          child: pw.Text(unit, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          child: pw.Text(qtyStr, textAlign: pw.TextAlign.center, style: pw.TextStyle(font: fontBold, fontSize: 10.5, color: PdfColor.fromHex('#1D4ED8'))),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          );
+
+          // Summary box (Totals)
+          final totalQty = document.items.fold(0.0, (s, i) => s + i.quantity);
+          final totalQtyStr = totalQty == totalQty.toInt() ? '${totalQty.toInt()}' : totalQty.toStringAsFixed(2);
+          content.add(pw.SizedBox(height: 12));
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('#F8FAFC'),
+                    border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Row(
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text('Total articles : ', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                      pw.Text('${document.items.length}', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#0F172A'))),
+                      pw.SizedBox(width: 16),
+                      pw.Text('Total entré : ', style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#64748B'))),
+                      pw.Text('$totalQtyStr unités', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1D4ED8'))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          // Notes if present and different from reason
+          if (document.notes != null &&
+              document.notes!.trim().isNotEmpty &&
+              document.notes!.trim() != reason &&
+              !document.notes!.toLowerCase().contains('confiance')) {
+            content.add(pw.SizedBox(height: 12));
+            content.add(
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#FFFBEB'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  border: pw.Border.all(color: PdfColor.fromHex('#FDE68A')),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Notes / Observations :', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#92400E'))),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.notes!.trim(), style: pw.TextStyle(font: fontRegular, fontSize: 9.5, color: PdfColor.fromHex('#78350F'))),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Dual Signatures
+          content.add(pw.SizedBox(height: 36));
+          content.add(
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Réceptionné par (Magasinier)',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa magasinier',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.Container(
+                  width: 200,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Validé / Contrôlé par (Responsable)',
+                        style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#1E293B')),
+                      ),
+                      pw.SizedBox(height: 28),
+                      pw.Container(width: 180, height: 0.8, color: PdfColor.fromHex('#475569')),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Date & Visa responsable',
+                        style: pw.TextStyle(font: fontRegular, fontSize: 8.5, color: PdfColor.fromHex('#64748B')),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          return content;
+        },
+      ),
+    );
+
+    return await pdf.save();
   }
 }
 

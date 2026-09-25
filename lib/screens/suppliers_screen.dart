@@ -17,6 +17,7 @@ import '../widgets/import_export/contact_import_dialog.dart';
 import 'supplier_detail_screen.dart';
 import '../widgets/supplier_history_dialog.dart';
 import '../l10n/app_localizations.dart';
+import '../services/trial_service.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -105,7 +106,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               ],
               SizedBox(
                 width: 250,
-                height: 32,
+                height: 34,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
               const SizedBox(width: 10),
@@ -1107,11 +1108,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                 ? Column(
                                     children: [
                                       AppTextField(
-                                        label: 'Email Personnel *',
+                                        label: 'Email Personnel',
                                         hint: 'Saisissez l\'email personnel',
                                         controller: _emailCtrl,
                                         keyboardType: TextInputType.emailAddress,
-                                        validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                        validator: (v) => (v != null && v.trim().isNotEmpty && !v.contains('@')) ? 'Email invalide' : null,
                                       ),
                                       SizedBox(height: 12),
                                       AppTextField(
@@ -1125,11 +1126,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     children: [
                                       Expanded(
                                         child: AppTextField(
-                                          label: 'Email Personnel *',
+                                          label: 'Email Personnel',
                                           hint: 'Saisissez l\'email personnel',
                                           controller: _emailCtrl,
                                           keyboardType: TextInputType.emailAddress,
-                                          validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                          validator: (v) => (v != null && v.trim().isNotEmpty && !v.contains('@')) ? 'Email invalide' : null,
                                         ),
                                       ),
                                       SizedBox(width: 16),
@@ -1168,11 +1169,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                       ),
                                       SizedBox(height: 12),
                                       AppTextField(
-                                        label: 'Email Personnel *',
+                                        label: 'Email Personnel',
                                         hint: 'Saisissez l\'email personnel',
                                         controller: _emailCtrl,
                                         keyboardType: TextInputType.emailAddress,
-                                        validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                        validator: (v) => (v != null && v.trim().isNotEmpty && !v.contains('@')) ? 'Email invalide' : null,
                                       ),
                                     ],
                                   )
@@ -1189,11 +1190,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                       SizedBox(width: 16),
                                       Expanded(
                                         child: AppTextField(
-                                          label: 'Email Personnel *',
+                                          label: 'Email Personnel',
                                           hint: 'Saisissez l\'email personnel',
                                           controller: _emailCtrl,
                                           keyboardType: TextInputType.emailAddress,
-                                          validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                          validator: (v) => (v != null && v.trim().isNotEmpty && !v.contains('@')) ? 'Email invalide' : null,
                                         ),
                                       ),
                                     ],
@@ -1273,7 +1274,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Numero de Telephone *',
+                                'Numero de Telephone',
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                               SizedBox(height: 6),
@@ -1325,7 +1326,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     child: TextFormField(
                                       controller: _phoneCtrl,
                                       keyboardType: TextInputType.phone,
-                                      validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
+                                      // Phone is optional
                                       style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                                       decoration: InputDecoration(
                                         hintText: 'Saisissez le numero de telephone',
@@ -1837,6 +1838,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
       referenceCode: _referenceCtrl.text.trim().isEmpty ? null : _referenceCtrl.text.trim(),
     );
     if (widget.existing == null) {
+      if (!TrialService.instance.checkCanCreate(context)) return;
       context.read<SuppliersBloc>().add(AddSupplier(supplier));
     } else {
       context.read<SuppliersBloc>().add(UpdateSupplier(supplier));

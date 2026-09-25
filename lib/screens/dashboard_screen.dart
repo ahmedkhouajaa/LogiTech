@@ -22,8 +22,11 @@ class DashboardScreen extends StatelessWidget {
           return const DashboardShimmerWidget();
         }
         if (state is DashboardError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(
+            message: state.message,
+            onRetry: () => context.read<DashboardBloc>().add(DashboardRefreshRequested()),
+          );
+        }
         if (state is DashboardLoaded) {
           print('DashboardScreen: received DashboardLoaded!');
           return _buildDashboard(context, state);

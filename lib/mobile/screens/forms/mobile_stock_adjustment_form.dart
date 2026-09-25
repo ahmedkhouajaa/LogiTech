@@ -13,6 +13,7 @@ import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../services/trial_service.dart';
 
 class MobileStockAdjustmentForm extends StatefulWidget {
   const MobileStockAdjustmentForm({super.key});
@@ -74,9 +75,10 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
   }
 
   void _save() {
-    if (_selectedProduct == null) {
+    if (!TrialService.instance.checkCanCreate(context)) return;
+    if (_selectedProduct == null || _selectedProduct!.isService) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('Veuillez sélectionner un article')), backgroundColor: AppColors.error),
+        SnackBar(content: Text(context.tr('Les services ne peuvent pas faire l\'objet d\'un ajustement de stock.')), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -186,7 +188,8 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           hint: context.tr('Rechercher un article...'),
                           selectedText: _selectedProduct?.name,
                           onTap: () async {
-                            final res = await showProductSelectDialog(context, pState.products, warehouseId: _selectedWarehouseId);
+                            final nonServiceProds = pState.products.where((p) => !p.isService).toList();
+                            final res = await showProductSelectDialog(context, nonServiceProds, warehouseId: _selectedWarehouseId, excludeServices: true);
                             if (res != null && mounted) {
                               final p = pState.products.cast<Product?>().firstWhere((item) => item?.id == res, orElse: () => null);
                               if (p != null) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'create_article_screen.dart';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
@@ -12,6 +13,8 @@ import '../models/supplier_credit_note.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -20,8 +23,10 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
 import '../services/document_numbering_service.dart';
+import '../widgets/document_tax_settings_dialog.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../services/trial_service.dart';
 
 enum SupplierCreditNoteStatus {
   draft('Brouillon'),
@@ -65,8 +70,12 @@ class _CreateSupplierCreditNoteScreenState
   final _conditionsCtrl = TextEditingController();
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   SupplierCreditNoteStatus _status = SupplierCreditNoteStatus.draft;
 
   // Custom fields
@@ -103,9 +112,45 @@ class _CreateSupplierCreditNoteScreenState
     });
   }
 
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0;
+
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
   double get _totalTTC =>
-      _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+      _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'purchase',
+    );
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -116,6 +161,11 @@ class _CreateSupplierCreditNoteScreenState
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -128,6 +178,13 @@ class _CreateSupplierCreditNoteScreenState
       _notesCtrl.text = n.reason ?? '';
       _conditionsCtrl.text = n.reason ?? '';
       _customFields = n.customFields != null ? Map<String, dynamic>.from(n.customFields!) : {};
+      _withTimbreFiscal = n.customFields?['withTimbreFiscal'] != false;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (n.customFields!['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _items = n.items.map((i) => SupplierCreditNoteItem(
         id: i.id,
         supplierCreditNoteId: i.supplierCreditNoteId,
@@ -143,6 +200,7 @@ class _CreateSupplierCreditNoteScreenState
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     _vehicleCtrl.dispose();
@@ -153,6 +211,9 @@ class _CreateSupplierCreditNoteScreenState
   // aâ€â‚¬aâ€â‚¬ Save aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
   Future<void> _save() async {
     if (_isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() {
       _hasAttemptedSubmit = true;
       _isSaving = true;
@@ -232,7 +293,15 @@ class _CreateSupplierCreditNoteScreenState
       date: _date,
       status: _status.name,
       reason: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      customFields: _customFields,
+      customFields: {
+        ..._customFields,
+        'withFodec': _withFodec,
+        'fodecAmount': _fodecAmount,
+        'fodecRate': 1.0,
+        'withTimbreFiscal': _withTimbreFiscal,
+        'activeCustomTaxes': _activeCustomTaxes,
+        'customTaxesTotal': _customTaxesTotal,
+      },
       items: _items.map((item) => SupplierCreditNoteItem(
         id: item.id,
         supplierCreditNoteId: noteId,
@@ -338,7 +407,7 @@ class _CreateSupplierCreditNoteScreenState
           SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
           SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -391,7 +460,7 @@ class _CreateSupplierCreditNoteScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -606,7 +675,7 @@ class _CreateSupplierCreditNoteScreenState
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -729,7 +798,7 @@ class _CreateSupplierCreditNoteScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -1021,10 +1090,10 @@ class _CreateSupplierCreditNoteScreenState
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
-                    final price = product.purchasePrice > 0 ? product.purchasePrice : product.sellingPrice;
+                    final price = product.purchasePrice;
                     setState(() {
                       _items.add(SupplierCreditNoteItem(
                         id: _uuid.v4(),
@@ -1057,9 +1126,9 @@ class _CreateSupplierCreditNoteScreenState
                   productId: res.id,
                   designation: res.name,
                   quantity: -1,
-                  unitPrice: res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice,
+                  unitPrice: res.purchasePrice,
                   tvaRate: res.tvaRate,
-                  totalHT: -1 * (res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice),
+                  totalHT: -1 * res.purchasePrice,
                 ));
               });
             }
@@ -1165,14 +1234,21 @@ class _CreateSupplierCreditNoteScreenState
     );
   }
 
-  // aâ€â‚¬aâ€â‚¬ Totals Section aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
+  // ─── Totals Section ──────────────────────────────────────────────
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine('Sous-total HT:',
                 formatCurrencyDT(_totalHTAfterDiscount)),
@@ -1182,11 +1258,48 @@ class _CreateSupplierCreditNoteScreenState
                   child: _buildTotalLine('TVA ${entry.key.toInt()}%:',
                       formatCurrencyDT(entry.value)),
                 )),
-            if (_withTimbreFiscal) ...[
-              _buildTotalLine(
-                  'Timbre fiscal:', formatCurrencyDT(_timbreFiscal)),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
               SizedBox(height: 6),
             ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(context.tr('Timbre fiscal:'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:',
                   '- ${formatCurrencyDT(_globalDiscountAmount)}'),
@@ -1208,34 +1321,6 @@ class _CreateSupplierCreditNoteScreenState
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary)),
               ],
-            ),
-            SizedBox(height: 8),
-            // Timbre fiscal toggle
-            InkWell(
-              onTap: () =>
-                  setState(() => _withTimbreFiscal = !_withTimbreFiscal),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: Checkbox(
-                      value: _withTimbreFiscal,
-                      onChanged: (v) => setState(
-                          () => _withTimbreFiscal = v ?? true),
-                      materialTapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
-                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  Text('Timbre fiscal (1 DT)',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary)),
-                ],
-              ),
             ),
           ],
         ),

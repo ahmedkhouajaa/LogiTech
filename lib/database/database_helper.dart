@@ -765,11 +765,79 @@ class DatabaseHelper {
   Future<void> deleteWarehouse(String id) async {}
 
   // Checks & Traites
-  Future<List<CheckTraite>> getChecksTraites() async => [];
-  Future<List<CheckTraite>> getUpcomingChecksTraites() async => [];
-  Future<void> insertCheckTraite(dynamic item) async {}
-  Future<void> updateCheckTraiteStatus(String id, String status, {String? paymentId}) async {}
-  Future<void> deleteCheckTraite(String id) async {}
+  Future<List<CheckTraite>> getChecksTraites() async {
+    final eid = currentEnterpriseId;
+    try {
+      Query query = _firestore.collection('cheque_traite');
+      if (eid != null && eid.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: eid);
+      }
+      final snap = await query.get();
+      final list = snap.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return CheckTraite.fromMap(data);
+      }).where((ct) => ct.id.isNotEmpty).toList();
+
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error getting cheque_traite: $e');
+      return [];
+    }
+  }
+
+  Future<List<CheckTraite>> getUpcomingChecksTraites() async {
+    final all = await getChecksTraites();
+    final now = DateTime.now();
+    return all.where((c) => c.status == 'en_attente' && c.maturityDate.isAfter(now.subtract(const Duration(days: 1)))).toList();
+  }
+
+  Future<void> insertCheckTraite(dynamic item) async {
+    try {
+      final CheckTraite ct = item is CheckTraite ? item : CheckTraite.fromMap(item as Map<String, dynamic>);
+      final data = ct.toMap();
+      final eid = currentEnterpriseId;
+      if (eid != null && eid.isNotEmpty) {
+        data['enterprise_id'] = eid;
+      }
+      await _firestore.collection('cheque_traite').doc(ct.id).set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error inserting cheque_traite: $e');
+    }
+  }
+
+  Future<void> updateCheckTraite(CheckTraite ct) async {
+    try {
+      final data = ct.toMap();
+      await _firestore.collection('cheque_traite').doc(ct.id).set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error updating cheque_traite: $e');
+    }
+  }
+
+  Future<void> updateCheckTraiteStatus(String id, String status, {String? paymentId, DateTime? dateDepot}) async {
+    try {
+      final updates = <String, dynamic>{
+        'status': status,
+        'statut': status,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
+      if (paymentId != null) updates['payment_id'] = paymentId;
+      if (dateDepot != null) updates['date_depot'] = dateDepot.toIso8601String();
+      await _firestore.collection('cheque_traite').doc(id).set(updates, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error updating cheque_traite status: $e');
+    }
+  }
+
+  Future<void> deleteCheckTraite(String id) async {
+    try {
+      await _firestore.collection('cheque_traite').doc(id).delete();
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error deleting cheque_traite: $e');
+    }
+  }
 
   // Projects & Documents & Reports
   Future<List<Project>> getProjects() async => [];

@@ -233,13 +233,24 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
       for (var item in event.transfer.items) {
         if (item.productId.isNotEmpty && item.quantityToTransfer > 0) {
           String? prodName;
+          bool isService = false;
           try {
-            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-            final doc = await prodRef.get();
+            final prodRef = FirebaseFirestore.instance.collection('articles').doc(item.productId);
+            var doc = await prodRef.get();
+            if (!doc.exists) {
+              doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+            }
             if (doc.exists && doc.data() != null) {
-              prodName = doc.data()!['name']?.toString();
+              final pType = (doc.data()!['product_type'] ?? doc.data()!['productType'])?.toString().toLowerCase();
+              if (pType == 'service') {
+                isService = true;
+              } else {
+                prodName = doc.data()!['name']?.toString();
+              }
             }
           } catch (_) {}
+
+          if (isService) continue;
 
           String? srcWhName;
           try {

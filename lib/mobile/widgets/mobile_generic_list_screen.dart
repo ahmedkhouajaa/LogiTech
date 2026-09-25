@@ -6,6 +6,7 @@ import 'mobile_filter_chips.dart';
 import 'mobile_empty_state.dart';
 import '../../services/sync_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/trial_service.dart';
 import 'shimmer_card.dart';
 import '../../widgets/shimmer_effect.dart';
 import '../../l10n/app_localizations.dart';
@@ -65,7 +66,8 @@ class MobileGenericListScreen extends StatelessWidget {
       builder: (context, _, __) {
         final resKey = PermissionService.instance.getResourceKeyForModule(activeModule);
         final canRead = PermissionService.instance.canAccessModule(activeModule);
-        final canCreate = resKey != null ? PermissionService.instance.canCreate(resKey) : PermissionService.instance.isAdmin;
+        final canCreate =
+            (resKey != null ? PermissionService.instance.canCreate(resKey) : PermissionService.instance.isAdmin);
 
         if (!canRead) {
           return Scaffold(

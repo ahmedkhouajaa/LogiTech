@@ -69,7 +69,9 @@ class Product {
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
-  bool get isLowStock => stockQty <= lowStockThreshold && lowStockAlert;
+  bool get isService => productType.toLowerCase() == 'service';
+
+  bool get isLowStock => !isService && stockQty <= lowStockThreshold && lowStockAlert;
 
   bool get isForSale => destination == 'Vente' || destination == 'Vente et Achat';
   bool get isForPurchase => destination == 'Achat' || destination == 'Vente et Achat';

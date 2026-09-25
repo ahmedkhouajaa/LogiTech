@@ -23,7 +23,6 @@ import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
 import '../../screens/create_stock_withdrawal_screen.dart';
-import '../../screens/exit_vouchers_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
@@ -90,6 +89,10 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
   }
 
   DocumentWrapper _createDocumentWrapper(StockWithdrawal note) {
+    final String? reason = (note.conditionsGenerales != null && note.conditionsGenerales!.trim().isNotEmpty)
+        ? note.conditionsGenerales!.trim()
+        : ((note.notes != null && note.notes!.trim().isNotEmpty) ? note.notes!.trim() : null);
+
     return DocumentWrapper(
       id: note.id,
       number: note.number,
@@ -103,10 +106,15 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       stampTax: note.timbreFiscal,
       totalTTC: note.totalTTC,
       notes: note.notes,
-      conditionsGenerales: note.conditionsGenerales,
+      conditionsGenerales: widget.isExitVoucher ? note.conditionsGenerales : null,
       items: note.items.map((item) {
         final product = _getProduct(item.productId);
+        final refCode = (product?.reference != null && product!.reference!.isNotEmpty) 
+            ? product.reference 
+            : (product?.code ?? '');
         return DocumentItemWrapper(
+          productId: item.productId,
+          reference: refCode,
           productName: product?.name ?? 'Article Inconnu',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -114,9 +122,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
           discountPercent: item.discountPercent,
           totalHT: item.totalHT,
           customFields: {
-            'code': (product?.reference != null && product!.reference!.isNotEmpty) 
-                ? product.reference 
-                : (product?.code ?? ''),
+            'code': refCode,
             'unit': product?.unit ?? 'pièce',
             'purchasePrice': product?.purchasePrice ?? 0,
           },
@@ -125,8 +131,10 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       customFields: note.customFields,
       customData: {
         'warehouseId': note.warehouseId,
-        'warehouseName': 'Entrepôt par défaut',
-        'createdBy': 'Admin',
+        'warehouseName': note.warehouseId ?? 'Entrepôt par défaut',
+        'reason': reason,
+        'createdBy': note.createdBy ?? 'Admin',
+        'status': note.status,
         'projectName': note.projectName,
         'driverName': note.driverName,
         'vehicleRegistration': note.vehicleRegistration,
@@ -157,35 +165,65 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     final statusColor = sInfo.color;
     final resKey = widget.isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
 
+    final String? withdrawalReason = (currentWithdrawal.conditionsGenerales != null && currentWithdrawal.conditionsGenerales!.trim().isNotEmpty)
+        ? currentWithdrawal.conditionsGenerales!.trim()
+        : ((currentWithdrawal.notes != null && currentWithdrawal.notes!.trim().isNotEmpty) ? currentWithdrawal.notes!.trim() : null);
+
     final infoSections = [
       PremiumInfoSection(
         title: context.tr('Informations Générales'),
         icon: Icons.info_outline,
         fields: [
-          if (currentWithdrawal.customerName != null && currentWithdrawal.customerName!.isNotEmpty)
+          if (!widget.isExitVoucher) ...[
             PremiumInfoField(
-              label: context.tr('Client'),
-              value: currentWithdrawal.customerName!,
-              icon: Icons.person_outline,
+              label: context.tr('Entrepôt'),
+              value: warehouseName,
+              icon: Icons.warehouse_outlined,
               isHighlight: true,
             ),
-          PremiumInfoField(
-            label: context.tr('Entrepôt'),
-            value: warehouseName,
-            icon: Icons.warehouse_outlined,
-            isHighlight: currentWithdrawal.customerName == null,
-          ),
-          PremiumInfoField(
-            label: 'Date',
-            value: formatDateTimeLong(currentWithdrawal.date),
-            icon: Icons.calendar_today_outlined,
-          ),
-          if (currentWithdrawal.projectName != null && currentWithdrawal.projectName!.isNotEmpty)
             PremiumInfoField(
-              label: 'Projet',
-              value: currentWithdrawal.projectName!,
-              icon: Icons.work_outline,
+              label: context.tr('Date de prélèvement'),
+              value: formatDateTimeLong(currentWithdrawal.date),
+              icon: Icons.calendar_today_outlined,
             ),
+            if (withdrawalReason != null && withdrawalReason.isNotEmpty)
+              PremiumInfoField(
+                label: context.tr('Motif'),
+                value: withdrawalReason,
+                icon: Icons.assignment_outlined,
+              ),
+            if (currentWithdrawal.createdBy != null && currentWithdrawal.createdBy!.isNotEmpty)
+              PremiumInfoField(
+                label: context.tr('Demandeur'),
+                value: currentWithdrawal.createdBy!,
+                icon: Icons.person_outline,
+              ),
+          ] else ...[
+            if (currentWithdrawal.customerName != null && currentWithdrawal.customerName!.isNotEmpty)
+              PremiumInfoField(
+                label: context.tr('Client'),
+                value: currentWithdrawal.customerName!,
+                icon: Icons.person_outline,
+                isHighlight: true,
+              ),
+            PremiumInfoField(
+              label: context.tr('Entrepôt'),
+              value: warehouseName,
+              icon: Icons.warehouse_outlined,
+              isHighlight: currentWithdrawal.customerName == null,
+            ),
+            PremiumInfoField(
+              label: 'Date',
+              value: formatDateTimeLong(currentWithdrawal.date),
+              icon: Icons.calendar_today_outlined,
+            ),
+            if (currentWithdrawal.projectName != null && currentWithdrawal.projectName!.isNotEmpty)
+              PremiumInfoField(
+                label: 'Projet',
+                value: currentWithdrawal.projectName!,
+                icon: Icons.work_outline,
+              ),
+          ],
         ],
       ),
     ];
@@ -208,19 +246,31 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     }).toList();
 
     final totals = <PremiumTotalRow>[
-      PremiumTotalRow(
-        label: context.tr('Total HT'),
-        amount: currentWithdrawal.subTotalHT,
-      ),
-      PremiumTotalRow(
-        label: context.tr('Total TVA'),
-        amount: currentWithdrawal.totalTVA,
-      ),
-      PremiumTotalRow(
-        label: context.tr('Total TTC'),
-        amount: currentWithdrawal.totalTTC,
-        isGrandTotal: true,
-      ),
+      if (!widget.isExitVoucher) ...[
+        PremiumTotalRow(
+          label: context.tr('Nombre d\'articles'),
+          formattedValue: '${currentWithdrawal.items.length}',
+        ),
+        PremiumTotalRow(
+          label: context.tr('Total unités prélevées'),
+          formattedValue: '${currentWithdrawal.items.fold(0.0, (sum, i) => sum + i.quantity).toInt()}',
+          isGrandTotal: true,
+        ),
+      ] else ...[
+        PremiumTotalRow(
+          label: context.tr('Total HT'),
+          amount: currentWithdrawal.subTotalHT,
+        ),
+        PremiumTotalRow(
+          label: context.tr('Total TVA'),
+          amount: currentWithdrawal.totalTVA,
+        ),
+        PremiumTotalRow(
+          label: context.tr('Total TTC'),
+          amount: currentWithdrawal.totalTTC,
+          isGrandTotal: true,
+        ),
+      ],
     ];
 
     return MultiBlocListener(
@@ -318,7 +368,8 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
           infoSections: infoSections,
           articles: articles,
           totals: totals,
-          notes: currentWithdrawal.notes,
+          notes: (!widget.isExitVoucher && currentWithdrawal.notes == withdrawalReason) ? null : currentWithdrawal.notes,
+          hidePricing: !widget.isExitVoucher,
         ),
       ),
     );

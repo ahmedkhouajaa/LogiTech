@@ -289,19 +289,21 @@ class AppSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 280,
+      height: 34,
       child: TextField(
         onChanged: onChanged,
-        style: const TextStyle(fontSize: 13),
+        style: const TextStyle(fontSize: 12),
         decoration: InputDecoration(
           hintText: context.tr(hint),
-          hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textTertiary),
+          hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
           filled: true,
-          fillColor: AppColors.surfaceAlt,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
         ),
       ),
     );

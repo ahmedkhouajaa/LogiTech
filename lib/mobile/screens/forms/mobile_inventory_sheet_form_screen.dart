@@ -23,6 +23,7 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../services/trial_service.dart';
 
 class MobileInventorySheetFormScreen extends StatefulWidget {
   final InventorySheet? existing;
@@ -77,6 +78,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
   }
 
   void _save() async {
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     if (widget.existing != null && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_selectedWarehouseId == null) {
@@ -143,7 +145,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
   }
 
   Future<void> _addItem() async {
-    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId);
+    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId, excludeServices: true);
     if (selectedProduct != null) {
       setState(() {
         _items.add(InventorySheetItem(
@@ -158,7 +160,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
   }
 
   Future<void> _showProductPicker(int index) async {
-    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId);
+    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId, excludeServices: true);
     if (selectedProduct != null) {
       setState(() {
         final oldItem = _items[index];

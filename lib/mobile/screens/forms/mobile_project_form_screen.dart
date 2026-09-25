@@ -13,6 +13,7 @@ import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../services/enterprise_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileProjectFormScreen extends StatefulWidget {
   final Project? existing;
@@ -61,6 +62,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
 
   void _save() {
     if (widget.isReadOnly) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {

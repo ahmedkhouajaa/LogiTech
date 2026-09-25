@@ -87,7 +87,9 @@ class Invoice {
         'project_id': projectId, 'project_name': projectName,
         'devis_id': devisId, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
-        'status': effectiveStatus,
+        'status': status == InvoiceStatus.pendingConfirmation
+            ? 'en_attente_confirmation'
+            : (status == InvoiceStatus.impayee ? 'impayee' : effectiveStatus),
         'custom_status': customStatus,
         'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
@@ -116,7 +118,21 @@ class Invoice {
     }
     
     final rawStatus = map['status']?.toString() ?? 'unpaid';
-    final enumMatch = InvoiceStatus.values.where((e) => e.name == rawStatus).firstOrNull;
+    final rawLower = rawStatus.toLowerCase().trim();
+    InvoiceStatus? enumMatch;
+    if (rawLower == 'en_attente_confirmation' ||
+        rawLower == 'pendingconfirmation' ||
+        rawLower == 'pending_confirmation' ||
+        rawLower.contains('attente') ||
+        rawLower.contains('pending')) {
+      enumMatch = InvoiceStatus.pendingConfirmation;
+    } else if (rawLower == 'impayee' || rawLower == 'impayé') {
+      enumMatch = InvoiceStatus.impayee;
+    } else if (rawLower == 'paid' || rawLower == 'payee' || rawLower == 'payée' || rawLower == 'paye' || rawLower == 'payé') {
+      enumMatch = InvoiceStatus.paid;
+    } else {
+      enumMatch = InvoiceStatus.values.where((e) => e.name.toLowerCase() == rawLower).firstOrNull;
+    }
     final cStatus = enumMatch == null ? rawStatus : (map['custom_status']?.toString() ?? map['customStatus']?.toString());
 
     return Invoice(

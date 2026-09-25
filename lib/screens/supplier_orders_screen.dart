@@ -1108,8 +1108,8 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     final canDelete = PermissionService.instance.hasPermission('supplier_orders', action: 'delete');
     final hasAnyAccess = PermissionService.instance.hasAnyPermission('supplier_orders');
     final hasAllAccess = PermissionService.instance.hasPermission('supplier_orders', action: 'all');
-    final canCreateInvoice = hasAllAccess;
-    final canCreateReceipt = hasAllAccess;
+    final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices);
+    final canCreateReceipt = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers);
 
     debugPrint('[SupplierOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateReceipt=$canCreateReceipt, isAdmin=${PermissionService.instance.isAdmin}');
 

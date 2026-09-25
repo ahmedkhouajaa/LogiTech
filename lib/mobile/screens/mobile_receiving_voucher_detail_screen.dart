@@ -244,7 +244,17 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
     }
 
-    if (voucher.status != 'payee' && voucher.status != 'cancelled' && canCreatePayment) {
+    final statusLower = voucher.status.trim().toLowerCase();
+    final isPaid = voucher.isPaid ||
+                   statusLower == 'payee' ||
+                   statusLower == 'paid' ||
+                   statusLower == 'paye' ||
+                   statusLower == 'payé';
+    final isPendingPayment = statusLower.contains('attente') ||
+                            statusLower.contains('pending') ||
+                            statusLower.contains('confirmation');
+
+    if (!isPaid && !isPendingPayment && voucher.status != 'cancelled' && canCreatePayment) {
       addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
     }
 
@@ -260,7 +270,7 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       if (canCreateInvoice) {
         addItem('convert_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en facture d\'achat');
       }
-      if (canCreateReturn) {
+      if (!isPaid && !isPendingPayment && canCreateReturn) {
         addItem('convert_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de retour');
       }
     }
@@ -519,7 +529,7 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     ).then((created) {
       if (created == true && mounted) {
         _loadFullVoucher();
-        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+        context.read<ReceivingVouchersBloc>().add(ResetReceivingVouchersPagination());
       }
     });
   }

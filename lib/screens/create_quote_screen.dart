@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,8 @@ import '../models/quote.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
@@ -24,7 +27,9 @@ import 'customers_screen.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../widgets/document_tax_settings_dialog.dart';
 import 'create_article_screen.dart';
+import '../services/trial_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 class CreateQuoteScreen extends StatefulWidget {
@@ -50,17 +55,24 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
   final _conditionsCtrl = TextEditingController();
-  DocumentStatus _status = DocumentStatus.draft;
-  bool _withTimbreFiscal = true;
-  bool _pricingModeHT = true;
-  bool _withGlobalDiscount = false;
+  bool _pricingModeHT = true; // true = HT, false = TTC
   double _globalDiscountPercent = 0.0;
+  bool _withGlobalDiscount = false;
+  bool _withTimbreFiscal = true;
+  bool _withFodec = false;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
+  DocumentStatus _status = DocumentStatus.draft;
   Map<String, dynamic> _customFields = {};
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
 
-  double get _globalDiscountAmount => _withGlobalDiscount ? _totalHT * (_globalDiscountPercent / 100) : 0.0;
+  double get _globalDiscountAmount {
+    if (!_withGlobalDiscount || _globalDiscountPercent <= 0) return 0;
+    return _totalHT * _globalDiscountPercent / 100;
+  }
 
   double get _totalHTAfterDiscount => _totalHT - _globalDiscountAmount;
 
@@ -68,8 +80,11 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     final map = <double, double>{};
     for (final item in _items) {
       final rate = item.tvaRate;
-      final discountFactor = _withGlobalDiscount ? (1 - (_globalDiscountPercent / 100)) : 1.0;
-      final tvaAmount = item.computedTotalHT * discountFactor * (rate / 100);
+      final itemHT = item.computedTotalHT;
+      final discountedHT = _withGlobalDiscount && _globalDiscountPercent > 0
+          ? itemHT - (itemHT * _globalDiscountPercent / 100)
+          : itemHT;
+      final tvaAmount = discountedHT * (rate / 100);
       map[rate] = (map[rate] ?? 0) + tvaAmount;
     }
     return map;
@@ -82,8 +97,30 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0.0;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
 
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
 
@@ -98,6 +135,11 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     }
     context.read<WarehousesBloc>().add(LoadWarehouses());
 
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
+
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
@@ -110,7 +152,13 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       _pricingModeHT = n.pricingMode == 'ht';
       _globalDiscountPercent = n.globalDiscountPercent;
       _withGlobalDiscount = _globalDiscountPercent > 0;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields['withTimbreFiscal'] == true;
+      _withFodec = n.customFields['withFodec'] == true || n.customFields['with_fodec'] == true;
+      if (n.customFields['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (n.customFields['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _notesCtrl.text = n.notes ?? '';
       _conditionsCtrl.text = n.conditionsGenerales ?? '';
       _customFields = Map<String, dynamic>.from(n.customFields);
@@ -128,8 +176,22 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     }
   }
 
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
+  }
+
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     super.dispose();
@@ -138,6 +200,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (_isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     _formKey.currentState?.validate();
 
@@ -241,7 +306,15 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         items: _items.map((item) => QuoteItem(
           id: item.id,
           quoteId: quoteId,
@@ -366,6 +439,8 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             setState(() => _status = DocumentStatus.draft);
           }),
           SizedBox(width: 8),
+          _buildHeaderButton(Icons.settings_rounded, context.tr('Paramètres'), _openSettingsDialog),
+          SizedBox(width: 8),
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
@@ -422,139 +497,115 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(context.tr("Date d'emission"),
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _date,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                          locale: Localizations.localeOf(context),
-                        );
-                        if (picked != null) setState(() => _date = picked);
-                      },
-                      child: AbsorbPointer(
-                        child: TextFormField(
-                          controller:
-                              TextEditingController(text: formatDateLong(_date, Localizations.localeOf(context).languageCode)),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: AppColors.surfaceAlt,
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 14),
-                            suffixIcon: Icon(Icons.calendar_today_rounded,
-                                size: 16, color: AppColors.textTertiary),
-                          ),
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                      ),
-                    ),
-                  ],
+          // Date d'émission
+          Text(context.tr("Date d'emission"),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary)),
+          SizedBox(height: 6),
+          GestureDetector(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _date,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2030),
+                locale: Localizations.localeOf(context),
+              );
+              if (picked != null) setState(() => _date = picked);
+            },
+            child: AbsorbPointer(
+              child: TextFormField(
+                controller: TextEditingController(
+                    text: formatDateLong(
+                        _date, Localizations.localeOf(context).languageCode)),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.surfaceAlt,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  suffixIcon: Icon(Icons.calendar_today_rounded,
+                      size: 16, color: AppColors.textTertiary),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(color: AppColors.border)),
                 ),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary),
               ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(context.tr("Date de validite"),
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _validityDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                          locale: Localizations.localeOf(context),
-                        );
-                        if (picked != null) setState(() => _validityDate = picked);
-                      },
-                      child: AbsorbPointer(
-                        child: TextFormField(
-                          controller:
-                              TextEditingController(text: formatDateLong(_validityDate, Localizations.localeOf(context).languageCode)),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: AppColors.surfaceAlt,
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 14),
-                            suffixIcon: Icon(Icons.calendar_today_rounded,
-                                size: 16, color: AppColors.textTertiary),
-                          ),
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
           SizedBox(height: 20),
 
-          // Client & Project
+          // Client & Project row
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(context.tr('Client'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Client'),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
                           child: BlocBuilder<CustomersBloc, CustomersState>(
                             builder: (context, state) {
-                              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                              final customers = state is CustomersLoaded
+                                  ? state.customers
+                                  : <Customer>[];
                               final displayName = _selectedCustomerName;
 
                               return FormField<String>(
                                 initialValue: _selectedCustomerId,
-                                validator: (v) => _selectedCustomerId == null ? context.tr('Requis') : null,
+                                validator: (v) => _selectedCustomerId == null
+                                    ? context.tr('Requis')
+                                    : null,
                                 builder: (field) {
                                   return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      _buildSearchableField(
+                                      SearchableSelectorField(
                                         hint: context.tr('Rechercher un client...'),
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
-                                          final res = await _showCustomerSelectDialog(context, customers);
+                                          final res =
+                                              await _showCustomerSelectDialog(
+                                                  context, customers);
                                           if (res != null) {
-                                            final displayName = res.companyName?.isNotEmpty == true
+                                            final displayName = res
+                                                        .companyName
+                                                        ?.isNotEmpty ==
+                                                    true
                                                 ? res.companyName!
-                                                : (res.responsibleName?.isNotEmpty == true
+                                                : (res.responsibleName
+                                                            ?.isNotEmpty ==
+                                                        true
                                                     ? res.responsibleName!
                                                     : res.name);
                                             setState(() {
                                               _selectedCustomerId = res.id;
-                                              _selectedCustomerName = displayName;
+                                              _selectedCustomerName =
+                                                  displayName;
                                             });
                                             field.didChange(res.id);
                                           }
@@ -564,7 +615,10 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                         SizedBox(height: 4),
                                         Padding(
                                           padding: EdgeInsets.only(left: 4),
-                                          child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                          child: Text(field.errorText!,
+                                              style: TextStyle(
+                                                  color: AppColors.error,
+                                                  fontSize: 11)),
                                         ),
                                       ],
                                     ],
@@ -591,9 +645,12 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                 );
                                 if (newRes != null && mounted) {
                                   if (newRes is Customer) {
-                                    final displayName = newRes.companyName?.isNotEmpty == true
+                                    final displayName = newRes
+                                                .companyName?.isNotEmpty ==
+                                            true
                                         ? newRes.companyName!
-                                        : (newRes.responsibleName?.isNotEmpty == true
+                                        : (newRes.responsibleName?.isNotEmpty ==
+                                                true
                                             ? newRes.responsibleName!
                                             : newRes.name);
                                     setState(() {
@@ -601,19 +658,26 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                       _selectedCustomerName = displayName;
                                     });
                                   } else if (newRes is String) {
-                                    setState(() => _selectedCustomerId = newRes);
+                                    setState(
+                                        () => _selectedCustomerId = newRes);
                                   }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                backgroundColor:
+                                    AppColors.primary.withValues(alpha: 0.1),
                                 foregroundColor: AppColors.primary,
                                 elevation: 0,
                                 padding: EdgeInsets.symmetric(horizontal: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.md)),
+                                side: BorderSide(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3)),
                               ),
-                              child: Icon(Icons.person_add_alt_1_rounded, size: 20),
+                              child: Icon(Icons.person_add_alt_1_rounded,
+                                  size: 20),
                             ),
                           ),
                         ),
@@ -627,38 +691,60 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(context.tr('Projet'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(context.tr('Projet'),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
                     SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
-                        final projects = state is ProjectsLoaded ? state.projects : <Project>[];
+                        final projects = state is ProjectsLoaded
+                            ? state.projects
+                            : <Project>[];
                         final defaultProj = projects.cast<Project?>().firstWhere(
-                          (p) => p?.isDefault == true,
-                          orElse: () => projects.cast<Project?>().firstWhere(
-                            (p) => p?.name.toLowerCase().contains('défaut') == true || p?.name.toLowerCase().contains('defaut') == true,
-                            orElse: () => projects.isNotEmpty ? projects.first : null,
-                          ),
-                        );
+                              (p) => p?.isDefault == true,
+                              orElse: () => projects.cast<Project?>().firstWhere(
+                                    (p) =>
+                                        p?.name
+                                            .toLowerCase()
+                                            .contains('défaut') ==
+                                        true ||
+                                        p?.name
+                                            .toLowerCase()
+                                            .contains('defaut') ==
+                                        true,
+                                    orElse: () => projects.isNotEmpty
+                                        ? projects.first
+                                        : null,
+                                  ),
+                            );
                         if (_selectedProjectId == null && defaultProj != null) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (mounted && _selectedProjectId == null) {
-                              setState(() => _selectedProjectId = defaultProj.id);
+                              setState(
+                                  () => _selectedProjectId = defaultProj.id);
                             }
                           });
                         }
-                        final selectedProject = projects.cast<Project?>().firstWhere(
-                          (p) => p?.id == (_selectedProjectId ?? defaultProj?.id),
-                          orElse: () => defaultProj,
-                        );
+                        final selectedProject =
+                            projects.cast<Project?>().firstWhere(
+                                  (p) =>
+                                      p?.id ==
+                                      (_selectedProjectId ?? defaultProj?.id),
+                                  orElse: () => defaultProj,
+                                );
 
-                        return _buildSearchableField(
+                        return SearchableSelectorField(
                           hint: context.tr('Sélectionner un projet'),
-                          selectedText: selectedProject?.name ?? 'Projet par défaut',
+                          selectedText:
+                              selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
                             final res = await showProjectSelectDialog(
                               context,
                               projects,
-                              selectedProjectId: _selectedProjectId ?? defaultProj?.id,
+                              selectedProjectId:
+                                  _selectedProjectId ?? defaultProj?.id,
                             );
                             if (res != null) {
                               setState(() => _selectedProjectId = res);
@@ -673,40 +759,135 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             ],
           ),
           SizedBox(height: 16),
-          // Entrepôt field (under Projet)
-          Column(
+
+          // Date de validité & Entrepôt row
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              SizedBox(height: 6),
-              BlocBuilder<WarehousesBloc, WarehousesState>(
-                builder: (context, state) {
-                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
-                  final defaultWh = warehouses.cast<Warehouse?>().firstWhere(
-                    (w) => w?.isDefault == true,
-                    orElse: () => warehouses.cast<Warehouse?>().firstWhere((w) => w?.name.toLowerCase().contains('défaut') == true || w?.name.toLowerCase().contains('defaut') == true, orElse: () => warehouses.isNotEmpty ? warehouses.first : null),
-                  );
-                  if (_selectedWarehouseId == null && defaultWh != null) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && _selectedWarehouseId == null) {
-                        setState(() => _selectedWarehouseId = defaultWh.id);
-                      }
-                    });
-                  }
-                  final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == (_selectedWarehouseId ?? defaultWh?.id), orElse: () => defaultWh);
-                  final warehouseName = selectedWh?.name;
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(context.tr("Date de validite"),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _validityDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                          locale: Localizations.localeOf(context),
+                        );
+                        if (picked != null) {
+                          setState(() => _validityDate = picked);
+                        }
+                      },
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: TextEditingController(
+                              text: formatDateLong(
+                                  _validityDate,
+                                  Localizations.localeOf(context)
+                                      .languageCode)),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: AppColors.surfaceAlt,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 14),
+                            suffixIcon: Icon(Icons.calendar_today_rounded,
+                                size: 16, color: AppColors.textTertiary),
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
+                                borderSide:
+                                    BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
+                                borderSide:
+                                    BorderSide(color: AppColors.border)),
+                          ),
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(context.tr('Entrepôt'),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    BlocBuilder<WarehousesBloc, WarehousesState>(
+                      builder: (context, state) {
+                        final warehouses = state is WarehousesLoaded
+                            ? state.warehouses
+                            : <Warehouse>[];
+                        final defaultWh = warehouses.cast<Warehouse?>().firstWhere(
+                              (w) => w?.isDefault == true,
+                              orElse: () => warehouses.cast<Warehouse?>().firstWhere(
+                                    (w) =>
+                                        w?.name
+                                            .toLowerCase()
+                                            .contains('défaut') ==
+                                        true ||
+                                        w?.name
+                                            .toLowerCase()
+                                            .contains('defaut') ==
+                                        true,
+                                    orElse: () => warehouses.isNotEmpty
+                                        ? warehouses.first
+                                        : null,
+                                  ),
+                            );
+                        if (_selectedWarehouseId == null && defaultWh != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && _selectedWarehouseId == null) {
+                              setState(
+                                  () => _selectedWarehouseId = defaultWh.id);
+                            }
+                          });
+                        }
+                        final selectedWh = warehouses.cast<Warehouse?>().firstWhere(
+                              (w) =>
+                                  w?.id ==
+                                  (_selectedWarehouseId ?? defaultWh?.id),
+                              orElse: () => defaultWh,
+                            );
+                        final warehouseName = selectedWh?.name;
 
-                  return SearchableSelectorField(
-                    hint: context.tr('Sélectionner un entrepôt'),
-                    selectedText: warehouseName,
-                    onTap: () async {
-                      final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
-                      if (res != null && mounted) {
-                        setState(() => _selectedWarehouseId = res);
-                      }
-                    },
-                  );
-                },
+                        return SearchableSelectorField(
+                          hint: context.tr('Sélectionner un entrepôt'),
+                          selectedText: warehouseName,
+                          onTap: () async {
+                            final res = await showWarehouseSelectDialog(
+                                context, warehouses,
+                                selectedWarehouseId:
+                                    _selectedWarehouseId ?? defaultWh?.id);
+                            if (res != null && mounted) {
+                              setState(() => _selectedWarehouseId = res);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -738,63 +919,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     );
   }
 
-  InputDecoration _formInputDecoration({String? hint}) {
-    return InputDecoration(
-      hintText: hint != null ? context.tr(hint) : null,
-      hintStyle:
-          TextStyle(color: AppColors.textTertiary, fontSize: 13),
-      filled: true,
-      fillColor: AppColors.surfaceAlt,
-      contentPadding:
-          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: AppColors.border)),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide:
-              BorderSide(color: AppColors.primary, width: 1.5)),
-    );
-  }
 
-  Widget _buildSearchableField({
-    required String hint,
-    required String? selectedText,
-    required VoidCallback onTap,
-    bool hasError = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: AbsorbPointer(
-        child: TextFormField(
-          controller: TextEditingController(text: selectedText ?? hint),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            suffixIcon: Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
-            ),
-          ),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
 
   Future<Customer?> _showCustomerSelectDialog(BuildContext context, List<Customer> initialCustomers) async {
     try {
@@ -953,8 +1078,8 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-        boxShadow: AppShadows.sm,
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1479,10 +1604,17 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine(context.tr('Sous-total HT:'), formatCurrencyDT(_totalHTAfterDiscount)),
             SizedBox(height: 6),
@@ -1491,6 +1623,19 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('${context.tr('TVA')} ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
               ),
             ),
             InkWell(
@@ -1553,59 +1698,68 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
   // ── Notes Section ─────────────────────────────────────────────────
   Widget _buildNotesSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _notesCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Visible sur le document final'),
-                  hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _notesCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Visible sur le document final'),
+                    hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _conditionsCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Conditions generales pour ce document'),
-                  hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+          SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Conditions Générales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _conditionsCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Conditions générales pour ce document'),
+                    hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

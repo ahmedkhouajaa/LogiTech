@@ -444,6 +444,10 @@ class MobileDashboardScreen extends StatelessWidget {
         return AppColors.textSecondary;
       case InvoiceStatus.transformed:
         return AppColors.info;
+      case InvoiceStatus.pendingConfirmation:
+        return const Color(0xFFF59E0B);
+      case InvoiceStatus.impayee:
+        return AppColors.error;
     }
   }
 }

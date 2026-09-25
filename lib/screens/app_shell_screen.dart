@@ -47,13 +47,16 @@ import 'custom_statuses_screen.dart';
 import 'app_modules_settings_screen.dart';
 import 'stock_transfers_screen.dart';
 import 'inventory_sheets_screen.dart';
-import 'diagnostic_screen.dart';
 import 'user_management_screen.dart';
 import 'import_export_screen.dart';
 import 'support_tickets_screen.dart';
+import 'trash_screen.dart';
+import 'user_tracking_screen.dart';
 import '../services/trial_service.dart';
 import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
+import '../services/update_service.dart';
+import '../widgets/update_banner_widget.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -78,6 +81,7 @@ class AppShellScreenState extends State<AppShellScreen> {
     super.initState();
     _checkInitialModule();
     TrialService.instance.initTrial();
+    UpdateService.instance.checkForUpdate();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
       if (mounted) {
@@ -108,15 +112,26 @@ class AppShellScreenState extends State<AppShellScreen> {
         setState(() {});
       }
     } else {
+      // If the app previously defaulted to support before permissions were ready, restore to dashboard
+      if (_activeModule == AppModule.support && PermissionService.instance.canAccessModule(AppModule.dashboard)) {
+        setState(() {
+          _activeModule = AppModule.dashboard;
+        });
+        return;
+      }
       setState(() {});
     }
   }
 
   void _checkInitialModule() {
-    if (PermissionService.instance.isLoaded && !PermissionService.instance.canAccessModule(_activeModule)) {
-      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
-      if (firstPermitted != null) {
-        _activeModule = firstPermitted;
+    if (PermissionService.instance.isLoaded) {
+      if (!PermissionService.instance.canAccessModule(_activeModule)) {
+        final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+        if (firstPermitted != null) {
+          _activeModule = firstPermitted;
+        }
+      } else if (_activeModule == AppModule.support && PermissionService.instance.canAccessModule(AppModule.dashboard)) {
+        _activeModule = AppModule.dashboard;
       }
     }
   }
@@ -219,6 +234,10 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const ImportExportScreen();
       case AppModule.support:
         return const SupportTicketsScreen();
+      case AppModule.trash:
+        return const TrashScreen();
+      case AppModule.userTracking:
+        return const UserTrackingScreen();
     }
   },
 );
@@ -242,6 +261,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.projects: raw = 'Projets'; break;
       case AppModule.reports: raw = 'Rapports et statistiques'; break;
       case AppModule.settings: raw = 'Parametres'; break;
+      case AppModule.trash: raw = 'Corbeille'; break;
       case AppModule.purchaseInvoices: raw = 'Factures d\'achat'; break;
       case AppModule.warehouses: raw = 'Entrepots'; break;
       case AppModule.withholdingTaxSales: raw = 'RS vente'; break;
@@ -270,6 +290,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.userManagement: raw = 'Gestion des utilisateurs'; break;
       case AppModule.importExport: raw = 'Import / Export des données'; break;
       case AppModule.support: raw = 'Support client'; break;
+      case AppModule.userTracking: raw = 'Traçabilité Utilisateurs'; break;
     }
     return context.tr(raw);
   }
@@ -364,14 +385,6 @@ class AppShellScreenState extends State<AppShellScreen> {
                             child: Row(children: [const Icon(Icons.settings_rounded, size: 16), const SizedBox(width: 8), Text(context.tr('Parametres'))]),
                           ),
                           PopupMenuItem(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
-                              );
-                            },
-                            child: const Row(children: [Icon(Icons.troubleshoot, size: 16), SizedBox(width: 8), Text('Diagnostic Système')]),
-                          ),
-                          PopupMenuItem(
                             onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
                             child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text(context.tr('Deconnexion'), style: TextStyle(color: AppColors.error))]),
                           ),
@@ -382,6 +395,8 @@ class AppShellScreenState extends State<AppShellScreen> {
                 ],
               ),
             ),
+            // Update Banner Widget
+            const UpdateBannerWidget(),
             // Trial Banner Widget
             const TrialBannerWidget(),
             // Content area

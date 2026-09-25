@@ -9,6 +9,8 @@ import 'document_numbering_screen.dart';
 import 'personal_info_screen.dart';
 import 'import_export_screen.dart';
 import 'support_tickets_screen.dart';
+import 'trash_screen.dart';
+import 'user_tracking_screen.dart';
 
 import '../services/permission_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +18,9 @@ import '../blocs/theme/theme_cubit.dart';
 import '../blocs/locale/locale_cubit.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/language_selection_dialog.dart';
+import '../services/update_service.dart';
+import '../widgets/update_dialog.dart';
+import '../services/ai_assistant_settings_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -100,6 +105,29 @@ class SettingsScreen extends StatelessWidget {
                   );
                 },
               ),
+              ValueListenableBuilder<bool>(
+                valueListenable: AiAssistantSettingsService.instance.isFloatingButtonEnabled,
+                builder: (context, isAiEnabled, _) {
+                  return _buildSettingItem(
+                    Icons.smart_toy_rounded,
+                    context.tr('Assistant IA flottant'),
+                    context.tr('Afficher le bouton flottant de l\'assistant IA'),
+                    iconColor: const Color(0xFFD97706),
+                    iconBgColor: const Color(0xFFFEF3C7),
+                    trailing: Switch(
+                      value: isAiEnabled,
+                      onChanged: (value) {
+                        AiAssistantSettingsService.instance.setFloatingButtonEnabled(value);
+                      },
+                      activeThumbColor: const Color(0xFFD97706),
+                      activeTrackColor: const Color(0xFFFCD535).withValues(alpha: 0.6),
+                    ),
+                    onTap: () {
+                      AiAssistantSettingsService.instance.setFloatingButtonEnabled(!isAiEnabled);
+                    },
+                  );
+                },
+              ),
               if (PermissionService.instance.isAdmin)
                 _buildSettingItem(
                   Icons.manage_accounts_rounded,
@@ -108,6 +136,33 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () {
                     final shell = context.findAncestorStateOfType<AppShellScreenState>();
                     shell?.setActiveModule(AppModule.userManagement);
+                  },
+                ),
+              _buildSettingItem(
+                Icons.delete_outline_rounded,
+                context.tr('Corbeille'),
+                context.tr('Restaurer ou supprimer définitivement les éléments supprimés'),
+                onTap: () {
+                  final shell = context.findAncestorStateOfType<AppShellScreenState>();
+                  if (shell != null) {
+                    shell.setActiveModule(AppModule.trash);
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const TrashScreen()));
+                  }
+                },
+              ),
+              if (PermissionService.instance.canAccessModule(AppModule.userTracking))
+                _buildSettingItem(
+                  Icons.manage_history_rounded,
+                  context.tr('Traçabilité Utilisateurs'),
+                  context.tr('Journal d\'audit et suivi des actions des utilisateurs en temps réel'),
+                  onTap: () {
+                    final shell = context.findAncestorStateOfType<AppShellScreenState>();
+                    if (shell != null) {
+                      shell.setActiveModule(AppModule.userTracking);
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const UserTrackingScreen()));
+                    }
                   },
                 ),
               BlocBuilder<LocaleCubit, Locale>(
@@ -221,6 +276,37 @@ class SettingsScreen extends StatelessWidget {
           ),
           SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
+            context.tr('Mises à jour du logiciel'),
+            [
+              _buildSettingItem(
+                Icons.system_update_rounded,
+                context.tr('Version de l\'application'),
+                'LogiTech Pro v${AppConfig.appVersion} • Cliquez pour vérifier les mises à jour',
+                isAction: true,
+                actionLabel: context.tr('Vérifier'),
+                onTap: () async {
+                  final update = await UpdateService.instance.checkForUpdate(silent: false);
+                  if (update != null) {
+                    if (context.mounted) {
+                      UpdateDialog.show(context, update);
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(context.tr('Vous disposez déjà de la version la plus récente.')),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: AppSpacing.lg),
+          _buildSettingsGroup(
             context.tr('Comptabilite'),
             [
               if (PermissionService.instance.canAccessModule(AppModule.documentNumbering))
@@ -292,13 +378,18 @@ class SettingsScreen extends StatelessWidget {
     String? actionLabel,
     VoidCallback? onTap,
     Widget? trailing,
+    Color? iconColor,
+    Color? iconBgColor,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: AppColors.primary, size: 20),
+        decoration: BoxDecoration(
+          color: iconBgColor ?? AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: iconColor ?? AppColors.primary, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),

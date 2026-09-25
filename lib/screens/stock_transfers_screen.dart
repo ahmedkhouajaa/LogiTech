@@ -4,17 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock_transfers/stock_transfers_bloc.dart';
 import '../models/stock_transfer.dart';
 import '../services/sync_service.dart';
-import '../widgets/pending_sync_badge.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_stock_transfer_screen.dart';
 import '../models/document_wrapper.dart';
-import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_transfer_detail_screen.dart';
 import '../blocs/products/products_bloc.dart';
 import '../models/stock_movement.dart';
-import '../database/database_helper.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -23,7 +20,6 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../l10n/app_localizations.dart';
 
@@ -112,7 +108,11 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => DocumentDetailScreen(
-          document: DocumentWrapper.fromStockTransfer(entry),
+          document: DocumentWrapper.fromStockTransfer(
+            entry,
+            _getWarehouseName(entry.sourceWarehouseId),
+            _getWarehouseName(entry.destinationWarehouseId),
+          ),
           status: statusLabel,
           statusColor: statusColor,
         ),
@@ -121,7 +121,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   Widget _buildArticlesDisplay(List<StockTransferItem> items) {
-    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
     
     final summaryText = items.map((item) {
       final pName = item.productName ?? context.tr('Produit Inconnu');
@@ -145,30 +145,6 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => CreateStockTransferScreen(existing: transfer),
-      ),
-    );
-  }
-
-  void _confirmDelete(StockTransfer transfer) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.tr('Confirmer la suppression')),
-        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${context.tr('Bons de transfert')} ${transfer.number} ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.tr('Annuler')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () {
-              context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
-              Navigator.pop(ctx);
-            },
-            child: Text(context.tr('Supprimer'), style: const TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -291,7 +267,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   
-                            value: _filterWarehouseId,
+                            initialValue: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -583,7 +559,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   icon: const Icon(Icons.add, size: 18),
                   label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -624,9 +600,8 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                               (w) => w?.id == _filterWarehouseId,
                               orElse: () => null,
                             );
-                            return SearchableSelectorField(
-                              hint: context.tr('Tous les Entrepôts'),
-                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
+                            final isSelected = _filterWarehouseId != null;
+                            return InkWell(
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -638,6 +613,35 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                                   setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                 }
                               },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isSelected
+                                            ? (selectedWh?.name ?? context.tr('Tous les Entrepôts'))
+                                            : context.tr('Tous les Entrepôts'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isSelected
+                                              ? AppColors.textPrimary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -660,11 +664,15 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: context.tr('Rechercher un produit...'),
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                           ),
                           style: const TextStyle(fontSize: 12),
                           onChanged: (v) => setState(() {
@@ -688,8 +696,8 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
-                        child: OutlinedButton(
-                          onPressed: () async {
+                        child: InkWell(
+                          onTap: () async {
                             final range = await CustomDateRangePicker.show(
                               context,
                               initialRange: _filterDateRange,
@@ -698,35 +706,38 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                               setState(() => _filterDateRange = range);
                             }
                           },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            height: 32,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            backgroundColor: AppColors.surface,
-                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _filterDateRange != null
-                                      ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : context.tr('Toutes les dates'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _filterDateRange != null
+                                        ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
+                                        : context.tr('Toutes les dates'),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              if (_filterDateRange != null)
-                                InkWell(
-                                  onTap: () => setState(() => _filterDateRange = null),
-                                  child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
-                                ),
-                            ],
+                                if (_filterDateRange != null)
+                                  InkWell(
+                                    onTap: () => setState(() => _filterDateRange = null),
+                                    child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -817,9 +828,9 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                             children: [
                               Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Text(context.tr('Date'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text(context.tr('Entrepôt'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 1, child: Text(context.tr('Articles'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 1, child: Text(context.tr('Créé par'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
@@ -927,10 +938,12 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   Widget _buildRow(BuildContext context, StockTransfer transfer, int index) {
-    return Container(
-      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
+    return InkWell(
+      onTap: () => _previewDocument(transfer),
+      child: Container(
+        color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
         children: [
           Expanded(
             flex: 2,
@@ -938,19 +951,50 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDateTimeLong(transfer.date), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(formatDateTimeLong(transfer.date), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           Expanded(
-            flex: 2,
-            child: Text('${_getWarehouseName(transfer.sourceWarehouseId)} -> ${_getWarehouseName(transfer.destinationWarehouseId)}', style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _getWarehouseName(transfer.sourceWarehouseId),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.arrow_forward_rounded, size: 13, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _getWarehouseName(transfer.destinationWarehouseId),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           Expanded(
             flex: 1,
             child: _buildArticlesDisplay(transfer.items),
           ),
           Expanded(
-            flex: 2,
-            child: Text('Admin', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+            flex: 1,
+            child: Text('Admin', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
@@ -1031,27 +1075,9 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _pageButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(4),
-      child: Container(
-        padding: EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled ? AppColors.textPrimary : AppColors.textTertiary,
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatusChip(String status) {
     Color color;

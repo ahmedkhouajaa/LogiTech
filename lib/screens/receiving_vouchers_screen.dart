@@ -913,7 +913,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                           ),
                                                         ).then((created) {
                                                           if (created == true && context.mounted) {
-                                                            context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                                                            context.read<ReceivingVouchersBloc>().add(ResetReceivingVouchersPagination());
                                                           }
                                                         });
                                                       } else if (val == 'email') {
@@ -1363,9 +1363,9 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     final canDelete = PermissionService.instance.hasPermission('receiving_vouchers', action: 'delete');
     final hasAnyAccess = PermissionService.instance.hasAnyPermission('receiving_vouchers');
     final hasAllAccess = PermissionService.instance.hasPermission('receiving_vouchers', action: 'all');
-    final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
-    final canCreateInvoice = hasAllAccess;
-    final canCreateReturn = hasAllAccess;
+    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+    final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices);
+    final canCreateReturn = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierReturns);
 
     debugPrint('[ReceivingVouchers.3dot] Voucher #${voucher.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, isAdmin=${PermissionService.instance.isAdmin}');
 
@@ -1381,7 +1381,17 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
     }
     
-    if (!voucher.isPaid && canCreatePayment) {
+    final statusLower = voucher.status.trim().toLowerCase();
+    final isPaid = voucher.isPaid ||
+                   statusLower == 'payee' ||
+                   statusLower == 'paid' ||
+                   statusLower == 'paye' ||
+                   statusLower == 'payé';
+    final isPendingPayment = statusLower.contains('attente') ||
+                            statusLower.contains('pending') ||
+                            statusLower.contains('confirmation');
+
+    if (!isPaid && !isPendingPayment && canCreatePayment) {
       items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
     }
     
@@ -1398,7 +1408,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       if (canCreateInvoice) {
         items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
       }
-      if (canCreateReturn) {
+      if (!isPaid && !isPendingPayment && canCreateReturn) {
         items.add(_buildMenuItem('to_return', Icons.assignment_return_outlined, 'Transformer en Bon de retour', const Color(0xFF475569)));
       }
     }

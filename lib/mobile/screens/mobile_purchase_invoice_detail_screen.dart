@@ -276,7 +276,26 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
     if (canDelete) {
       addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
     }
-    if (inv.status != InvoiceStatus.paid && canCreatePayment) {
+    final statusLower = inv.effectiveStatus.trim().toLowerCase();
+    final customStatusLower = (inv.customStatus ?? '').trim().toLowerCase();
+    final isPaid = inv.status == InvoiceStatus.paid ||
+                   statusLower == 'paid' ||
+                   statusLower == 'paye' ||
+                   statusLower == 'payé' ||
+                   statusLower == 'payee' ||
+                   statusLower == 'payée' ||
+                   (statusLower.contains('pay') && !statusLower.contains('non') && !statusLower.contains('impay') && !statusLower.contains('partiel')) ||
+                   (customStatusLower.contains('pay') && !customStatusLower.contains('non') && !customStatusLower.contains('impay') && !customStatusLower.contains('partiel')) ||
+                   (inv.amountPaid >= (inv.totalTTC + inv.timbreFiscal) - 0.01 && (inv.totalTTC + inv.timbreFiscal) > 0);
+    final isPendingPayment = inv.status == InvoiceStatus.pendingConfirmation ||
+                            statusLower.contains('attente') ||
+                            statusLower.contains('pending') ||
+                            statusLower.contains('confirmation') ||
+                            customStatusLower.contains('attente') ||
+                            customStatusLower.contains('pending') ||
+                            customStatusLower.contains('confirmation');
+
+    if (!isPaid && !isPendingPayment && canCreatePayment) {
       addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
     }
     if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty) {

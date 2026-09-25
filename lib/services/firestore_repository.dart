@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'enterprise_service.dart';
@@ -19,13 +20,11 @@ import '../models/supplier_order.dart';
 import '../models/purchase_invoice.dart';
 import '../models/supplier_return.dart';
 import '../models/inventory_sheet.dart';
-import '../models/stock_movement.dart';
-import '../models/treasury_account.dart';
-import '../models/treasury_transaction.dart';
 import '../models/payment_model.dart';
-import '../models/check_traite.dart';
 import '../models/stock_entry.dart';
-import '../models/project.dart';
+import 'trash_service.dart';
+
+import 'user_tracking_service.dart';
 
 class FirestoreRepository {
   static final FirestoreRepository instance = FirestoreRepository._();
@@ -53,25 +52,38 @@ class FirestoreRepository {
   }
 
   Future<void> saveDocument(String collection, String id, Map<String, dynamic> data) async {
+    final isNew = !data.containsKey('created_at') || data['created_at'] == null;
     final payload = _withMetadata(data);
-    if (!payload.containsKey('created_at') || payload['created_at'] == null) {
+    if (isNew) {
       payload['created_at'] = DateTime.now().toIso8601String();
     }
     await _firestore.collection(collection).doc(id).set(payload, SetOptions(merge: true));
+
+    // Audit log
+    unawaited(UserTrackingService.instance.logActivity(
+      action: isNew ? 'create' : 'update',
+      collection: collection,
+      documentId: id,
+      docData: data,
+    ));
   }
 
   Future<void> updateDocument(String collection, String id, Map<String, dynamic> data) async {
     final payload = _withMetadata(data);
     await _firestore.collection(collection).doc(id).update(payload);
+
+    // Audit log
+    unawaited(UserTrackingService.instance.logActivity(
+      action: 'update',
+      collection: collection,
+      documentId: id,
+      docData: data,
+    ));
   }
 
   Future<void> softDeleteDocument(String collection, String id) async {
     try {
-      await _firestore.collection(collection).doc(id).update({
-        'is_deleted': 1,
-        'updated_at': DateTime.now().toIso8601String(),
-        if (currentUid != null) 'userId': currentUid,
-      });
+      await TrashService.instance.moveToTrash(collection, id);
     } catch (e) {
       if (e.toString().contains('permission-denied') || e.toString().contains('not-found')) {
         // If the document is already deleted on the server, update() might throw permission-denied or not-found.
@@ -184,22 +196,6 @@ class FirestoreRepository {
   Future<void> savePayment(Payment payment) async {
     final map = payment.toMap();
     await saveDocument('paiements', payment.id, map);
-
-    if (payment.accountId != null && payment.accountId!.isNotEmpty && payment.amount > 0) {
-      try {
-        final accRef = _firestore.collection('treasury_accounts').doc(payment.accountId);
-        final doc = await accRef.get();
-        if (doc.exists && doc.data() != null) {
-          final currentBalance = (doc.data()!['balance'] as num?)?.toDouble() ?? 0.0;
-          final delta = payment.direction == 'encaissement' ? payment.amount : -payment.amount;
-          final newBalance = currentBalance + delta;
-          await accRef.update({
-            'balance': newBalance,
-            'updated_at': DateTime.now().toIso8601String(),
-          });
-        }
-      } catch (_) {}
-    }
   }
 
   Future<void> saveStockEntry(StockEntry entry) async {

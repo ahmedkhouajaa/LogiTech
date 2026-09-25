@@ -22,7 +22,7 @@ import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
 import 'create_article_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
-import '../mobile/widgets/forms/mobile_smart_fields.dart';
+import '../services/trial_service.dart';
 
 class CreateInventorySheetScreen extends StatefulWidget {
   final InventorySheet? sheet;
@@ -107,6 +107,9 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   }
 
   Future<void> _save({bool isDraft = false}) async {
+    if (widget.sheet == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     if (_warehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt.')));
       return;
@@ -281,35 +284,53 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   Widget _buildHeaderSection() {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
+    final selectedWh = _warehouses.cast<Warehouse?>().firstWhere(
+      (w) => w?.id == _warehouseId,
+      orElse: () => _warehouses.cast<Warehouse?>().firstWhere(
+        (w) => w?.isDefault == true,
+        orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null,
+      ),
+    );
+
     return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
+      ),
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr('Informations'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(context.tr('Informations'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 16),
             if (isMobile) ...[
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  SizedBox(height: 4),
+                  Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 6),
                   TextFormField(
                     initialValue: formatDateLong(_date, Localizations.localeOf(context).languageCode),
                     readOnly: true,
                     enabled: !widget.isViewOnly,
                     decoration: InputDecoration(
-                      suffixIcon: Icon(Icons.calendar_today, size: 16),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt,
+                      suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
                   SizedBox(height: 16),
-                  SmartSearchableSelector(
-                    label: context.tr('Entrepôt'),
+                  Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 6),
+                  SearchableSelectorField(
                     hint: context.tr('Sélectionner un entrepôt'),
-                    selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
+                    selectedText: selectedWh?.name,
                     onTap: () async {
                       if (widget.isViewOnly) return;
                       final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
@@ -327,16 +348,19 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        SizedBox(height: 4),
+                        Text(context.tr('Date'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 6),
                         TextFormField(
                           initialValue: formatDateLong(_date, Localizations.localeOf(context).languageCode),
                           readOnly: true,
                           enabled: !widget.isViewOnly,
                           decoration: InputDecoration(
-                            suffixIcon: Icon(Icons.calendar_today, size: 16),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            filled: true,
+                            fillColor: AppColors.surfaceAlt,
+                            suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
                         ),
                       ],
@@ -344,17 +368,23 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   ),
                   SizedBox(width: 16),
                   Expanded(
-                    child: SmartSearchableSelector(
-                      label: context.tr('Entrepôt'),
-                      hint: context.tr('Sélectionner un entrepôt'),
-                      selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
-                      onTap: () async {
-                        if (widget.isViewOnly) return;
-                        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
-                        if (res != null && mounted) {
-                          setState(() => _warehouseId = res);
-                        }
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Entrepôt'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 6),
+                        SearchableSelectorField(
+                          hint: context.tr('Sélectionner un entrepôt'),
+                          selectedText: selectedWh?.name,
+                          onTap: () async {
+                            if (widget.isViewOnly) return;
+                            final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
+                            if (res != null && mounted) {
+                              setState(() => _warehouseId = res);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -365,8 +395,8 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  SizedBox(height: 4),
+                  Text(context.tr('Date d\'inventaire'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 6),
                   InkWell(
                     onTap: widget.isViewOnly ? null : () async {
                       final picked = await showDatePicker(
@@ -379,36 +409,46 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         setState(() => _inventoryDate = picked);
                       }
                     },
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     child: InputDecorator(
                       decoration: InputDecoration(
-                        suffixIcon: Icon(Icons.calendar_today, size: 16),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        filled: true,
+                        fillColor: AppColors.surfaceAlt,
+                        suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
-                      child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
+                      child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     ),
                   ),
                   SizedBox(height: 16),
-                  Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  SizedBox(height: 4),
+                  Text(context.tr('Date de saisie'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 6),
                   TextFormField(
                     initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
                     readOnly: true,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
                   SizedBox(height: 16),
-                  Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  SizedBox(height: 4),
+                  Text(context.tr('Compté par'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 6),
                   TextFormField(
                     controller: _countedByController,
                     readOnly: widget.isViewOnly,
                     decoration: InputDecoration(
-                      hintText: 'Nom du responsable',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt,
+                      hintText: context.tr('Nom du responsable'),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
                 ],
@@ -420,8 +460,8 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        SizedBox(height: 4),
+                        Text(context.tr('Date d\'inventaire'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 6),
                         InkWell(
                           onTap: widget.isViewOnly ? null : () async {
                             final picked = await showDatePicker(
@@ -434,13 +474,17 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                               setState(() => _inventoryDate = picked);
                             }
                           },
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                           child: InputDecorator(
                             decoration: InputDecoration(
-                              suffixIcon: Icon(Icons.calendar_today, size: 16),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              filled: true,
+                              fillColor: AppColors.surfaceAlt,
+                              suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             ),
-                            child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
+                            child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           ),
                         ),
                       ],
@@ -451,14 +495,17 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        SizedBox(height: 4),
+                        Text(context.tr('Date de saisie'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 6),
                         TextFormField(
                           initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
                           readOnly: true,
                           decoration: InputDecoration(
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            filled: true,
+                            fillColor: AppColors.surfaceAlt,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
                         ),
                       ],
@@ -469,15 +516,18 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        SizedBox(height: 4),
+                        Text(context.tr('Compté par'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        SizedBox(height: 6),
                         TextFormField(
                           controller: _countedByController,
                           readOnly: widget.isViewOnly,
                           decoration: InputDecoration(
-                            hintText: 'Nom du responsable',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            filled: true,
+                            fillColor: AppColors.surfaceAlt,
+                            hintText: context.tr('Nom du responsable'),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
                         ),
                       ],
@@ -493,16 +543,19 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
+                      Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 6),
                       TextFormField(
                         controller: _reasonController,
                         readOnly: widget.isViewOnly,
                         maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: 'Raison de l\'opération...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          hintText: context.tr("Raison de l'opération..."),
+                          filled: true,
+                          fillColor: AppColors.surfaceAlt,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
                       ),
                     ],
@@ -513,16 +566,19 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
+                      Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 6),
                       TextFormField(
                         controller: _notesController,
                         readOnly: widget.isViewOnly,
                         maxLines: 2,
                         decoration: InputDecoration(
                           hintText: context.tr('Notes additionnelles...'),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: AppColors.surfaceAlt,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
                       ),
                     ],
@@ -540,6 +596,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
+      ),
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
@@ -572,7 +634,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
               builder: (context, productsState) {
                 List<Product> products = [];
                 if (productsState is ProductsLoaded) {
-                  products = productsState.products;
+                  products = productsState.products.where((p) => !p.isService).toList();
                 }
                 
                 return BlocBuilder<StockBloc, StockState>(
@@ -623,9 +685,9 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                             margin: EdgeInsets.only(bottom: 12),
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                              color: AppColors.surface,
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,7 +708,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                 SizedBox(height: 6),
                                 InkWell(
                                   onTap: widget.isViewOnly ? null : () async {
-                                    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                                    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId, excludeServices: true);
                                     if (selectedProduct != null) {
                                       setState(() {
                                         _items[index] = item.copyWith(
@@ -828,6 +890,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                                   selectedProductId: item.productId,
                                                   warehouseId: _warehouseId,
                                                   warehouseStockMap: stockMap,
+                                                  excludeServices: true,
                                                 );
                                                 if (res != null) {
                                                   final p = products.firstWhere((prod) => prod.id == res);
@@ -858,7 +921,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                 flex: 1,
                                 child: Container(
                                   padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                  decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                   child: Text(formatAmount(theoreticalStock, symbol: ''), textAlign: TextAlign.right),
                                 ),
                               ),
@@ -871,8 +934,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   textAlign: TextAlign.right,
                                   decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: AppColors.surfaceAlt,
                                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                                   ),
                                   onChanged: (val) {
                                     final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
@@ -887,7 +954,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                 flex: 1,
                                 child: Container(
                                   padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: surplus > 0 ? AppColors.successLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                  decoration: BoxDecoration(color: surplus > 0 ? AppColors.successLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                   child: Text(surplus > 0 ? formatAmount(surplus, symbol: '') : '—', textAlign: TextAlign.right, style: TextStyle(color: surplus > 0 ? AppColors.success : AppColors.textTertiary, fontWeight: FontWeight.bold)),
                                 ),
                               ),
@@ -896,7 +963,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                 flex: 1,
                                 child: Container(
                                   padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(color: missing > 0 ? AppColors.errorLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                  decoration: BoxDecoration(color: missing > 0 ? AppColors.errorLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                   child: Text(missing > 0 ? formatAmount(missing, symbol: '') : '—', textAlign: TextAlign.right, style: TextStyle(color: missing > 0 ? AppColors.error : AppColors.textTertiary, fontWeight: FontWeight.bold)),
                                 ),
                               ),
@@ -925,7 +992,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   OutlinedButton.icon(
                     onPressed: () async {
                       if (isMobile) {
-                        final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                        final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId, excludeServices: true);
                         if (selectedProduct != null) {
                           setState(() {
                             _items.add(InventorySheetItem(

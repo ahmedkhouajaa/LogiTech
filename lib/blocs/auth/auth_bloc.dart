@@ -36,6 +36,8 @@ class AuthSignUpRequested extends AuthEvent {
 
 class AuthGoogleSignInRequested extends AuthEvent {}
 
+class AuthResetLoadingRequested extends AuthEvent {}
+
 class AuthLogoutRequested extends AuthEvent {}
 
 class AuthOfflineModeRequested extends AuthEvent {}
@@ -118,6 +120,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthSignUpRequested>(_onAuthSignUpRequested);
     on<AuthGoogleSignInRequested>(_onAuthGoogleSignInRequested);
+    on<AuthResetLoadingRequested>((event, emit) {
+      if (state is AuthLoading) {
+        emit(AuthUnauthenticated());
+      }
+    });
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
     on<AuthOfflineModeRequested>(_onAuthOfflineModeRequested);
     on<AuthSessionExpiredEvent>(_onAuthSessionExpired);
@@ -192,7 +199,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthLoginRequested(AuthLoginRequested event, Emitter<AuthState> emit) async {
     // Debounce simultaneous clicks
-    if (state is AuthLoading) return;
+    if (state is AuthLoading) {
+      emit(const AuthError('Une opération de connexion est déjà en cours. Veuillez patienter ou réessayer.'));
+      return;
+    }
 
     // Pre-flight anti-brute force / rate-limit check
     final spamCheck = AntiSpamGuard.instance.checkLoginAllowed(email: event.email);
@@ -221,7 +231,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthSignUpRequested(AuthSignUpRequested event, Emitter<AuthState> emit) async {
-    if (state is AuthLoading) return;
+    if (state is AuthLoading) {
+      emit(const AuthError('Une opération est déjà en cours (ex. Connexion Google). Veuillez patienter ou réessayer.'));
+      return;
+    }
 
     // Pre-flight anti-spam / rate-limit check
     final spamCheck = AntiSpamGuard.instance.checkSignUpAllowed();
@@ -245,7 +258,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthGoogleSignInRequested(AuthGoogleSignInRequested event, Emitter<AuthState> emit) async {
     // Scenario 11: Debounce / prevent multiple simultaneous clicks
-    if (state is AuthLoading) return;
+    if (state is AuthLoading) {
+      emit(const AuthError('Une tentative de connexion est déjà en cours. Veuillez patienter.'));
+      return;
+    }
 
     emit(AuthLoading());
     try {

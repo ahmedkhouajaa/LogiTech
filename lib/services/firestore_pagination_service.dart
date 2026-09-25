@@ -634,7 +634,6 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
         if (isDel) {
-          doc.reference.delete().catchError((_) {});
           continue;
         }
         final mappedData = Map<String, dynamic>.from(data);
@@ -693,7 +692,6 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
         if (isDel) {
-          doc.reference.delete().catchError((_) {});
           continue;
         }
         final mappedData = Map<String, dynamic>.from(data);
@@ -742,9 +740,7 @@ class FirestorePaginationService {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
-        if (isDel) {
-          doc.reference.delete().catchError((_) {});
-        } else {
+        if (!isDel) {
           count++;
         }
       }
@@ -796,7 +792,6 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
         if (isDel) {
-          doc.reference.delete().catchError((_) {});
           continue;
         }
         final mappedData = Map<String, dynamic>.from(data);
@@ -857,7 +852,6 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
         if (isDel) {
-          doc.reference.delete().catchError((_) {});
           continue;
         }
         final mappedData = Map<String, dynamic>.from(data);
@@ -908,9 +902,7 @@ class FirestorePaginationService {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
-        if (isDel) {
-          doc.reference.delete().catchError((_) {});
-        } else {
+        if (!isDel) {
           count++;
         }
       }
@@ -4120,7 +4112,6 @@ class FirestorePaginationService {
             data['id'] = doc.id;
             final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
             if (isDel) {
-              doc.reference.delete().catchError((_) {});
               continue;
             }
             results.add(Product.fromMap(data));
@@ -4193,7 +4184,6 @@ class FirestorePaginationService {
           data['id'] = doc.id;
           final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
           if (isDel) {
-            doc.reference.delete().catchError((_) {});
             continue;
           }
           results.add(Product.fromMap(data));
@@ -4238,9 +4228,7 @@ class FirestorePaginationService {
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
-        if (isDel) {
-          doc.reference.delete().catchError((_) {});
-        } else {
+        if (!isDel) {
           count++;
         }
       }

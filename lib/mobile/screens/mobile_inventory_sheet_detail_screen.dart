@@ -211,6 +211,18 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
           statusColor: currentSheet.status == 'validated' ? AppColors.success : (currentSheet.status == 'cancelled' ? AppColors.error : AppColors.warning),
           infoSections: infoSections,
           articles: articles,
+          hidePricing: true,
+          totals: [
+            PremiumTotalRow(
+              label: 'Nombre d\'articles',
+              formattedValue: '${currentSheet.items.length}',
+            ),
+            PremiumTotalRow(
+              label: 'Total unités comptées',
+              formattedValue: '${currentSheet.items.fold(0.0, (sum, i) => sum + i.actualQty).toInt()}',
+              isGrandTotal: true,
+            ),
+          ],
         ),
       ),
     );
@@ -237,22 +249,34 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
       return;
     }
 
+    final wState = context.read<WarehousesBloc>().state;
+    String whName = 'Entrepôt par défaut';
+    if (wState is WarehousesLoaded) {
+      final match = wState.warehouses.cast<dynamic>().firstWhere(
+        (w) => w.id == sheet.warehouseId,
+        orElse: () => null,
+      );
+      if (match != null && match.name != null && match.name.toString().isNotEmpty) {
+        whName = match.name.toString();
+      }
+    }
+
     switch (action) {
       case 'view':
       case 'print':
-        final doc = DocumentWrapper.fromInventorySheet(sheet);
+        final doc = DocumentWrapper.fromInventorySheet(sheet, whName);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
       case 'pdf':
-        final doc = DocumentWrapper.fromInventorySheet(sheet);
+        final doc = DocumentWrapper.fromInventorySheet(sheet, whName);
         PdfService.instance.downloadDocument(context, doc);
         break;
       case 'email':
-        final docEmail = DocumentWrapper.fromInventorySheet(sheet);
+        final docEmail = DocumentWrapper.fromInventorySheet(sheet, whName);
         DocumentShareService.shareDocument(docEmail, isEmail: true);
         break;
       case 'whatsapp':
-        final docWa = DocumentWrapper.fromInventorySheet(sheet);
+        final docWa = DocumentWrapper.fromInventorySheet(sheet, whName);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:

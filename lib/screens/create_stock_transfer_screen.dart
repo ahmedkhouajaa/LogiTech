@@ -20,7 +20,7 @@ import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
 import '../widgets/searchable_dropdown_field.dart';
-import '../mobile/widgets/forms/mobile_smart_fields.dart';
+import '../services/trial_service.dart';
 
 class CreateStockTransferScreen extends StatefulWidget {
   final StockTransfer? existing;
@@ -129,6 +129,9 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   }
 
   Future<void> _save() async {
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     if (!_formKey.currentState!.validate()) return;
     
@@ -332,23 +335,6 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
     );
   }
 
-  String _resolveWarehouseName(String? id) {
-    if (id == null || id.isEmpty) return 'Sélectionner...';
-    if (id == 'default_warehouse') return 'Entrepôt principal';
-    try {
-      final w = _warehouses.firstWhere((w) => w.id == id);
-      return w.name;
-    } catch (_) {}
-    try {
-      final state = context.read<WarehousesBloc>().state;
-      if (state is WarehousesLoaded) {
-        final w = state.warehouses.firstWhere((w) => w.id == id);
-        return w.name;
-      }
-    } catch (_) {}
-    return 'Sélectionner...';
-  }
-
   Widget _buildInformationsSection() {
     return BlocBuilder<WarehousesBloc, WarehousesState>(
       builder: (context, whState) {
@@ -374,15 +360,12 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         }
 
         final sourceWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null);
-        final sourceWarehouseName = sourceWh?.name ?? 'Sélectionner...';
-
         final destWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null);
-        final destWarehouseName = destWh?.name ?? 'Sélectionner...';
 
         final dateField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr('Date'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Date'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
             SizedBox(height: 8),
             InkWell(
               onTap: () async {
@@ -394,17 +377,20 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 );
                 if (date != null) setState(() => _selectedDate = date);
               },
+              borderRadius: BorderRadius.circular(AppRadius.md),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                height: 48,
+                padding: EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                  color: AppColors.surfaceAlt,
+                  border: Border.all(color: AppColors.border),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                    Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
                   ],
                 ),
               ),
@@ -412,63 +398,77 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
           ],
         );
 
-        final sourceField = SmartSearchableSelector(
-          label: 'Entrepôt Source',
-          hint: 'Sélectionner...',
-          selectedText: sourceWarehouseName,
-          onTap: () async {
-            final available = warehouses.where((w) => w.id != _destWarehouseId).toList();
-            if (available.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Aucun autre entrepôt disponible')),
-              );
-              return;
-            }
-            final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
-            if (res != null && mounted) {
-              setState(() {
-                _sourceWarehouseId = res;
-              });
-              _onWarehouseChanged();
-            }
-          },
+        final sourceField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.tr('Entrepôt Source'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            SizedBox(height: 8),
+            SearchableSelectorField(
+              hint: context.tr('Sélectionner un entrepôt'),
+              selectedText: sourceWh?.name,
+              onTap: () async {
+                final available = warehouses.where((w) => w.id != _destWarehouseId).toList();
+                if (available.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Aucun autre entrepôt disponible')),
+                  );
+                  return;
+                }
+                final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
+                if (res != null && mounted) {
+                  setState(() {
+                    _sourceWarehouseId = res;
+                  });
+                  _onWarehouseChanged();
+                }
+              },
+            ),
+          ],
         );
 
-        final destField = SmartSearchableSelector(
-          label: 'Entrepôt Destination',
-          hint: 'Sélectionner...',
-          selectedText: destWarehouseName,
-          onTap: () async {
-            final available = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
-            if (available.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
-              );
-              return;
-            }
-            final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
-            if (res != null && mounted) {
-              setState(() {
-                _destWarehouseId = res;
-              });
-              _onWarehouseChanged();
-            }
-          },
+        final destField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.tr('Entrepôt Destination'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            SizedBox(height: 8),
+            SearchableSelectorField(
+              hint: context.tr('Sélectionner un entrepôt'),
+              selectedText: destWh?.name,
+              onTap: () async {
+                final available = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+                if (available.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
+                  );
+                  return;
+                }
+                final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
+                if (res != null && mounted) {
+                  setState(() {
+                    _destWarehouseId = res;
+                  });
+                  _onWarehouseChanged();
+                }
+              },
+            ),
+          ],
         );
 
         final reasonField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Raison (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
             SizedBox(height: 8),
             TextFormField(
               controller: _reasonController,
               decoration: InputDecoration(
-                hintText: 'Raison de l\'opération...',
+                hintText: context.tr("Raison de l'opération..."),
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 filled: true,
                 fillColor: AppColors.surfaceAlt,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
               ),
               maxLines: 2,
             ),
@@ -478,16 +478,18 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         final notesField = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            Text(context.tr('Notes (optionnel)'), style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
             SizedBox(height: 8),
             TextFormField(
               controller: _notesController,
               decoration: InputDecoration(
                 hintText: context.tr('Notes additionnelles...'),
+                hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 filled: true,
                 fillColor: AppColors.surfaceAlt,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
               ),
               maxLines: 2,
             ),
@@ -499,7 +501,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+            side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
           ),
           child: Padding(
             padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
@@ -550,7 +552,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       builder: (context, productsState) {
         List<Product> products = [];
         if (productsState is ProductsLoaded) {
-          products = productsState.products;
+          products = productsState.products.where((p) => !p.isService).toList();
         }
 
         return BlocBuilder<StockBloc, StockState>(
@@ -560,7 +562,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                side: BorderSide(color: AppColors.cardBlueBorder, width: 1.5),
               ),
               child: Padding(
                 padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
@@ -676,6 +678,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                             selectedProductId: item.productId,
                             warehouseId: _sourceWarehouseId,
                             warehouseStockMap: stockMap,
+                            excludeServices: true,
                           );
                           if (res != null) {
                             final p = products.firstWhere((prod) => prod.id == res);
@@ -698,9 +701,9 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                           margin: EdgeInsets.only(bottom: 12),
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+                            border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,7 +723,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               SizedBox(height: 6),
                               InkWell(
                                 onTap: () async {
-                                  final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _sourceWarehouseId);
+                                  final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _sourceWarehouseId, excludeServices: true);
                                   if (selectedProduct != null) {
                                     setState(() {
                                       _items[index] = StockTransferItem(
@@ -921,7 +924,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               flex: 1,
                               child: Container(
                                 padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                 child: Text(
                                   formatAmount(sourceStock, symbol: ''),
                                   textAlign: TextAlign.right,
@@ -939,9 +942,12 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                                 textAlign: TextAlign.right,
                                 decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: AppColors.surfaceAlt,
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                                 ),
                                 onChanged: (val) {
                                   final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
@@ -962,7 +968,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               flex: 1,
                               child: Container(
                                 padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                 child: Text(
                                   formatAmount(finalSourceStock, symbol: ''),
                                   textAlign: TextAlign.right,
@@ -977,7 +983,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               flex: 1,
                               child: Container(
                                 padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                 child: Text(
                                   formatAmount(destStock, symbol: ''),
                                   textAlign: TextAlign.right,
@@ -992,7 +998,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               flex: 1,
                               child: Container(
                                 padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                                 child: Text(
                                   formatAmount(finalDestStock, symbol: ''),
                                   textAlign: TextAlign.right,
@@ -1019,7 +1025,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         OutlinedButton.icon(
                           onPressed: () async {
                             if (_isMobile) {
-                              final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _sourceWarehouseId);
+                              final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _sourceWarehouseId, excludeServices: true);
                               if (selectedProduct != null) {
                                 setState(() {
                                   _items.add(StockTransferItem(

@@ -7,7 +7,6 @@ import '../services/sync_service.dart';
 import '../widgets/pending_sync_badge.dart';
 
 
-import '../database/database_helper.dart';
 import '../models/stock_movement.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../blocs/products/products_bloc.dart';
@@ -28,7 +27,6 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../l10n/app_localizations.dart';
 
@@ -267,7 +265,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   
-                            value: _filterWarehouseId,
+                            initialValue: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -443,10 +441,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   }
 
   DocumentWrapper _createDocumentWrapper(StockWithdrawal entry) {
+    final String resolvedWarehouse = _getWarehouseName(entry.warehouseId);
+    final String? reason = (entry.conditionsGenerales != null && entry.conditionsGenerales!.trim().isNotEmpty)
+        ? entry.conditionsGenerales!.trim()
+        : ((entry.notes != null && entry.notes!.trim().isNotEmpty) ? entry.notes!.trim() : null);
+
     return DocumentWrapper(
       id: entry.id,
       number: entry.number,
-      documentTitle: widget.isExitVoucher ? context.tr("Bons de sortie") : context.tr("Bons de prélèvement"),
+      documentTitle: widget.isExitVoucher ? "BON DE SORTIE" : "BON DE PRÉLÈVEMENT",
       documentType: widget.isExitVoucher ? "exit_voucher" : "stock_withdrawal",
       customerName: widget.isExitVoucher ? (entry.customerCompany ?? entry.customerName) : null,
       customerId: widget.isExitVoucher ? entry.customerId : null,
@@ -456,10 +459,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
       stampTax: entry.timbreFiscal,
       totalTTC: entry.totalTTC,
       notes: entry.notes,
-      conditionsGenerales: entry.conditionsGenerales,
+      conditionsGenerales: widget.isExitVoucher ? entry.conditionsGenerales : null,
       items: entry.items.map((item) {
         final product = _getProduct(item.productId);
+        final refCode = (product?.reference != null && product!.reference!.trim().isNotEmpty)
+            ? product.reference!.trim()
+            : (product?.code ?? '');
         return DocumentItemWrapper(
+          productId: item.productId,
+          reference: refCode,
           productName: product?.name ?? context.tr('Article Inconnu'),
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -467,7 +475,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
           discountPercent: item.discountPercent,
           totalHT: item.totalHT,
           customFields: {
-            'code': product?.code ?? '',
+            'code': refCode,
             'unit': product?.unit ?? 'pièce',
             'purchasePrice': product?.purchasePrice ?? 0,
           },
@@ -476,8 +484,10 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
       customFields: entry.customFields,
       customData: {
         'warehouseId': entry.warehouseId,
-        'warehouseName': _getWarehouseName(entry.warehouseId ?? 'default_warehouse'),
-        'createdBy': 'Admin',
+        'warehouseName': resolvedWarehouse,
+        'reason': reason,
+        'createdBy': entry.createdBy ?? 'Admin',
+        'status': entry.status,
         'projectName': entry.projectName,
         'driverName': entry.driverName,
         'vehicleRegistration': entry.vehicleRegistration,
@@ -514,7 +524,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   }
 
   Widget _buildArticlesDisplay(List<StockWithdrawalItem> items) {
-    if (items.isEmpty) return Text('0 article', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 article', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
     
     final summaryText = items.map((item) {
       final pName = item.description ?? 'Produit Inconnu';
@@ -529,7 +539,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
       showDuration: Duration(seconds: 3),
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
-      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
   }
 
@@ -714,7 +724,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   icon: const Icon(Icons.add, size: 18),
                   label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -755,9 +765,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                               (w) => w?.id == _filterWarehouseId,
                               orElse: () => null,
                             );
-                            return SearchableSelectorField(
-                              hint: context.tr('Tous les Entrepôts'),
-                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
+                            final isSelected = _filterWarehouseId != null;
+                            return InkWell(
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -769,6 +778,35 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                                   setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                 }
                               },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isSelected
+                                            ? (selectedWh?.name ?? context.tr('Tous les Entrepôts'))
+                                            : context.tr('Tous les Entrepôts'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isSelected
+                                              ? AppColors.textPrimary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -791,11 +829,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: context.tr('Rechercher un produit...'),
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                           ),
                           style: const TextStyle(fontSize: 12),
                           onChanged: (v) => setState(() {
@@ -819,8 +861,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
-                        child: OutlinedButton(
-                          onPressed: () async {
+                        child: InkWell(
+                          onTap: () async {
                             final range = await CustomDateRangePicker.show(
                               context,
                               initialRange: _filterDateRange,
@@ -829,35 +871,38 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                               setState(() => _filterDateRange = range);
                             }
                           },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            height: 32,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            backgroundColor: AppColors.surface,
-                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _filterDateRange != null
-                                      ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : context.tr('Toutes les dates'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _filterDateRange != null
+                                        ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
+                                        : context.tr('Toutes les dates'),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              if (_filterDateRange != null)
-                                InkWell(
-                                  onTap: () => setState(() => _filterDateRange = null),
-                                  child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
-                                ),
-                            ],
+                                if (_filterDateRange != null)
+                                  InkWell(
+                                    onTap: () => setState(() => _filterDateRange = null),
+                                    child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1058,11 +1103,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   }
 
   Widget _buildRow(BuildContext context, StockWithdrawal entry, int index) {
-    return Container(
+    return Material(
       color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
+      child: InkWell(
+        onTap: () => _previewDocument(entry),
+        hoverColor: AppColors.primary.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
           Expanded(
             flex: 2,
             child: Row(
@@ -1077,11 +1126,11 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDateTimeLong(entry.date), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(formatDateTimeLong(entry.date), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 2,
-            child: Text(_getWarehouseName(entry.warehouseId), style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary)),
+            child: Text(_getWarehouseName(entry.warehouseId), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 1,
@@ -1089,7 +1138,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text('Admin', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+            child: Text('Admin', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
@@ -1202,48 +1251,9 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _pageButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        padding: EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(4),
-          color: AppColors.surface,
-        ),
-        child: Icon(icon, size: 20, color: enabled ? AppColors.textPrimary : AppColors.textTertiary),
-      ),
-    );
-  }
-
-  void _confirmDelete(StockWithdrawal entry) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.tr('Confirmer la suppression')),
-        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${widget.isExitVoucher ? context.tr('Bons de sortie') : context.tr('Bons de prélèvement')} ${entry.number} ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(entry.id));
-              // Refresh products list so stock quantities are updated immediately
-              context.read<ProductsBloc>().add(LoadProducts());
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text(context.tr('Supprimer')),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  ),
+);
+}
 }
 

@@ -13,6 +13,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileCheckTraiteFormScreen extends StatefulWidget {
   final CheckTraite? existing;
@@ -75,6 +76,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     
     if (_documentNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez saisir le numéro du document'), backgroundColor: AppColors.error));

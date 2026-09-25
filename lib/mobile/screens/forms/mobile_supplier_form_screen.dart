@@ -12,6 +12,7 @@ import '../../../../services/enterprise_service.dart';
 import '../../../../database/database_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileSupplierFormScreen extends StatefulWidget {
   final Supplier? existing;
@@ -56,6 +57,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {
@@ -144,11 +146,10 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SmartTextInput(
-                        label: 'Téléphone *',
+                        label: 'Téléphone',
                         initialValue: _phone,
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(

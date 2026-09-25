@@ -26,7 +26,10 @@ Future<UserCredential> signInWithDesktopGoogleAuthImpl() async {
 
   Credential credentials;
   try {
-    credentials = await authenticator.authorize();
+    credentials = await authenticator.authorize().timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => throw 'Connexion Google expirée ou annulée.',
+    );
   } catch (e) {
     throw 'Connexion Google annulée.';
   }

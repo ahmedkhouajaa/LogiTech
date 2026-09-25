@@ -56,6 +56,8 @@ enum AppModule {
   userManagement,
   importExport,
   support,
+  trash,
+  userTracking,
 }
 
 class SidebarMenu extends StatefulWidget {
@@ -161,6 +163,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       // Section 5: Paramètres (always visible)
                       const _SidebarDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                      _buildItem(AppModule.trash, Icons.delete_outline_rounded, 'Corbeille'),
                       _buildItem(AppModule.appModulesSettings, Icons.widgets_rounded, 'Modules de l\'application'),
                       _buildItem(AppModule.personalInfo, Icons.badge_outlined, 'Informations personnelles'),
                       _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
@@ -172,6 +175,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
+                      _buildItem(AppModule.userTracking, Icons.manage_history_rounded, 'Traçabilité Utilisateurs'),
                       const SizedBox(height: 16),
                       
                       // // TEMP SYNC BUTTON - Temporarily hidden

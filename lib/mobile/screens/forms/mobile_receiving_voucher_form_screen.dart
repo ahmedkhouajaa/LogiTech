@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../models/custom_tax_rate.dart';
+import '../../../../services/custom_tax_service.dart';
 import '../../../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../../../../blocs/suppliers/suppliers_bloc.dart';
 import '../../../../services/connectivity_service.dart';
@@ -31,7 +34,9 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../widgets/document_tax_settings_dialog.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileReceivingVoucherFormScreen extends StatefulWidget {
   final ReceivingVoucher? existing;
@@ -56,8 +61,12 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   String _conditions = '';
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   String _status = 'draft';
   Map<String, dynamic> _customFields = {};
 
@@ -91,8 +100,45 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     });
   }
 
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
   double get _timbreFiscal => _withTimbreFiscal ? 1.000 : 0;
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+
+  Map<String, double> get _customTaxesBreakdownMap {
+    final map = <String, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        final label = '${tax.label.isNotEmpty ? tax.label : tax.name} (${tax.isPercentage ? '${tax.value.toStringAsFixed(tax.value.truncateToDouble() == tax.value ? 0 : 2)}%' : '${tax.value.toStringAsFixed(2)} DT'})';
+        map[label] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdownMap.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'purchase',
+    );
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -103,6 +149,11 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
 
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
+
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
@@ -111,7 +162,11 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields?['withTimbreFiscal'] == true;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(n.customFields!['activeCustomTaxes']);
+      }
       _status = n.status;
       _notes = n.notes ?? '';
       _conditions = n.conditionsGenerales ?? '';
@@ -130,8 +185,15 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     }
   }
 
+  @override
+  void dispose() {
+    _customTaxesSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_items.isEmpty) {
@@ -213,7 +275,15 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
         timbreFiscal: _timbreFiscal,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         items: _items.map((item) => ReceivingVoucherItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           voucherId: voucherId,
@@ -354,6 +424,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),
+      onSettingsTap: _openSettingsDialog,
       onSave: () {
         if (!widget.isReadOnly) _save();
       },
@@ -599,7 +670,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                                 productName: newProd.name,
                                 quantityExpected: 1,
                                 quantityReceived: 1,
-                                unitPrice: newProd.purchasePrice > 0 ? newProd.purchasePrice : newProd.sellingPrice,
+                                unitPrice: newProd.purchasePrice,
                                 tvaRate: newProd.tvaRate,
                               ));
                             });
@@ -636,9 +707,13 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
             subTotalHT: _totalHTAfterDiscount,
             tvaBreakdown: _tvaBreakdown,
             totalTva: _totalTvaAfterDiscount,
+            withFodec: _withFodec,
+            fodecAmount: _fodecAmount,
+            customTaxesBreakdown: _customTaxesBreakdownMap,
             timbreFiscal: 1.000,
             applyTimbreFiscal: _withTimbreFiscal,
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
+            onSettingsTap: _openSettingsDialog,
             totalTTC: _totalTTC,
           ),
         ),

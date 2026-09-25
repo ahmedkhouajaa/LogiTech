@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/products/products_bloc.dart';
@@ -7,10 +8,12 @@ import '../../../../blocs/product_settings/product_settings_state.dart';
 import '../../../../blocs/product_settings/product_settings_event.dart';
 import '../../../../models/product.dart';
 import '../../../../models/product_family.dart';
+import '../../../../models/product_category.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileProductFormScreen extends StatefulWidget {
   final Product? existing;
@@ -43,6 +46,8 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
   String _destination = 'Vente et Achat';
   String _productType = 'produit';
   double _tvaRate = 19.0;
+  static const List<double> _defaultTvaRates = [0.0, 7.0, 13.0, 19.0];
+  final List<double> _tvaRates = [0.0, 7.0, 13.0, 19.0];
   String _unit = 'Piece';
   String? _familyId;
   String? _subFamilyId;
@@ -167,6 +172,10 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
       }
     }
     _tvaRate = p?.tvaRate ?? 19.0;
+    if (!_tvaRates.contains(_tvaRate)) {
+      _tvaRates.add(_tvaRate);
+      _tvaRates.sort();
+    }
 
     // Unit normalize
     String rawUnit = p?.unit ?? 'Piece';
@@ -212,6 +221,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
 
   void _save() {
     if (widget.isReadOnly) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameCtrl.text.trim();
@@ -245,13 +255,13 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         sellingPrice: _destination == 'Achat' ? 0.0 : _sellingPrice,
         usualDiscount: _usualDiscount,
         tvaRate: _tvaRate,
-        stockQty: _stockQty,
-        minStockQty: _minStockQty,
-        allowNegativeStock: _allowNegativeStock,
-        lowStockAlert: _lowStockAlert,
-        lowStockThreshold: _minStockQty > 0 ? _minStockQty : 5.0,
-        highStockAlert: _highStockAlert,
-        highStockThreshold: _highStockThreshold,
+        stockQty: _productType == 'service' ? 0.0 : _stockQty,
+        minStockQty: _productType == 'service' ? 0.0 : _minStockQty,
+        allowNegativeStock: _productType == 'service' ? false : _allowNegativeStock,
+        lowStockAlert: _productType == 'service' ? false : _lowStockAlert,
+        lowStockThreshold: _productType == 'service' ? 0.0 : (_minStockQty > 0 ? _minStockQty : 5.0),
+        highStockAlert: _productType == 'service' ? false : _highStockAlert,
+        highStockThreshold: _productType == 'service' ? 0.0 : _highStockThreshold,
         barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
         privateNotes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         isActive: widget.existing?.isActive ?? true,
@@ -289,6 +299,8 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
     IconData? itemIcon,
     bool allowCustom = false,
     T Function(String)? onAddCustom,
+    VoidCallback? onAddNew,
+    String? addNewLabel,
   }) async {
     return showDialog<T?>(
       context: context,
@@ -318,7 +330,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header: Title & Close Button
+                    // Header: Title, Optional Add & Close Button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -332,6 +344,29 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                             ),
                           ),
                         ),
+                        if (onAddNew != null && !widget.isReadOnly) ...[
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              onAddNew();
+                            },
+                            icon: Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                            label: Text(
+                              addNewLabel ?? 'Ajouter',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 22),
@@ -374,6 +409,43 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                     const SizedBox(height: 12),
                     Divider(height: 1, color: AppColors.border.withValues(alpha: 0.7)),
                     const SizedBox(height: 8),
+
+                    // Quick add inside dropdown dialog
+                    if (onAddNew != null && !widget.isReadOnly) ...[
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onAddNew();
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  addNewLabel ?? 'Ajouter',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
 
                     // Items List
                     Flexible(
@@ -991,7 +1063,35 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
           ],
 
           // TVA Rate Selector
-          _buildFieldLabel('Taux de TVA (%)'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildFieldLabel('Taux de TVA (%)'),
+              if (!widget.isReadOnly)
+                InkWell(
+                  onTap: _showAddTvaDialog,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_circle_outline_rounded, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Ajouter TVA',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           _buildTvaSelector(),
         ],
@@ -1067,9 +1167,210 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
   }
 
   // ─── TVA PILL SELECTOR ───────────────────────────────────────────────────
-  Widget _buildTvaSelector() {
-    final rates = [0.0, 7.0, 13.0, 19.0];
+  Future<void> _showAddTvaDialog() async {
+    final tvaCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
 
+    final result = await showDialog<double>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.percent_rounded, color: AppColors.primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Ajouter un taux de TVA',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Saisissez un nouveau taux de TVA en pourcentage :',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: tvaCtrl,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d*')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Taux de TVA (%)',
+                          hintText: 'Ex: 9',
+                          suffixText: '%',
+                          suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Veuillez saisir un taux de TVA';
+                          }
+                          final parsed = double.tryParse(val.trim().replaceAll(',', '.'));
+                          if (parsed == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          if (parsed < 0 || parsed > 100) {
+                            return 'Le taux doit être entre 0% et 100%';
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) {
+                          if (formKey.currentState!.validate()) {
+                            final val = double.parse(tvaCtrl.text.trim().replaceAll(',', '.'));
+                            Navigator.of(dialogCtx).pop(val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [9.0, 10.0, 14.0, 20.0]
+                            .where((r) => !_tvaRates.contains(r))
+                            .map((r) {
+                          return ActionChip(
+                            label: Text('${r.toInt()}%'),
+                            labelStyle: TextStyle(fontSize: 12, color: AppColors.primary),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                            onPressed: () {
+                              tvaCtrl.text = r.toInt().toString();
+                              if (formKey.currentState!.validate()) {
+                                Navigator.of(dialogCtx).pop(r);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    side: BorderSide(color: AppColors.border),
+                  ),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      final val = double.parse(tvaCtrl.text.trim().replaceAll(',', '.'));
+                      Navigator.of(dialogCtx).pop(val);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Ajouter'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        if (!_tvaRates.contains(result)) {
+          _tvaRates.add(result);
+          _tvaRates.sort();
+        }
+        _tvaRate = result;
+      });
+    }
+  }
+
+  void _removeTvaRate(double rate) {
+    final rateLabel = rate == rate.roundToDouble() ? '${rate.toInt()}%' : '${rate.toStringAsFixed(1)}%';
+    final wasSelected = _tvaRate == rate;
+    setState(() {
+      _tvaRates.remove(rate);
+      if (wasSelected) {
+        _tvaRate = _tvaRates.contains(19.0) ? 19.0 : (_tvaRates.isNotEmpty ? _tvaRates.first : 0.0);
+      }
+    });
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Taux de TVA $rateLabel supprimé'),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Annuler',
+          textColor: Colors.amber,
+          onPressed: () {
+            setState(() {
+              if (!_tvaRates.contains(rate)) {
+                _tvaRates.add(rate);
+                _tvaRates.sort();
+              }
+              if (wasSelected) {
+                _tvaRate = rate;
+              }
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvaSelector() {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -1077,41 +1378,108 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
-      child: Row(
-        children: rates.map((rate) {
-          final isSelected = _tvaRate == rate;
-          return Expanded(
-            child: GestureDetector(
-              onTap: widget.isReadOnly ? null : () => setState(() => _tvaRate = rate),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ..._tvaRates.map((rate) {
+              final isSelected = _tvaRate == rate;
+              final isCustom = !_defaultTvaRates.contains(rate);
+              final label = rate == rate.roundToDouble() ? '${rate.toInt()}%' : '${rate.toStringAsFixed(1)}%';
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: GestureDetector(
+                  onTap: widget.isReadOnly ? null : () => setState(() => _tvaRate = rate),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isCustom ? 10 : 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.surface : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? AppColors.primary : AppColors.textSecondary,
                           ),
-                        ]
-                      : [],
+                        ),
+                        if (isCustom && !widget.isReadOnly) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => _removeTvaRate(rate),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary.withValues(alpha: 0.12)
+                                    : AppColors.border.withValues(alpha: 0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 12,
+                                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${rate.toInt()}%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              );
+            }),
+            if (!widget.isReadOnly)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: GestureDetector(
+                  onTap: _showAddTvaDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'TVA',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+          ],
+        ),
       ),
     );
   }
@@ -1130,9 +1498,12 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         builder: (context, state) {
           List<ProductFamily> rootFamilies = [];
           List<ProductFamily> subFamilies = [];
+          List<ProductCategory> dynamicCategories = [];
+          List<ProductBrand> dynamicBrands = [];
 
           if (state is ProductSettingsLoaded) {
             rootFamilies = state.rootFamilies;
+            dynamicCategories = state.categories;
             if (_familyId != null && !rootFamilies.any((f) => f.id == _familyId)) {
               _familyId = null;
               _subFamilyId = null;
@@ -1143,7 +1514,20 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 _subFamilyId = null;
               }
             }
+
+            if (_category != null && _category!.trim().isNotEmpty) {
+              dynamicBrands = state.getBrandsForCategory(_category!);
+            } else {
+              dynamicBrands = state.brands;
+            }
           }
+
+          final categoriesList = dynamicCategories.isNotEmpty
+              ? dynamicCategories
+              : _categoryOptions.map((c) => ProductCategory(id: c, name: c)).toList();
+          final brandsList = dynamicBrands.isNotEmpty
+              ? dynamicBrands
+              : _brandOptions.map((b) => ProductBrand(id: b, name: b)).toList();
 
           final selectedFamily = rootFamilies.where((f) => f.id == _familyId).firstOrNull;
           final selectedSubFamily = subFamilies.where((sf) => sf.id == _subFamilyId).firstOrNull;
@@ -1163,19 +1547,21 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         const SizedBox(height: 6),
                         _buildDialogSelectorField(
                           text: selectedFamily?.name,
-                          hint: 'Sélectionner',
+                          hint: context.tr('Sélectionner'),
                           prefixIcon: Icons.account_tree_outlined,
                           onTap: widget.isReadOnly
                               ? null
                               : () async {
                                   final res = await _showSearchableSelectDialog<ProductFamily>(
-                                    title: 'Sélectionner une famille',
-                                    searchHint: 'Rechercher une famille...',
+                                    title: context.tr('Sélectionner une famille'),
+                                    searchHint: context.tr('Rechercher une famille...'),
                                     items: rootFamilies,
                                     itemTitle: (f) => f.name,
                                     filter: (f, q) => f.name.toLowerCase().contains(q),
                                     isSelected: (f) => f.id == _familyId,
                                     itemIcon: Icons.folder_open_rounded,
+                                    onAddNew: () => _showAddFamilyDialog(context),
+                                    addNewLabel: context.tr('Ajouter une famille'),
                                   );
                                   if (res != null) {
                                     setState(() {
@@ -1197,28 +1583,30 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         const SizedBox(height: 6),
                         _buildDialogSelectorField(
                           text: selectedSubFamily?.name,
-                          hint: _familyId == null ? 'Choisir famille' : 'Sélectionner',
+                          hint: _familyId == null ? context.tr('Choisir famille') : context.tr('Sélectionner'),
                           prefixIcon: Icons.subdirectory_arrow_right_rounded,
                           onTap: widget.isReadOnly || _familyId == null
                               ? () {
                                   if (_familyId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Veuillez d\'abord sélectionner une famille'),
-                                        duration: Duration(seconds: 2),
+                                      SnackBar(
+                                        content: Text(context.tr('Veuillez d\'abord sélectionner une famille')),
+                                        duration: const Duration(seconds: 2),
                                       ),
                                     );
                                   }
                                 }
                               : () async {
                                   final res = await _showSearchableSelectDialog<ProductFamily>(
-                                    title: 'Sélectionner une sous-famille',
-                                    searchHint: 'Rechercher une sous-famille...',
+                                    title: context.tr('Sélectionner une sous-famille'),
+                                    searchHint: context.tr('Rechercher une sous-famille...'),
                                     items: subFamilies,
                                     itemTitle: (sf) => sf.name,
                                     filter: (sf, q) => sf.name.toLowerCase().contains(q),
                                     isSelected: (sf) => sf.id == _subFamilyId,
                                     itemIcon: Icons.account_tree_outlined,
+                                    onAddNew: () => _showAddSubFamilyDialog(context, rootFamilies, _familyId),
+                                    addNewLabel: context.tr('Ajouter une sous-famille'),
                                   );
                                   if (res != null) {
                                     setState(() => _subFamilyId = res.id);
@@ -1243,24 +1631,32 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         const SizedBox(height: 6),
                         _buildDialogSelectorField(
                           text: _category,
-                          hint: 'Sélectionner',
+                          hint: context.tr('Sélectionner'),
                           prefixIcon: Icons.folder_outlined,
                           onTap: widget.isReadOnly
                               ? null
                               : () async {
-                                  final res = await _showSearchableSelectDialog<String>(
-                                    title: 'Sélectionner une catégorie',
-                                    searchHint: 'Rechercher une catégorie...',
-                                    items: _categoryOptions,
-                                    itemTitle: (c) => c,
-                                    filter: (c, q) => c.toLowerCase().contains(q),
-                                    isSelected: (c) => c == _category,
+                                  final res = await _showSearchableSelectDialog<ProductCategory>(
+                                    title: context.tr('Sélectionner une catégorie'),
+                                    searchHint: context.tr('Rechercher une catégorie...'),
+                                    items: categoriesList,
+                                    itemTitle: (c) => c.name,
+                                    filter: (c, q) => c.name.toLowerCase().contains(q),
+                                    isSelected: (c) => c.name == _category,
                                     itemIcon: Icons.category_outlined,
-                                    allowCustom: true,
-                                    onAddCustom: (q) => q,
+                                    onAddNew: () => _showAddCategoryDialog(context),
+                                    addNewLabel: context.tr('Ajouter une catégorie'),
                                   );
                                   if (res != null) {
-                                    setState(() => _category = res);
+                                    setState(() {
+                                      _category = res.name;
+                                      if (state is ProductSettingsLoaded) {
+                                        final validBrands = state.getBrandsForCategory(res.name);
+                                        if (_brandId != null && !validBrands.any((b) => b.name.toLowerCase() == _brandId!.toLowerCase())) {
+                                          _brandId = null;
+                                        }
+                                      }
+                                    });
                                   }
                                 },
                         ),
@@ -1276,24 +1672,30 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         const SizedBox(height: 6),
                         _buildDialogSelectorField(
                           text: _brandId,
-                          hint: 'Sélectionner',
+                          hint: context.tr('Sélectionner'),
                           prefixIcon: Icons.branding_watermark_outlined,
                           onTap: widget.isReadOnly
                               ? null
                               : () async {
-                                  final res = await _showSearchableSelectDialog<String>(
-                                    title: 'Sélectionner une marque',
-                                    searchHint: 'Rechercher une marque...',
-                                    items: _brandOptions,
-                                    itemTitle: (b) => b,
-                                    filter: (b, q) => b.toLowerCase().contains(q),
-                                    isSelected: (b) => b == _brandId,
+                                  final res = await _showSearchableSelectDialog<ProductBrand>(
+                                    title: context.tr('Sélectionner une marque'),
+                                    searchHint: context.tr('Rechercher une marque...'),
+                                    items: brandsList,
+                                    itemTitle: (b) => b.name,
+                                    itemSubtitle: (b) => (b.categoryId != null && b.categoryId!.isNotEmpty) ? '${context.tr('Catégorie')}: ${b.categoryId}' : '',
+                                    filter: (b, q) => b.name.toLowerCase().contains(q),
+                                    isSelected: (b) => b.name == _brandId,
                                     itemIcon: Icons.branding_watermark_outlined,
-                                    allowCustom: true,
-                                    onAddCustom: (q) => q,
+                                    onAddNew: () => _showAddBrandDialog(context, categoriesList, _category),
+                                    addNewLabel: context.tr('Ajouter une marque'),
                                   );
                                   if (res != null) {
-                                    setState(() => _brandId = res);
+                                    setState(() {
+                                      _brandId = res.name;
+                                      if (res.categoryId != null && (_category == null || _category!.isEmpty)) {
+                                        _category = res.categoryId;
+                                      }
+                                    });
                                   }
                                 },
                         ),
@@ -1391,8 +1793,714 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
     );
   }
 
+  // ─── ADD FAMILY / SUBFAMILY DIALOGS (MOBILE) ──────────────────────────────
+  Future<void> _showAddFamilyDialog(BuildContext context) async {
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.surface,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.folder_open_rounded, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            dialogCtx.tr('Nouvelle Famille'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    dialogCtx.tr('Nom de la famille'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: textCtrl,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: dialogCtx.tr('Nom de la famille (ex: Informatique, Mobilier...)'),
+                      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return dialogCtx.tr('Veuillez entrer un nom');
+                      }
+                      return null;
+                    },
+                    onFieldSubmitted: (_) => _submitFamily(dialogCtx, textCtrl, formKey),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _submitFamily(dialogCtx, textCtrl, formKey),
+                        icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                        label: Text(dialogCtx.tr('Créer la famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitFamily(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newFam = ProductFamily(
+      id: const Uuid().v4(),
+      name: name,
+    );
+    context.read<ProductSettingsBloc>().add(AddFamily(newFam));
+    setState(() {
+      _familyId = newFam.id;
+      _subFamilyId = null;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Famille "$name" créée et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddSubFamilyDialog(BuildContext context, List<ProductFamily> rootFamilies, String? selectedParentId) async {
+    if (rootFamilies.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('Veuillez d\'abord créer au moins une famille principale')),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _showAddFamilyDialog(context);
+      return;
+    }
+
+    String parentId = selectedParentId ?? rootFamilies.first.id;
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            final parentFamily = rootFamilies.where((f) => f.id == parentId).firstOrNull;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: AppColors.surface,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.subdirectory_arrow_right_rounded, color: AppColors.primary, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                dialogCtx.tr('Nouvelle Sous-famille'),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Famille parente'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: parentId,
+                            isExpanded: true,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                            items: rootFamilies.map((f) {
+                              return DropdownMenuItem<String>(
+                                value: f.id,
+                                child: Text(f.name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() => parentId = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Nom de la sous-famille'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: textCtrl,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: dialogCtx.tr('Nom de la nouvelle sous-famille'),
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return dialogCtx.tr('Veuillez entrer un nom');
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) => _submitSubFamily(dialogCtx, textCtrl, formKey, parentId, parentFamily?.name),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _submitSubFamily(dialogCtx, textCtrl, formKey, parentId, parentFamily?.name),
+                            icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                            label: Text(dialogCtx.tr('Créer la sous-famille'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _submitSubFamily(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey, String parentId, String? parentName) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newSub = ProductFamily(
+      id: const Uuid().v4(),
+      name: name,
+      parentId: parentId,
+    );
+    context.read<ProductSettingsBloc>().add(AddSubFamily(newSub));
+    setState(() {
+      _familyId = parentId;
+      _subFamilyId = newSub.id;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sous-famille "$name" liée à "${parentName ?? ''}" et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddCategoryDialog(BuildContext context) async {
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.surface,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.category_outlined, color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            dialogCtx.tr('Nouvelle Catégorie'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    dialogCtx.tr('Nom de la catégorie'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: textCtrl,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      hintText: dialogCtx.tr('ex: Téléphonie, Accessoires...'),
+                      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return dialogCtx.tr('Veuillez entrer un nom');
+                      }
+                      return null;
+                    },
+                    onFieldSubmitted: (_) => _submitCategory(dialogCtx, textCtrl, formKey),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _submitCategory(dialogCtx, textCtrl, formKey),
+                        icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                        label: Text(dialogCtx.tr('Créer la catégorie'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitCategory(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newCat = ProductCategory(
+      id: const Uuid().v4(),
+      name: name,
+    );
+    context.read<ProductSettingsBloc>().add(AddCategory(newCat));
+    setState(() {
+      _category = newCat.name;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Catégorie "$name" créée et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Future<void> _showAddBrandDialog(BuildContext context, List<ProductCategory> categories, String? selectedCategoryName) async {
+    if (categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('Veuillez d\'abord créer au moins une catégorie')),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      _showAddCategoryDialog(context);
+      return;
+    }
+
+    String parentCatName = selectedCategoryName ?? categories.first.name;
+    final textCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: AppColors.surface,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.branding_watermark_outlined, color: AppColors.primary, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                dialogCtx.tr('Nouvelle Marque'),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Catégorie parente'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: categories.any((c) => c.name == parentCatName) ? parentCatName : categories.first.name,
+                            isExpanded: true,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                            items: categories.map((c) {
+                              return DropdownMenuItem<String>(
+                                value: c.name,
+                                child: Text(c.name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() => parentCatName = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        dialogCtx.tr('Nom de la marque'),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: textCtrl,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: dialogCtx.tr('Nom de la nouvelle marque'),
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return dialogCtx.tr('Veuillez entrer un nom');
+                          }
+                          return null;
+                        },
+                        onFieldSubmitted: (_) => _submitBrand(dialogCtx, textCtrl, formKey, parentCatName),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text(dialogCtx.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _submitBrand(dialogCtx, textCtrl, formKey, parentCatName),
+                            icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                            label: Text(dialogCtx.tr('Créer la marque'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _submitBrand(BuildContext dialogCtx, TextEditingController textCtrl, GlobalKey<FormState> formKey, String parentCategoryName) {
+    if (formKey.currentState?.validate() != true) return;
+    final name = textCtrl.text.trim();
+    final newBrand = ProductBrand(
+      id: const Uuid().v4(),
+      name: name,
+      categoryId: parentCategoryName,
+    );
+    context.read<ProductSettingsBloc>().add(AddBrand(newBrand));
+    setState(() {
+      _category = parentCategoryName;
+      _brandId = newBrand.name;
+    });
+    Navigator.of(dialogCtx).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Marque "$name" liée à "$parentCategoryName" et sélectionnée'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
   // ─── SECTION 4: STOCK & ALERTES ──────────────────────────────────────────
   Widget _buildStockSection() {
+    if (_productType == 'service') {
+      return _buildCard(
+        title: 'Stock & Alertes',
+        subtitle: 'Article de type Service',
+        icon: Icons.info_outline,
+        iconColor: AppColors.primary,
+        iconBgColor: AppColors.primary.withValues(alpha: 0.1),
+        isExpanded: _stockExpanded,
+        onToggle: () => setState(() => _stockExpanded = !_stockExpanded),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            context.tr('Les articles de type Service n\'ont pas de gestion de stock ni d\'alertes de stock.'),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+        ),
+      );
+    }
     return _buildCard(
       title: 'Stock & Alertes',
       subtitle: 'Quantités initiales, seuils et alertes',

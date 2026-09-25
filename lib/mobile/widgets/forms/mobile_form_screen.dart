@@ -13,6 +13,7 @@ class MobileFormScreen extends StatelessWidget {
   final String saveLabel;
   final bool isLoading;
   final bool isSaveEnabled;
+  final VoidCallback? onSettingsTap;
 
   const MobileFormScreen({
     super.key,
@@ -25,6 +26,7 @@ class MobileFormScreen extends StatelessWidget {
     this.saveLabel = 'Créer',
     this.isLoading = false,
     this.isSaveEnabled = true,
+    this.onSettingsTap,
   });
 
   @override
@@ -56,10 +58,18 @@ class MobileFormScreen extends StatelessWidget {
             if (statusLabel != null && statusColor != null) ...[
               SizedBox(width: 8),
               StatusBadge(label: context.tr(statusLabel!), color: statusColor!),
-              SizedBox(width: 16),
+              SizedBox(width: 8),
             ]
           ],
         ),
+        actions: [
+          if (onSettingsTap != null)
+            IconButton(
+              icon: Icon(Icons.settings_rounded, color: AppColors.textPrimary),
+              tooltip: context.tr('Paramètres'),
+              onPressed: onSettingsTap,
+            ),
+        ],
         shape: Border(
           bottom: BorderSide(color: AppColors.border, width: 1),
         ),

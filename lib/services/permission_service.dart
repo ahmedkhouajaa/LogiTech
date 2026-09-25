@@ -8,10 +8,13 @@ import 'enterprise_service.dart';
 import 'trial_service.dart';
 import '../utils/firestore_safe_helper.dart';
 
-/// Singleton service that manages active user permissions for the current enterprise context.
 class PermissionService {
   static final PermissionService instance = PermissionService._();
-  PermissionService._();
+  PermissionService._() {
+    TrialService.instance.trialNotifier.addListener(() {
+      permissionsNotifier.value = !permissionsNotifier.value;
+    });
+  }
 
   bool _isLoaded = false;
   bool _isAdmin = false;
@@ -518,6 +521,15 @@ class PermissionService {
       case 'dashboard':
       case 'tableau_de_bord':
         return UserPermissionResources.dashboard;
+      case 'trash':
+      case 'corbeille':
+        return UserPermissionResources.trash;
+      case 'user_tracking':
+      case 'usertracking':
+      case 'tracabilite_utilisateurs':
+      case 'tracabilite':
+      case 'audit_log':
+        return UserPermissionResources.userTracking;
       default:
         return rawKey;
     }
@@ -585,7 +597,7 @@ class PermissionService {
         case 'delete':
         case 'supprimer':
         case 'suppr':
-        case 'remove':
+          case 'remove':
           result = perm.delete;
           break;
         case 'all':
@@ -608,17 +620,15 @@ class PermissionService {
   bool canRead(String resourceKey) => hasPermission(resourceKey, action: 'read');
 
   bool canCreate(String resourceKey) {
-    if (TrialService.instance.isTrialExpired) return false;
     return hasPermission(resourceKey, action: 'create');
   }
 
   bool canUpdate(String resourceKey) {
-    if (TrialService.instance.isTrialExpired) return false;
+    // Permitted even if trial expired: users can update existing records!
     return hasPermission(resourceKey, action: 'update');
   }
 
   bool canDelete(String resourceKey) {
-    if (TrialService.instance.isTrialExpired) return false;
     return hasPermission(resourceKey, action: 'delete');
   }
 
@@ -726,6 +736,10 @@ class PermissionService {
         return UserPermissionResources.importExport;
       case AppModule.userManagement:
         return UserPermissionResources.userManagement;
+      case AppModule.trash:
+        return UserPermissionResources.trash;
+      case AppModule.userTracking:
+        return UserPermissionResources.userTracking;
       case AppModule.settings:
       case AppModule.reports:
       case AppModule.support:
@@ -738,6 +752,13 @@ class PermissionService {
     if (!_isLoaded) return false;
     if (_isAdmin || _isOwner) return true;
     if (module == AppModule.userManagement) return false;
+
+    if (module == AppModule.trash) {
+      return canRead(UserPermissionResources.trash);
+    }
+    if (module == AppModule.userTracking) {
+      return canRead(UserPermissionResources.userTracking);
+    }
 
     if (module == AppModule.settings) {
       return canRead(UserPermissionResources.settingsAppModules) ||
@@ -761,15 +782,29 @@ class PermissionService {
     return canRead(resKey);
   }
 
+  /// Grant immediate admin and owner privileges in-memory (e.g., when the current
+  /// user creates a new enterprise).
+  void grantImmediateOwnerAdmin(String enterpriseId) {
+    _isLoaded = true;
+    _isOwner = true;
+    _isAdmin = true;
+    _role = 'admin';
+    _permissions = UserPermissionResources.getAdminDefaultPermissions();
+    permissionsNotifier.value = !permissionsNotifier.value;
+  }
+
   /// Get the first accessible AppModule for the current user, or null if 0 permissions.
   AppModule? getFirstAccessibleModule() {
     if (!_isLoaded) return null;
-    if (isAdmin || isOwner) return AppModule.dashboard;
+    if (isAdmin || isOwner || canAccessModule(AppModule.dashboard)) return AppModule.dashboard;
     for (final mod in AppModule.values) {
+      if (mod == AppModule.support) continue; // Never default to Support Client as primary landing module
       if (canAccessModule(mod)) {
         return mod;
       }
     }
+    // Only if literally no other module is permitted, fallback to support
+    if (canAccessModule(AppModule.support)) return AppModule.support;
     return null;
   }
 }

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -54,12 +55,14 @@ import 'blocs/user_management/user_management_bloc.dart';
 import 'blocs/theme/theme_cubit.dart';
 import 'services/auth_service.dart';
 import 'services/enterprise_service.dart';
+import 'services/document_numbering_service.dart';
 import 'services/permission_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
 import 'services/data_prefetch_service.dart';
 import 'database/database_helper.dart';
 import 'utils/constants.dart';
+import 'services/pdf_service.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/app_shell_screen.dart';
@@ -70,6 +73,7 @@ import 'screens/diagnostic_screen.dart';
 import 'screens/account_deactivated_screen.dart';
 import 'screens/web_landing_screen.dart';
 import 'screens/signup_screen.dart';
+import 'widgets/desktop_exit_listener.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -114,6 +118,13 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('[FIREBASE] Windows Desktop initialized: project=${DefaultFirebaseOptions.currentPlatform.projectId}');
+    try {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+      debugPrint('[FIREBASE] Firestore offline persistence enabled');
+    } catch (_) {}
   } catch (e, stack) {
     print('FIREBASE INIT ERROR: $e');
     print(stack);
@@ -131,6 +142,7 @@ void main() async {
   try {
     await EnterpriseService.instance.initialize().timeout(const Duration(seconds: 3));
     unawaited(MigrationService.instance.runEnterpriseMigration());
+    unawaited(DocumentNumberingService.instance.startRealtimeSync());
   } catch (e, stack) {
     print('ENTERPRISE SERVICE INIT ERROR: $e');
     print(stack);
@@ -161,6 +173,9 @@ void main() async {
   } catch (_) {}
 
   runApp(BusinessManagerApp(initialLang: initialLang));
+
+  // Pre-download PDF fonts in the background so the first PDF opens fast.
+  unawaited(PdfService.instance.warmup());
 }
 
 class BusinessManagerApp extends StatelessWidget {
@@ -236,7 +251,7 @@ class BusinessManagerApp extends StatelessWidget {
                   Locale('en'),
                   Locale('ar'),
                 ],
-                home: const _AppGate(),
+                home: const DesktopExitListener(child: _AppGate()),
             onGenerateRoute: (settings) {
               if (settings.name != null) {
                 final uri = Uri.tryParse(settings.name!);
@@ -964,16 +979,18 @@ class _EnterpriseErrorScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
-                  );
-                },
-                icon: const Icon(Icons.troubleshoot, size: 16, color: Colors.white60),
-                label: const Text('Ouvrir le Diagnostic Système', style: TextStyle(color: Colors.white60, fontSize: 12)),
-              ),
+              if (kDebugMode) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.troubleshoot, size: 16, color: Colors.white60),
+                  label: const Text('Ouvrir le Diagnostic Système', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                ),
+              ],
             ],
           ),
         ),

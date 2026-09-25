@@ -118,7 +118,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       return _buildStockLevelsSection(
                         state.movements,
                         state.warehouses,
-                        pState.products,
+                        pState.products.where((p) => !p.isService).toList(),
                       );
                     },
                   ),

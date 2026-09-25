@@ -25,6 +25,7 @@ import 'clients/client_export_screen.dart';
 import 'clients/user_activation_screen.dart';
 import '../services/user_presence_helper.dart';
 import 'firestore_metrics_screen.dart';
+import '../../widgets/admin_publish_update_dialog.dart';
 
 class SupportAdminShellScreen extends StatefulWidget {
   const SupportAdminShellScreen({super.key});
@@ -470,6 +471,18 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
                               // 9. System
                               _sectionHeader('SYSTÈME', collapsed),
                               _menuItem(AdminNavModule.systemProfile, 'Mon Profil & Thème', Icons.person_rounded, collapsed, isDrawer),
+                              _actionItem(
+                                'Diffuser une mise à jour',
+                                Icons.cloud_upload_rounded,
+                                collapsed,
+                                isDrawer,
+                                onTap: () {
+                                  if (isDrawer) {
+                                    Navigator.pop(context);
+                                  }
+                                  AdminPublishUpdateDialog.show(context);
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -584,6 +597,51 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
                     style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionItem(
+    String label,
+    IconData icon,
+    bool collapsed,
+    bool isDrawer, {
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 38,
+        margin: const EdgeInsets.symmetric(vertical: 1.5),
+        padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 17,
+              color: const Color(0xFF60A5FA),
+            ),
+            if (!collapsed) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.normal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ],
         ),

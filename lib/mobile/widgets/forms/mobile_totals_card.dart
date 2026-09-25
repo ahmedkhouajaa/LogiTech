@@ -12,6 +12,11 @@ class MobileTotalsCard extends StatelessWidget {
   final ValueChanged<bool?> onTimbreFiscalChanged;
   final double totalTTC;
 
+  final bool withFodec;
+  final double fodecAmount;
+  final Map<String, double>? customTaxesBreakdown;
+  final VoidCallback? onSettingsTap;
+
   const MobileTotalsCard({
     super.key,
     required this.subTotalHT,
@@ -21,6 +26,10 @@ class MobileTotalsCard extends StatelessWidget {
     required this.applyTimbreFiscal,
     required this.onTimbreFiscalChanged,
     required this.totalTTC,
+    this.withFodec = false,
+    this.fodecAmount = 0.0,
+    this.customTaxesBreakdown,
+    this.onSettingsTap,
   });
 
   @override
@@ -30,12 +39,50 @@ class MobileTotalsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (onSettingsTap != null) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.tr('Récapitulatif des taxes & totaux'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                InkWell(
+                  onTap: onSettingsTap,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.settings_rounded, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.tr('Paramètres'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildRow(context, 'Sous-total HT', formatCurrencyDT(subTotalHT)),
           if (tvaBreakdown.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -47,7 +94,16 @@ class MobileTotalsCard extends StatelessWidget {
             const SizedBox(height: 12),
             _buildRow(context, '${context.tr('TVA')} 0%', '0,000 TND'),
           ],
-          
+          if (withFodec) ...[
+            const SizedBox(height: 12),
+            _buildRow(context, 'FODEC (1%)', formatCurrencyDT(fodecAmount)),
+          ],
+          if (customTaxesBreakdown != null && customTaxesBreakdown!.isNotEmpty) ...[
+            for (final entry in customTaxesBreakdown!.entries) ...[
+              const SizedBox(height: 12),
+              _buildRow(context, entry.key, formatCurrencyDT(entry.value)),
+            ],
+          ],
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Divider(color: AppColors.border, height: 1),

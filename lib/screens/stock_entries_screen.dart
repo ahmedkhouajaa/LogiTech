@@ -13,10 +13,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../models/stock_movement.dart';
-import '../database/database_helper.dart';
 import '../models/document_wrapper.dart';
 import 'create_stock_entry_screen.dart';
-import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_entry_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
@@ -26,7 +24,6 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../l10n/app_localizations.dart';
 
@@ -141,10 +138,13 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
   }
 
   void _previewDocument(StockEntry entry) {
+    final String resolvedWarehouse = _getWarehouseName(entry.warehouseId);
     final wrapper = DocumentWrapper(
       id: entry.id,
       number: entry.number,
-      documentTitle: context.tr("Bons d'entrée"),
+      documentTitle: "BON D'ENTRÉE",
+      documentType: "stock_entry",
+      customerName: null,
       date: entry.date,
       totalHT: 0,
       totalTva: 0,
@@ -152,7 +152,12 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       notes: entry.notes,
       items: entry.items.map((item) {
         final product = _getProduct(item.productId);
+        final refCode = (product?.reference != null && product!.reference!.trim().isNotEmpty)
+            ? product.reference!.trim()
+            : (product?.code ?? '');
         return DocumentItemWrapper(
+          productId: item.productId,
+          reference: refCode,
           productName: product?.name ?? context.tr('Article Inconnu'),
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -160,7 +165,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           discountPercent: 0,
           totalHT: item.quantity * item.unitPrice,
           customFields: {
-            'code': product?.code ?? '',
+            'code': refCode,
             'unit': product?.unit ?? 'pièce',
             'purchasePrice': product?.purchasePrice ?? 0,
           },
@@ -168,8 +173,10 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       }).toList(),
       customData: {
         'warehouseId': entry.warehouseId,
-        'warehouseName': _getWarehouseName(entry.warehouseId),
+        'warehouseName': resolvedWarehouse,
+        'reason': entry.reason,
         'createdBy': 'Admin',
+        'status': entry.status,
       },
     );
     Navigator.push(
@@ -177,8 +184,8 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       MaterialPageRoute(
         builder: (_) => DocumentDetailScreen(
           document: wrapper,
-          status: context.tr('Validé'),
-          statusColor: AppColors.success,
+          status: entry.status == 'cancelled' ? context.tr('Annulé') : context.tr('Validé'),
+          statusColor: entry.status == 'cancelled' ? AppColors.error : AppColors.success,
         ),
       ),
     );
@@ -307,7 +314,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           child: DropdownButtonFormField(
                             dropdownColor: AppColors.surfaceAlt,
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            value: _filterWarehouseId,
+                            initialValue: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -608,23 +615,6 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     );
   }
 
-  Widget _buildInfoItem(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textTertiary),
-        SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildStatusChip(String status) {
     final StockEntryStatus entryStatus;
     switch (status) {
@@ -653,7 +643,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
   }
 
   Widget _buildArticlesDisplay(List<StockEntryItem> items) {
-    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    if (items.isEmpty) return Text('0 ${context.tr('article')}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
     
     final summaryText = items.map((item) {
       final pName = _getProductName(item.productId);
@@ -668,7 +658,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       showDuration: Duration(seconds: 3),
       decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
-      child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      child: Text('${items.length} ${items.length > 1 ? context.tr('articles') : context.tr('article')}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
   }
 
@@ -704,7 +694,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   icon: const Icon(Icons.add, size: 18),
                   label: Text(context.tr('Créer')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -745,9 +735,8 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               (w) => w?.id == _filterWarehouseId,
                               orElse: () => null,
                             );
-                            return SearchableSelectorField(
-                              hint: context.tr('Tous les Entrepôts'),
-                              selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
+                            final isSelected = _filterWarehouseId != null;
+                            return InkWell(
                               onTap: () async {
                                 final res = await showWarehouseSelectDialog(
                                   context,
@@ -759,6 +748,35 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                   setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                 }
                               },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isSelected
+                                            ? (selectedWh?.name ?? context.tr('Tous les Entrepôts'))
+                                            : context.tr('Tous les Entrepôts'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isSelected
+                                              ? AppColors.textPrimary
+                                              : AppColors.textSecondary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -781,11 +799,15 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: context.tr('Rechercher un produit...'),
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textSecondary),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                            isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                           ),
                           style: const TextStyle(fontSize: 12),
                           onChanged: (v) => setState(() {
@@ -809,8 +831,8 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                       const SizedBox(height: 4),
                       SizedBox(
                         height: 32,
-                        child: OutlinedButton(
-                          onPressed: () async {
+                        child: InkWell(
+                          onTap: () async {
                             final range = await CustomDateRangePicker.show(
                               context,
                               initialRange: _filterDateRange,
@@ -819,35 +841,38 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               setState(() => _filterDateRange = range);
                             }
                           },
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            height: 32,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            backgroundColor: AppColors.surface,
-                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  _filterDateRange != null
-                                      ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
-                                      : context.tr('Toutes les dates'),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textTertiary,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _filterDateRange != null
+                                        ? '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}'
+                                        : context.tr('Toutes les dates'),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              if (_filterDateRange != null)
-                                InkWell(
-                                  onTap: () => setState(() => _filterDateRange = null),
-                                  child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
-                                ),
-                            ],
+                                if (_filterDateRange != null)
+                                  InkWell(
+                                    onTap: () => setState(() => _filterDateRange = null),
+                                    child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1048,11 +1073,15 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
   }
 
   Widget _buildRow(BuildContext context, StockEntry entry, int index) {
-    return Container(
+    return Material(
       color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
+      child: InkWell(
+        onTap: () => _previewDocument(entry),
+        hoverColor: AppColors.primary.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
           Expanded(
             flex: 2,
             child: Row(
@@ -1067,11 +1096,11 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDateTimeLong(entry.date), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(formatDateTimeLong(entry.date), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 2,
-            child: Text(_getWarehouseName(entry.warehouseId), style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+            child: Text(_getWarehouseName(entry.warehouseId), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
           ),
           Expanded(
             flex: 1,
@@ -1079,7 +1108,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text('Admin', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+            child: Text('Admin', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
@@ -1160,47 +1189,9 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
-  Widget _pageButton({required IconData icon, required bool enabled, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      child: Container(
-        padding: EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(4),
-          color: AppColors.surface,
-        ),
-        child: Icon(icon, size: 20, color: enabled ? AppColors.textPrimary : AppColors.textTertiary),
-      ),
-    );
-  }
-
-  void _confirmDelete(StockEntry entry) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(context.tr('Confirmer la suppression')),
-        content: Text('${context.tr('Voulez-vous vraiment supprimer')} ${entry.number} ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<StockEntriesBloc>().add(DeleteStockEntry(entry.id));
-              // Refresh products list so stock quantities are updated immediately
-              context.read<ProductsBloc>().add(LoadProducts());
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: Text(context.tr('Supprimer')),
-          ),
-        ],
-      ),
-    );
-  }
 }

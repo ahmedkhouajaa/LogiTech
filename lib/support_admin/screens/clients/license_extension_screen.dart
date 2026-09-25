@@ -98,8 +98,10 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
 
         if (exactDays != null) {
           // Mode: Set exact number of remaining days from now
-          newEnd = DateTime.now().add(Duration(days: exactDays));
-          actionType = 'LICENSE_SET_EXACT_DAYS';
+          newEnd = exactDays <= 0
+              ? DateTime.now().subtract(const Duration(hours: 1))
+              : DateTime.now().add(Duration(days: exactDays));
+          actionType = exactDays <= 0 ? 'LICENSE_EXPIRE_IMMEDIATE' : 'LICENSE_SET_EXACT_DAYS';
         } else if (exactDate != null) {
           // Mode: Set exact calendar date
           newEnd = exactDate;
@@ -120,7 +122,10 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
         String targetPlan;
         bool targetIsUpgraded;
 
-        if (_selectedPlan == 'keep_current') {
+        if (exactDays != null && exactDays <= 0) {
+          targetPlan = 'trial';
+          targetIsUpgraded = false;
+        } else if (_selectedPlan == 'keep_current') {
           targetPlan = (ent['plan'] ?? (ent['isUpgraded'] == true ? 'annual' : 'trial')).toString().toLowerCase();
           targetIsUpgraded = ent['isUpgraded'] == true && targetPlan != 'trial';
         } else if (_selectedPlan == 'trial') {
@@ -213,6 +218,145 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur : ${e.toString()}'), backgroundColor: const Color(0xFFDC2626)),
+        );
+      }
+    }
+  }
+
+  Future<void> _expireLicenseImmediately({
+    required List<Map<String, dynamic>> userEnterprises,
+    required String userName,
+  }) async {
+    if (_selectedUserId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez d\'abord sélectionner un client.'), backgroundColor: Color(0xFFDC2626)),
+        );
+      }
+      return;
+    }
+
+    if (_selectedEnterpriseId == null || userEnterprises.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez sélectionner au moins une entreprise à configurer.'), backgroundColor: Color(0xFFDC2626)),
+        );
+      }
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text('Expirer la licence immédiatement ?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Text(
+          'Cette action va régler la date d\'expiration à une date échue (0 jour restant) et retirer le statut VIP pour le client "$userName". La création de nouveaux éléments sera immédiatement bloquée dans son application.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmer l\'expiration'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final firestore = FirebaseFirestore.instance;
+      final pastDate = DateTime.now().subtract(const Duration(hours: 1));
+
+      final List<Map<String, dynamic>> targets = _selectedEnterpriseId == 'ALL'
+          ? userEnterprises
+          : userEnterprises.where((e) => e['id'] == _selectedEnterpriseId).toList();
+
+      for (final ent in targets) {
+        final entId = ent['id'] as String;
+        final entRef = firestore.collection('enterprises').doc(entId);
+
+        batch.update(entRef, {
+          'trialEndDate': Timestamp.fromDate(pastDate),
+          'isUpgraded': false,
+          'isVip': false,
+          'plan': 'trial',
+          'subscriptionPlan': 'trial',
+          'subscriptionTier': 'trial',
+          'lastExtendedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        final auditRef = firestore.collection('audit_logs').doc();
+        batch.set(auditRef, {
+          'action': 'LICENSE_EXPIRE_IMMEDIATE',
+          'targetUserId': _selectedUserId,
+          'targetUserName': userName,
+          'targetEnterpriseId': entId,
+          'targetCompanyName': ent['name'] ?? 'Entreprise',
+          'previousEndDate': ent['trialEndDate'] as Timestamp?,
+          'newEndDate': Timestamp.fromDate(pastDate),
+          'plan': 'trial',
+          'reason': 'Expiration immédiate déclenchée par le Super Admin pour test ou suspension.',
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      final userRef = firestore.collection('users').doc(_selectedUserId);
+      batch.update(userRef, {
+        'isUpgraded': false,
+        'isVip': false,
+        'plan': 'trial',
+        'subscriptionPlan': 'trial',
+        'subscriptionTier': 'trial',
+        'trialEndDate': Timestamp.fromDate(pastDate),
+        'lastExtendedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      setState(() {
+        _isProcessing = false;
+        _selectedPlan = 'trial';
+        _exactDaysController.text = '0';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              targets.length > 1
+                  ? '⚠️ Licence expirée avec succès pour les ${targets.length} entreprises de "$userName" (Création de documents bloquée).'
+                  : '⚠️ Licence expirée avec succès pour "${targets.first['name']}" (Création de documents bloquée).',
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: const Color(0xFFDC2626)),
         );
       }
     }
@@ -731,6 +875,73 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 12),
+
+                            // Expire License Immediately Card (For Testing / Suspension)
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDC2626).withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.timer_off_rounded, color: Color(0xFFDC2626), size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text(
+                                          'Expirer / Clôturer la licence immédiatement (Mode Test)',
+                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF991B1B)),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'Définit 0 jour restant, retire le statut VIP et marque la licence comme échue. Vous pouvez tester immédiatement le blocage des créations dans l\'application du client.',
+                                          style: TextStyle(fontSize: 11.5, color: Color(0xFFB91C1C)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFDC2626),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    onPressed: _isProcessing || _selectedUserId == null
+                                        ? null
+                                        : () {
+                                            _expireLicenseImmediately(
+                                              userEnterprises: selectedUserEnterprises,
+                                              userName: selectedUserName,
+                                            );
+                                          },
+                                    icon: const Icon(Icons.block_rounded, size: 16),
+                                    label: const Text(
+                                      'Expirer maintenant',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 20),
 
                             // ─── Duration Mode Selector (Tabs) ───
@@ -793,6 +1004,7 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
                                       spacing: 8,
                                       runSpacing: 8,
                                       children: [
+                                        _exactChip(0),
                                         _exactChip(7),
                                         _exactChip(11),
                                         _exactChip(14),
@@ -1120,16 +1332,23 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
 
   Widget _exactChip(int days) {
     final isSelected = _exactDaysController.text.trim() == days.toString();
+    final isZero = days == 0;
     return ActionChip(
-      label: Text('$days jours restants'),
-      backgroundColor: isSelected ? const Color(0xFF2563EB) : Colors.white,
+      label: Text(isZero ? '0 jour (Expirer)' : '$days jours restants'),
+      backgroundColor: isSelected
+          ? (isZero ? const Color(0xFFDC2626) : const Color(0xFF2563EB))
+          : (isZero ? const Color(0xFFFEF2F2) : Colors.white),
       labelStyle: TextStyle(
         fontSize: 11.5,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-        color: isSelected ? Colors.white : const Color(0xFF334155),
+        color: isSelected
+            ? Colors.white
+            : (isZero ? const Color(0xFFDC2626) : const Color(0xFF334155)),
       ),
       side: BorderSide(
-        color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+        color: isSelected
+            ? (isZero ? const Color(0xFFDC2626) : const Color(0xFF2563EB))
+            : (isZero ? const Color(0xFFFECACA) : const Color(0xFFCBD5E1)),
       ),
       onPressed: () {
         setState(() {

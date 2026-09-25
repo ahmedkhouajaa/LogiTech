@@ -22,9 +22,10 @@ class TrialInfo {
 
   int get daysRemaining {
     final now = DateTime.now();
-    if (now.isAfter(trialEndDate)) return 0;
-    final diffDays = trialEndDate.difference(now).inDays;
-    return diffDays < 0 ? 0 : diffDays;
+    if (!now.isBefore(trialEndDate)) return 0;
+    final diff = trialEndDate.difference(now);
+    final days = (diff.inHours / 24).ceil();
+    return days < 0 ? 0 : days;
   }
 
   bool get isTrial => !isUpgraded || plan == 'trial' || plan == 'free';
@@ -32,10 +33,20 @@ class TrialInfo {
       plan.toLowerCase().trim() == 'vip' ||
       plan.toLowerCase().trim().contains('vip') ||
       daysRemaining >= 3000;
-  bool get isTrialExpired => isTrial && daysRemaining <= 0;
-  bool get isTrialActive => isTrial && daysRemaining > 0;
-  bool get isSubscriptionActive => !isTrial && (isVip || daysRemaining > 0);
-  bool get isSubscriptionExpired => !isTrial && !isVip && daysRemaining <= 0;
+
+  /// Whether the license or trial is expired (not VIP and trialEndDate has passed)
+  bool get isExpired {
+    if (isVip) return false;
+    return !DateTime.now().isBefore(trialEndDate);
+  }
+
+  /// Whether creation of new items is allowed (VIP or days remaining)
+  bool get canCreateNewItems => isVip || DateTime.now().isBefore(trialEndDate);
+
+  bool get isTrialExpired => isExpired;
+  bool get isTrialActive => isTrial && !isExpired;
+  bool get isSubscriptionActive => !isTrial && !isExpired;
+  bool get isSubscriptionExpired => !isTrial && isExpired;
 
   Map<String, dynamic> toMap() => {
         'trialStartDate': Timestamp.fromDate(trialStartDate),
@@ -101,14 +112,20 @@ class TrialService {
   TrialInfo? _currentTrial;
   TrialInfo? get currentTrial => _currentTrial ?? trialNotifier.value;
 
-  /// Check if trial is expired
-  bool get isTrialExpired => currentTrial?.isTrialExpired ?? false;
+  /// Check if the trial or subscription is expired
+  bool get isExpired => currentTrial?.isExpired ?? false;
+
+  /// Backward compatible alias
+  bool get isTrialExpired => isExpired;
 
   /// Check if plan is upgraded
   bool get isPlanUpgraded => currentTrial?.isUpgraded ?? false;
 
+  /// Check if user has active trial, subscription, or VIP access to create new items
+  bool get canCreateItems => currentTrial?.canCreateNewItems ?? (!isExpired);
+
   /// Days remaining in trial or subscription
-  int get daysRemaining => currentTrial?.daysRemaining ?? 7;
+  int get daysRemaining => currentTrial?.daysRemaining ?? (isExpired ? 0 : 7);
 
   /// Initialize trial status for current user / enterprise
   Future<void> initTrial() async {
@@ -220,75 +237,93 @@ class TrialService {
     await prefs.setString('trial_plan_$keyId', info.plan);
   }
 
-  /// Check if an action (create, update, delete) is allowed.
-  /// Returns true if trial is active or plan is upgraded.
-  /// If trial is expired, displays upgrade modal and returns false.
-  bool checkActionAllowed(BuildContext context) {
-    if (!isTrialExpired) return true;
+  /// Check if creating an item is allowed.
+  /// Returns true if VIP or trial/subscription active with days remaining.
+  /// If expired, displays upgrade modal and returns false.
+  bool checkCanCreate(BuildContext context) {
+    if (canCreateItems) return true;
     showTrialExpiredModal(context);
     return false;
   }
 
-  /// Show the Trial Expired upgrade modal / dialog
+  /// Backward compatible alias for action checking
+  bool checkActionAllowed(BuildContext context) => checkCanCreate(context);
+
+  /// Show the Trial/Subscription Expired upgrade modal / dialog
   void showTrialExpiredModal(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.surface,
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Color(0xFFFDEDEC),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.error_outline_rounded, color: Color(0xFFE74C3C), size: 24),
+              child: Icon(Icons.workspace_premium_rounded, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Période d\'essai expirée',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'Abonnement requis',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+              onPressed: () => Navigator.pop(ctx),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Votre période d\'essai gratuite de 7 jours est terminée.',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        content: SizedBox(
+          width: 440,
+          child: Text(
+            'Votre période d\'essai ou abonnement est arrivé à expiration. Veuillez renouveler votre offre pour continuer à créer de nouveaux éléments.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              height: 1.5,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Pour continuer à ajouter, modifier ou supprimer des données, veuillez mettre à niveau votre plan. Vous pouvez toujours consulter vos données existantes.',
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fermer (Mode lecture)'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            child: const Text('Plus tard'),
           ),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
-              // Open Support / Upgrade ticket
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
               );
             },
-            icon: const Icon(Icons.star_rounded, size: 18),
-            label: const Text('Mettre à niveau mon plan'),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+            label: const Text('Renouveler l\'abonnement'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              elevation: 0,
             ),
           ),
         ],

@@ -13,6 +13,7 @@ import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileTransactionFormScreen extends StatefulWidget {
   final TreasuryTransaction? existing;
@@ -74,6 +75,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_accountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte'), backgroundColor: AppColors.error));
       return;

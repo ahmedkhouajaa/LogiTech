@@ -165,7 +165,7 @@ class _StockScreenState extends State<StockScreen> {
                     return _StockLevelsTable(
                       movements: state.movements,
                       warehouses: state.warehouses,
-                      products: pState.products,
+                      products: pState.products.where((p) => !p.isService).toList(),
                     );
                   },
                 ),
@@ -311,9 +311,8 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                     (w) => w?.id == _filterWarehouseId,
                                     orElse: () => null,
                                   );
-                                  return SearchableSelectorField(
-                                    hint: context.tr('Tous les Entrepôts'),
-                                    selectedText: selectedWh?.name ?? context.tr('Tous les Entrepôts'),
+                                  final isSelected = _filterWarehouseId != null;
+                                  return InkWell(
                                     onTap: () async {
                                       final res = await showWarehouseSelectDialog(
                                         context,
@@ -325,6 +324,35 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                         setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                       }
                                     },
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              isSelected
+                                                  ? (selectedWh?.name ?? context.tr('Tous les Entrepôts'))
+                                                  : context.tr('Tous les Entrepôts'),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isSelected
+                                                    ? AppColors.textPrimary
+                                                    : AppColors.textSecondary,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                        ],
+                                      ),
+                                    ),
                                   );
                                 },
                               ),
@@ -342,26 +370,46 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           children: [
                             Text(context.tr('Type de mouvement'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 4),
-                            SizedBox(
+                            Container(
                               height: 32,
-                              child: DropdownButtonFormField<MovementType?>(
-                                value: _filterType,
-                                isExpanded: true,
-                                dropdownColor: AppColors.surfaceAlt,
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                                decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<MovementType?>(
+                                  value: _filterType,
+                                  isExpanded: true,
+                                  dropdownColor: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(6),
+                                  icon: Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: _filterType != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: null,
+                                      child: Text(
+                                        context.tr('Tous les types'),
+                                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                      ),
+                                    ),
+                                    ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map(
+                                      (t) => DropdownMenuItem(
+                                        value: t,
+                                        child: Text(
+                                          context.tr(t.label),
+                                          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (v) => setState(() => _filterType = v),
                                 ),
-                                items: [
-                                  DropdownMenuItem(value: null, child: Text(context.tr('Tous les types'), style: const TextStyle(fontSize: 12))),
-                                  ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(context.tr(t.label), style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
-                                ],
-                                onChanged: (v) => setState(() => _filterType = v),
                               ),
                             ),
                           ],
@@ -383,14 +431,15 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                 onChanged: (v) => setState(() => _searchQuery = v),
                                 decoration: InputDecoration(
                                   hintText: context.tr('Rechercher produit...'),
-                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                  prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textTertiary),
-                                  prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                                  filled: true,
+                                  fillColor: AppColors.surface,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                  isDense: true,
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                                 ),
                                 style: const TextStyle(fontSize: 12),
                               ),
@@ -414,14 +463,15 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                 onChanged: (v) => setState(() => _filterReference = v),
                                 decoration: InputDecoration(
                                   hintText: context.tr('Rechercher réf...'),
-                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                  prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textTertiary),
-                                  prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                  prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textSecondary),
+                                  filled: true,
+                                  fillColor: AppColors.surface,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                  isDense: true,
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
                                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.primary)),
                                 ),
                                 style: const TextStyle(fontSize: 12),
                               ),
@@ -441,8 +491,8 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                             const SizedBox(height: 4),
                             SizedBox(
                               height: 32,
-                              child: OutlinedButton(
-                                onPressed: () async {
+                              child: InkWell(
+                                onTap: () async {
                                   final range = await CustomDateRangePicker.show(
                                     context,
                                     initialRange: _filterDateRange,
@@ -451,32 +501,38 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                     setState(() => _filterDateRange = range);
                                   }
                                 },
-                                style: OutlinedButton.styleFrom(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  height: 32,
                                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                                  backgroundColor: AppColors.surface,
-                                  alignment: Alignment.centerLeft,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        _filterDateRange == null 
-                                            ? context.tr('Toutes les dates') 
-                                            : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
-                                        style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                                        overflow: TextOverflow.ellipsis,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    border: Border.all(color: AppColors.border),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _filterDateRange == null 
+                                              ? context.tr('Toutes les dates') 
+                                              : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: _filterDateRange != null ? AppColors.textPrimary : AppColors.textSecondary,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                    if (_filterDateRange != null)
-                                      GestureDetector(
-                                        onTap: () => setState(() => _filterDateRange = null),
-                                        child: Icon(Icons.close, size: 14, color: AppColors.error),
-                                      ),
-                                  ],
+                                      if (_filterDateRange != null)
+                                        InkWell(
+                                          onTap: () => setState(() => _filterDateRange = null),
+                                          child: Icon(Icons.close, size: 14, color: AppColors.textSecondary),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -701,8 +757,9 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                           optionsBuilder: (textEditingValue) {
                             if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
                             return pState.products.where((p) =>
-                                p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
-                                p.code.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                                !p.isService &&
+                                (p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
+                                 p.code.toLowerCase().contains(textEditingValue.text.toLowerCase())));
                           },
                           onSelected: (p) {
                             setState(() {
@@ -915,6 +972,10 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
   }
 
   void _save(BuildContext context, List<Warehouse> warehouses) {
+    if (_selectedProduct == null || _selectedProduct!.isService) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Les services ne peuvent pas faire l\'objet d\'un ajustement de stock.')), backgroundColor: AppColors.error));
+      return;
+    }
     final qtyInput = double.parse(_quantityCtrl.text);
     double qtyToRegister = 0;
     MovementType type = MovementType.adjustment;

@@ -741,7 +741,10 @@ Future<String?> showProductSelectDialog(
   String? warehouseId,
   Map<String, double>? warehouseStockMap,
   String? destinationFilter,
+  bool? isPurchase,
+  bool excludeServices = false,
 }) async {
+  final isAchat = isPurchase == true || destinationFilter == 'Achat';
   Map<String, double> computedStockMap = warehouseStockMap ?? {};
   if (warehouseStockMap == null) {
     try {
@@ -754,6 +757,7 @@ Future<String?> showProductSelectDialog(
           } catch (_) {}
         }
         for (var p in products) {
+          if (excludeServices && p.isService) continue;
           double stock = 0.0;
           if (warehouseId == null || warehouseId.isEmpty) {
             stock = p.stockQty;
@@ -791,13 +795,17 @@ Future<String?> showProductSelectDialog(
             builder: (context, state) {
               final isLoaded = state is ProductsLoaded;
               final rawProducts = isLoaded ? state.products : products;
-              final currentProducts = destinationFilter == null || destinationFilter.isEmpty
+              var currentProducts = destinationFilter == null || destinationFilter.isEmpty
                   ? rawProducts
                   : rawProducts.where((p) {
                       if (destinationFilter == 'Vente') return p.isForSale;
                       if (destinationFilter == 'Achat') return p.isForPurchase;
                       return true;
                     }).toList();
+
+              if (excludeServices) {
+                currentProducts = currentProducts.where((p) => !p.isService).toList();
+              }
 
               if (!isLoaded) {
                 return Dialog(
@@ -961,7 +969,7 @@ Future<String?> showProductSelectDialog(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      '${product.sellingPrice.toStringAsFixed(3)} DT',
+                                      '${(isAchat ? product.purchasePrice : product.sellingPrice).toStringAsFixed(3)} DT',
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,

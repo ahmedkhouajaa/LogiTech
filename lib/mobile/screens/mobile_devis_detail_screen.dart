@@ -184,9 +184,9 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesQuotes);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesQuotes);
                 final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesQuotes, action: 'all');
-                final canCreateInvoice = hasAllAccess;
-                final canCreateOrder = hasAllAccess;
-                final canCreateDelivery = hasAllAccess;
+                final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                final canCreateOrder = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesOrders);
+                final canCreateDelivery = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes);
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {

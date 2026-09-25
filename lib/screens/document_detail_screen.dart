@@ -123,44 +123,156 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     final document = widget.document;
     final docStatus = widget.status ?? 'Validé';
     final resKey = _getResourceKey(document.documentTitle);
-    final canRead = resKey != null ? PermissionService.instance.canRead(resKey) : PermissionService.instance.isAdmin;
     final canUpdate = resKey != null ? PermissionService.instance.canUpdate(resKey) : PermissionService.instance.isAdmin;
     final canDelete = resKey != null ? PermissionService.instance.canDelete(resKey) : PermissionService.instance.isAdmin;
     final hasAnyAccess = resKey != null ? PermissionService.instance.hasAnyPermission(resKey) : PermissionService.instance.isAdmin;
+    final isInventorySheet = document.documentType == 'inventory_sheet' ||
+        document.documentTitle.toUpperCase().contains('INVENTAIRE');
+    final isStockTransfer = document.documentType == 'stock_transfer' ||
+        document.documentTitle.toUpperCase().contains('TRANSFERT');
+    final isStockWithdrawal = document.documentType == 'stock_withdrawal' ||
+        document.documentTitle.toUpperCase().contains('PRÉLÈVEMENT') ||
+        document.documentTitle.toUpperCase().contains('PRELEVEMENT');
+    final isStockEntry = document.documentType == 'stock_entry' ||
+        document.documentTitle.toUpperCase().contains('ENTRÉE') ||
+        document.documentTitle.toUpperCase().contains('ENTREE');
+
+    final String warehouseName = document.customData['warehouseName']?.toString() ??
+        (document.notes != null && document.notes!.isNotEmpty && document.notes!.length < 50
+            ? document.notes!
+            : 'Entrepôt par défaut');
 
     // Build Information Sections
     final infoFields = <PremiumInfoField>[
-      if (document.customerName != null && document.customerName!.isNotEmpty)
+      if (isInventorySheet) ...[
         PremiumInfoField(
-          label: document.documentTitle.contains('FOURNISSEUR') ||
-                  document.documentTitle.contains('ACHAT') ||
-                  document.documentTitle.contains('RECEPTION')
-              ? 'Fournisseur'
-              : 'Client',
-          value: document.customerName!,
-          icon: Icons.person_outline,
+          label: 'Magasin',
+          value: warehouseName,
+          icon: Icons.warehouse_outlined,
           isHighlight: true,
         ),
-      PremiumInfoField(
-        label: 'Date d\'émission',
-        value: formatDateTimeLong(document.date),
-        icon: Icons.calendar_today_outlined,
-      ),
-      if (document.dueDate != null)
         PremiumInfoField(
-          label: document.documentTitle.contains('DEVIS')
-              ? 'Date de validité'
-              : 'Date d\'échéance',
-          value: formatDateTimeLong(document.dueDate!),
-          icon: Icons.event_available_outlined,
+          label: 'Date de création',
+          value: formatDateTimeLong(document.date),
+          icon: Icons.calendar_today_outlined,
         ),
-      if (document.customData['projectName'] != null &&
-          document.customData['projectName'].toString().isNotEmpty)
+        if (document.customData['inventoryDate'] != null)
+          PremiumInfoField(
+            label: "Date d'inventaire",
+            value: formatDateTimeLong(document.customData['inventoryDate'] as DateTime),
+            icon: Icons.event_note_outlined,
+          ),
+        if (document.customData['countedBy'] != null && document.customData['countedBy'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Compté par',
+            value: document.customData['countedBy'].toString(),
+            icon: Icons.badge_outlined,
+          ),
+      ] else if (isStockTransfer) ...[
         PremiumInfoField(
-          label: 'Projet',
-          value: document.customData['projectName'].toString(),
-          icon: Icons.folder_outlined,
+          label: 'Entrepôt Source',
+          value: document.customData['sourceWarehouseName']?.toString() ?? 'Entrepôt Source',
+          icon: Icons.warehouse_outlined,
+          isHighlight: true,
         ),
+        PremiumInfoField(
+          label: 'Entrepôt Destination',
+          value: document.customData['destinationWarehouseName']?.toString() ?? 'Entrepôt Destination',
+          icon: Icons.input_outlined,
+          isHighlight: true,
+        ),
+        PremiumInfoField(
+          label: 'Date de transfert',
+          value: formatDateTimeLong(document.date),
+          icon: Icons.calendar_today_outlined,
+        ),
+        if (document.customData['reason'] != null && document.customData['reason'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Motif',
+            value: document.customData['reason'].toString(),
+            icon: Icons.assignment_outlined,
+          ),
+      ] else if (isStockWithdrawal) ...[
+        PremiumInfoField(
+          label: 'Entrepôt',
+          value: warehouseName,
+          icon: Icons.warehouse_outlined,
+          isHighlight: true,
+        ),
+        PremiumInfoField(
+          label: 'Date de prélèvement',
+          value: formatDateTimeLong(document.date),
+          icon: Icons.calendar_today_outlined,
+        ),
+        if (document.customData['reason'] != null && document.customData['reason'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Motif',
+            value: document.customData['reason'].toString(),
+            icon: Icons.assignment_outlined,
+          ),
+        if (document.customData['createdBy'] != null && document.customData['createdBy'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Demandeur',
+            value: document.customData['createdBy'].toString(),
+            icon: Icons.person_outline,
+          ),
+      ] else if (isStockEntry) ...[
+        PremiumInfoField(
+          label: 'Entrepôt',
+          value: warehouseName,
+          icon: Icons.warehouse_outlined,
+          isHighlight: true,
+        ),
+        PremiumInfoField(
+          label: 'Date d\'entrée',
+          value: formatDateTimeLong(document.date),
+          icon: Icons.calendar_today_outlined,
+        ),
+        if (document.customData['reason'] != null && document.customData['reason'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Motif',
+            value: document.customData['reason'].toString(),
+            icon: Icons.assignment_outlined,
+          ),
+        if (document.customData['createdBy'] != null && document.customData['createdBy'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Enregistré par',
+            value: document.customData['createdBy'].toString(),
+            icon: Icons.person_outline,
+          ),
+      ] else ...[
+        if (document.customerName != null && document.customerName!.isNotEmpty)
+          PremiumInfoField(
+            label: document.documentTitle.contains('FOURNISSEUR') ||
+                    document.documentTitle.contains('ACHAT') ||
+                    document.documentTitle.contains('RECEPTION')
+                ? 'Fournisseur'
+                : 'Client',
+            value: document.customerName!,
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+        PremiumInfoField(
+          label: 'Date d\'émission',
+          value: formatDateTimeLong(document.date),
+          icon: Icons.calendar_today_outlined,
+        ),
+        if (document.dueDate != null)
+          PremiumInfoField(
+            label: document.documentTitle.contains('DEVIS')
+                ? 'Date de validité'
+                : 'Date d\'échéance',
+            value: formatDateTimeLong(document.dueDate!),
+            icon: Icons.event_available_outlined,
+          ),
+        if (document.customData['projectName'] != null &&
+            document.customData['projectName'].toString().isNotEmpty)
+          PremiumInfoField(
+            label: 'Projet',
+            value: document.customData['projectName'].toString(),
+            icon: Icons.folder_outlined,
+          ),
+      ],
       if (widget.extraInfoFields != null) ...widget.extraInfoFields!,
     ];
 
@@ -202,27 +314,80 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
     // Build Totaux
     final totals = <PremiumTotalRow>[
-      if (document.totalHT > 0)
+      if (isInventorySheet) ...[
         PremiumTotalRow(
-          label: 'Total HT',
-          amount: document.totalHT,
+          label: 'Nombre d\'articles',
+          formattedValue: '${document.items.length}',
         ),
-      if (document.totalTva > 0)
         PremiumTotalRow(
-          label: 'Total TVA',
-          amount: document.totalTva,
+          label: 'Total unités comptées',
+          formattedValue: '${document.items.fold(0.0, (sum, i) => sum + i.quantity).toInt()}',
+          isGrandTotal: true,
         ),
-      if (document.stampTax > 0)
+      ] else if (isStockTransfer) ...[
         PremiumTotalRow(
-          label: 'Droit de Timbre',
-          amount: document.stampTax,
+          label: 'Nombre d\'articles',
+          formattedValue: '${document.items.length}',
         ),
-      PremiumTotalRow(
-        label: 'Total TTC',
-        amount: document.totalTTC,
-        isGrandTotal: true,
-      ),
+        PremiumTotalRow(
+          label: 'Total unités transférées',
+          formattedValue: '${document.items.fold(0.0, (sum, i) => sum + i.quantity).toInt()}',
+          isGrandTotal: true,
+        ),
+      ] else if (isStockWithdrawal) ...[
+        PremiumTotalRow(
+          label: 'Nombre d\'articles',
+          formattedValue: '${document.items.length}',
+        ),
+        PremiumTotalRow(
+          label: 'Total unités prélevées',
+          formattedValue: '${document.items.fold(0.0, (sum, i) => sum + i.quantity).toInt()}',
+          isGrandTotal: true,
+        ),
+      ] else if (isStockEntry) ...[
+        PremiumTotalRow(
+          label: 'Nombre d\'articles',
+          formattedValue: '${document.items.length}',
+        ),
+        PremiumTotalRow(
+          label: 'Total unités entrées',
+          formattedValue: '${document.items.fold(0.0, (sum, i) => sum + i.quantity).toInt()}',
+          isGrandTotal: true,
+        ),
+      ] else ...[
+        if (document.totalHT > 0)
+          PremiumTotalRow(
+            label: 'Total HT',
+            amount: document.totalHT,
+          ),
+        if (document.totalTva > 0)
+          PremiumTotalRow(
+            label: 'Total TVA',
+            amount: document.totalTva,
+          ),
+        if (document.stampTax > 0)
+          PremiumTotalRow(
+            label: 'Droit de Timbre',
+            amount: document.stampTax,
+          ),
+        PremiumTotalRow(
+          label: 'Total TTC',
+          amount: document.totalTTC,
+          isGrandTotal: true,
+        ),
+      ],
     ];
+
+    final String? displayNotes = (isInventorySheet &&
+            document.notes != null &&
+            document.notes!.trim().toLowerCase() == warehouseName.toLowerCase())
+        ? null
+        : ((isStockWithdrawal || isStockEntry) &&
+                document.notes != null &&
+                document.customData['reason'] != null &&
+                document.notes!.trim().toLowerCase() == document.customData['reason'].toString().trim().toLowerCase())
+            ? null
+            : document.notes;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -319,8 +484,9 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
         infoSections: infoSections,
         articles: articles,
         totals: totals,
-        notes: document.notes,
-        termsAndConditions: document.conditionsGenerales,
+        notes: displayNotes,
+        termsAndConditions: (isStockWithdrawal || isStockEntry) ? null : document.conditionsGenerales,
+        hidePricing: isInventorySheet || isStockTransfer || isStockWithdrawal || isStockEntry,
       ),
     );
   }

@@ -240,6 +240,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
         rib: event.rib,
         logoUrl: event.logoUrl,
       );
+      PermissionService.instance.grantImmediateOwnerAdmin(enterprise.id);
       emit(EnterpriseLoaded(
         enterprises: List<Enterprise>.from(_service.enterprises),
         currentEnterpriseId: enterprise.id,

@@ -5,7 +5,6 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -289,7 +288,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
 
     if (event.id.trim().isNotEmpty) {
       try {
-        await FirestoreRepository.instance.deleteDocument('articles', event.id);
+        await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
         await DatabaseHelper.instance.deleteProduct(event.id);
       } catch (e) {
         print("Error deleting product in Firestore: $e");
@@ -324,13 +323,8 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     try {
       final validIds = event.ids.where((id) => id.trim().isNotEmpty).toList();
       if (validIds.isNotEmpty) {
-        final batch = FirebaseFirestore.instance.batch();
         for (final id in validIds) {
-          batch.delete(FirebaseFirestore.instance.collection('articles').doc(id));
-        }
-        await batch.commit();
-
-        for (final id in validIds) {
+          await FirestoreRepository.instance.softDeleteDocument('articles', id);
           await DatabaseHelper.instance.deleteProduct(id);
         }
       }

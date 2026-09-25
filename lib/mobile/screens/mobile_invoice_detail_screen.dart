@@ -209,8 +209,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesInvoices);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesInvoices);
                 final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesInvoices, action: 'all');
-                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
-                final canCreateCreditNote = hasAllAccess;
+                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                final canCreateCreditNote = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes);
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -227,7 +227,26 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 if (canDelete) {
                   addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
                 }
-                if (canCreatePayment) {
+                final statusLower = currentInvoice.effectiveStatus.trim().toLowerCase();
+                final customStatusLower = (currentInvoice.customStatus ?? '').trim().toLowerCase();
+                final isPaid = currentInvoice.status == InvoiceStatus.paid ||
+                               statusLower == 'paid' ||
+                               statusLower == 'paye' ||
+                               statusLower == 'payé' ||
+                               statusLower == 'payee' ||
+                               statusLower == 'payée' ||
+                               (statusLower.contains('pay') && !statusLower.contains('non') && !statusLower.contains('impay') && !statusLower.contains('partiel')) ||
+                               (customStatusLower.contains('pay') && !customStatusLower.contains('non') && !customStatusLower.contains('impay') && !customStatusLower.contains('partiel')) ||
+                               (currentInvoice.amountPaid >= (currentInvoice.totalTTC + currentInvoice.timbreFiscal) - 0.01 && (currentInvoice.totalTTC + currentInvoice.timbreFiscal) > 0);
+                final isPendingPayment = currentInvoice.status == InvoiceStatus.pendingConfirmation ||
+                                        statusLower.contains('attente') ||
+                                        statusLower.contains('pending') ||
+                                        statusLower.contains('confirmation') ||
+                                        customStatusLower.contains('attente') ||
+                                        customStatusLower.contains('pending') ||
+                                        customStatusLower.contains('confirmation');
+
+                if (!isPaid && !isPendingPayment && canCreatePayment) {
                   addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement');
                 }
                 if (currentInvoice.creditNoteId == null || currentInvoice.creditNoteId!.isEmpty) {

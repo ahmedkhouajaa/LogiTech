@@ -973,6 +973,10 @@ class EnterpriseService {
       currentEnterpriseNotifier.value = enterprise;
       enterprisesNotifier.value = _enterprises;
       await _persistToPrefs();
+
+      // Immediately grant local owner/admin permissions so UI never sees 0 permissions or routes to support
+      PermissionService.instance.grantImmediateOwnerAdmin(id);
+
       _enterpriseController.add(_currentEnterpriseId);
       _enterpriseListController.add(_enterprises);
       _updateEnterpriseSubscriptions();

@@ -289,19 +289,30 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
       for (var item in event.withdrawal.items) {
         if (item.productId.isNotEmpty && item.quantity > 0) {
           String? prodName;
+          bool isService = false;
           try {
-            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-            final doc = await prodRef.get();
+            final prodRef = FirebaseFirestore.instance.collection('articles').doc(item.productId);
+            var doc = await prodRef.get();
+            if (!doc.exists) {
+              doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+            }
             if (doc.exists && doc.data() != null) {
-              prodName = doc.data()!['name']?.toString();
-              final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
-              final newStock = currentStock - item.quantity;
-              await prodRef.update({
-                'stock_qty': newStock,
-                'updated_at': DateTime.now().toIso8601String(),
-              });
+              final pType = (doc.data()!['product_type'] ?? doc.data()!['productType'])?.toString().toLowerCase();
+              if (pType == 'service') {
+                isService = true;
+              } else {
+                prodName = doc.data()!['name']?.toString();
+                final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
+                final newStock = currentStock - item.quantity;
+                await prodRef.update({
+                  'stock_qty': newStock,
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+              }
             }
           } catch (_) {}
+
+          if (isService) continue;
 
           String? whName;
           final whId = event.withdrawal.warehouseId ?? '';
@@ -364,13 +375,24 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
       for (var item in event.withdrawal.items) {
         if (item.productId.isNotEmpty && item.quantity > 0) {
           String? prodName;
+          bool isService = false;
           try {
-            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-            final doc = await prodRef.get();
+            final prodRef = FirebaseFirestore.instance.collection('articles').doc(item.productId);
+            var doc = await prodRef.get();
+            if (!doc.exists) {
+              doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+            }
             if (doc.exists && doc.data() != null) {
-              prodName = doc.data()!['name']?.toString();
+              final pType = (doc.data()!['product_type'] ?? doc.data()!['productType'])?.toString().toLowerCase();
+              if (pType == 'service') {
+                isService = true;
+              } else {
+                prodName = doc.data()!['name']?.toString();
+              }
             }
           } catch (_) {}
+
+          if (isService) continue;
 
           String? whName;
           final whId = event.withdrawal.warehouseId ?? '';

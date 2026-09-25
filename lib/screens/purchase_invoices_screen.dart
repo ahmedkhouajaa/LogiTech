@@ -39,7 +39,6 @@ import '../services/document_share_service.dart';
 import '../services/document_numbering_service.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../services/custom_status_service.dart';
 import '../widgets/dialogs/change_status_dialog.dart';
@@ -189,24 +188,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   Widget _buildFilterBar(PurchaseInvoicesState state) {
-    int totalItems = 0;
-    if (state is PurchaseInvoicesLoaded) {
-      List<PurchaseInvoice> filteredInvoices = state.filteredPurchaseInvoices;
-      if (_selectedClientId != null && _selectedClientId != 'all') {
-        filteredInvoices = filteredInvoices.where((q) => q.supplierId == _selectedClientId).toList();
-      }
-      if (_dateFrom != null) {
-        filteredInvoices = filteredInvoices.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
-      }
-      if (_dateTo != null) {
-        filteredInvoices = filteredInvoices.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
-      }
-      if (_statusFilter != null) {
-        filteredInvoices = filteredInvoices.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
-      }
-      totalItems = filteredInvoices.length;
-    }
-
     final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
@@ -584,16 +565,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
-  InputDecoration _filterInputDecoration() {
-    return InputDecoration(
-      filled: true,
-      fillColor: AppColors.surfaceAlt,
-      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
-    );
-  }
 
   Widget _buildTableShimmer() {
     return ShimmerTable(
@@ -653,79 +624,75 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               border: Border.all(color: AppColors.border),
               boxShadow: AppShadows.sm,
             ),
-            child: Column(
-              children: [
-                // Table
-                Expanded(
-                  child: pagePurchaseInvoices.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
-                              SizedBox(height: 12),
-                              Text(context.tr('Aucune facture trouvee'), style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: DataTable(
-                              showCheckboxColumn: false,
-                              headingRowHeight: 38,
-                              dataRowMinHeight: 42,
-                              dataRowMaxHeight: 46,
-                              headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.background),
-                              headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
-                              dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
-                              dividerThickness: 0.5,
-                              columnSpacing: 20,
-                              horizontalMargin: 16,
-                              columns: [
-                                DataColumn(
-                                  label: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        width: 28,
-                                        height: 28,
-                                        child: Checkbox(
-                                          value: pagePurchaseInvoices.isNotEmpty && pagePurchaseInvoices.every((inv) => _selectedPurchaseInvoiceIds.contains(inv.id)),
-                                          onChanged: (val) {
-                                            setState(() {
-                                              if (val == true) {
-                                                _selectedPurchaseInvoiceIds.addAll(pagePurchaseInvoices.map((inv) => inv.id));
-                                              } else {
-                                                for (final inv in pagePurchaseInvoices) {
-                                                  _selectedPurchaseInvoiceIds.remove(inv.id);
-                                                }
-                                              }
-                                            });
-                                          },
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(context.tr('Reference')),
-                                    ],
-                                  ),
-                                ),
-                                DataColumn(label: Text(context.tr('Fournisseur'))),
-                                DataColumn(label: Text(context.tr('Statut'))),
-                                DataColumn(label: Text(context.tr('Montant'))),
-                                DataColumn(label: Text(context.tr('Actions'))),
-                              ],
-                              rows: pagePurchaseInvoices.map((inv) => _buildPurchaseInvoiceRow(inv)).toList(),
-                            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Table header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                      color: AppColors.background,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Checkbox(
+                            value: pagePurchaseInvoices.isNotEmpty && pagePurchaseInvoices.every((inv) => _selectedPurchaseInvoiceIds.contains(inv.id)),
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedPurchaseInvoiceIds.addAll(pagePurchaseInvoices.map((inv) => inv.id));
+                                } else {
+                                  for (final inv in pagePurchaseInvoices) {
+                                    _selectedPurchaseInvoiceIds.remove(inv.id);
+                                  }
+                                }
+                              });
+                            },
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                           ),
                         ),
-                ),
-                // Pagination
-                _buildPaginationBar(totalRows, totalPages),
-              ],
+                        Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 3, child: Text(context.tr('Fournisseur'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                        Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      ],
+                    ),
+                  ),
+                  // Table body
+                  Expanded(
+                    child: pagePurchaseInvoices.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
+                                const SizedBox(height: 12),
+                                Text(context.tr('Aucune facture trouvee'), style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: pagePurchaseInvoices.length,
+                            separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border),
+                            itemBuilder: (context, index) {
+                              final inv = pagePurchaseInvoices[index];
+                              return _buildPurchaseInvoiceRow(inv, index);
+                            },
+                          ),
+                  ),
+                  // Pagination
+                  _buildPaginationBar(totalRows, totalPages),
+                ],
+              ),
             ),
           );
         }
@@ -734,154 +701,186 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
-  DataRow _buildPurchaseInvoiceRow(PurchaseInvoice inv) {
+  Widget _buildPurchaseInvoiceRow(PurchaseInvoice inv, int index) {
     final isSelected = _selectedPurchaseInvoiceIds.contains(inv.id);
-    return DataRow(
-      selected: isSelected,
-      onSelectChanged: (_) {
-        setState(() {
-          if (isSelected) {
-            _selectedPurchaseInvoiceIds.remove(inv.id);
-          } else {
-            _selectedPurchaseInvoiceIds.add(inv.id);
-          }
-        });
-      },
-      cells: [
-        // Checkbox & Reference (number + date)
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) {
-                        _selectedPurchaseInvoiceIds.add(inv.id);
-                      } else {
-                        _selectedPurchaseInvoiceIds.remove(inv.id);
-                      }
-                    });
-                  },
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(inv.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary)),
-                  const SizedBox(height: 1),
-                  Text(
-                    formatDateTimeLong(inv.createdAt),
-                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        // Supplier (icon + name + company)
-        DataCell(
-          Row(
-            children: [
-              Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textTertiary),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(inv.supplierName ?? '—', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
-              ),
-            ],
-          ),
-        ),
-        // Statut badge
-        DataCell((!inv.isSynced || inv.number.startsWith('BROUILLON-'))
-            ? const PendingSyncBadge()
-            : () {
-                final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', inv.effectiveStatus, fallbackLabel: inv.status.label, fallbackColor: inv.status.color);
-                return StatusBadge(label: context.tr(sInfo.label), color: sInfo.color);
-              }()),
-        // Montant
-        DataCell(
-          Text(
-            formatCurrencyDT(inv.totalTTC + inv.timbreFiscal),
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
-              color: AppColors.textPrimary,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: isSelected 
+          ? AppColors.primary.withValues(alpha: 0.06) 
+          : (index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3)),
+      child: Row(
+        children: [
+          // Checkbox
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(
+              value: isSelected,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedPurchaseInvoiceIds.add(inv.id);
+                  } else {
+                    _selectedPurchaseInvoiceIds.remove(inv.id);
+                  }
+                });
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             ),
           ),
-        ),
-        // Actions (three dots menu)
-        DataCell(
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-            offset: const Offset(0, 30),
-            onSelected: (val) => _handleAction(context, val, inv),
-            itemBuilder: (_) {
-              final canRead = PermissionService.instance.hasPermission('purchase_invoices', action: 'read');
-              final canUpdate = PermissionService.instance.hasPermission('purchase_invoices', action: 'update');
-              final canDelete = PermissionService.instance.hasPermission('purchase_invoices', action: 'delete');
-              final hasAnyAccess = PermissionService.instance.hasAnyPermission('purchase_invoices');
-              final hasAllAccess = PermissionService.instance.hasPermission('purchase_invoices', action: 'all');
-              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
-              final canCreateCreditNote = hasAllAccess;
-
-              debugPrint('[PurchaseInvoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
-
-              final entries = <PopupMenuEntry<String>>[];
-
-              void addItem(String val, IconData icon, Color col, String label) {
-                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
-                entries.add(_buildMenuItem(val, icon, col, context.tr(label)));
-              }
-
-              if (canRead) {
-                addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
-              }
-              if (canUpdate) {
-                addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
-              }
-              if (canDelete) {
-                addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
-              }
-
-              if (inv.status != InvoiceStatus.paid && canCreatePayment) {
-                addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
-              }
-
-              if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty) {
-                if (canRead) {
-                  addItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir');
-                }
-              } else if (canCreateCreditNote) {
-                addItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir');
-              }
-
-              if (hasAnyAccess) {
-                addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
-                addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
-              }
-              if (hasAllAccess) {
-                addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
-              }
-
-              return entries;
-            },
+          // Reference (number + date)
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  inv.number,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  formatDateTimeLong(inv.createdAt),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          // Supplier (icon + name)
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    inv.supplierName ?? '—',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Statut badge
+          Expanded(
+            flex: 2,
+            child: Container(
+              alignment: Alignment.centerLeft,
+              child: (!inv.isSynced || inv.number.startsWith('BROUILLON-'))
+                  ? const PendingSyncBadge()
+                  : () {
+                      final sInfo = CustomStatusService.instance.getStatusInfo('purchase_invoice', inv.effectiveStatus, fallbackLabel: inv.status.label, fallbackColor: inv.status.color);
+                      return StatusBadge(label: context.tr(sInfo.label), color: sInfo.color);
+                    }(),
+            ),
+          ),
+          // Montant
+          Expanded(
+            flex: 2,
+            child: Text(
+              formatCurrencyDT(inv.totalTTC + inv.timbreFiscal),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          // Actions (three dots menu)
+          SizedBox(
+            width: 60,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: PopupMenuButton<String>(
+                icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                offset: const Offset(0, 30),
+                onSelected: (val) => _handleAction(context, val, inv),
+                itemBuilder: (_) {
+                  final canRead = PermissionService.instance.hasPermission('purchase_invoices', action: 'read');
+                  final canUpdate = PermissionService.instance.hasPermission('purchase_invoices', action: 'update');
+                  final canDelete = PermissionService.instance.hasPermission('purchase_invoices', action: 'delete');
+                  final hasAnyAccess = PermissionService.instance.hasAnyPermission('purchase_invoices');
+                  final hasAllAccess = PermissionService.instance.hasPermission('purchase_invoices', action: 'all');
+                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                  final canCreateCreditNote = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierCreditNotes);
+
+                  debugPrint('[PurchaseInvoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  void addItem(String val, IconData icon, Color col, String label) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(_buildMenuItem(val, icon, col, context.tr(label)));
+                  }
+
+                  if (canRead) {
+                    addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                  }
+                  if (canUpdate) {
+                    addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  }
+                  if (canDelete) {
+                    addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  }
+
+                  final statusLower = inv.effectiveStatus.trim().toLowerCase();
+                  final customStatusLower = (inv.customStatus ?? '').trim().toLowerCase();
+                  final isPaid = inv.status == InvoiceStatus.paid ||
+                                 statusLower == 'paid' ||
+                                 statusLower == 'paye' ||
+                                 statusLower == 'payé' ||
+                                 statusLower == 'payee' ||
+                                 statusLower == 'payée' ||
+                                 (statusLower.contains('pay') && !statusLower.contains('non') && !statusLower.contains('impay') && !statusLower.contains('partiel')) ||
+                                 (customStatusLower.contains('pay') && !customStatusLower.contains('non') && !customStatusLower.contains('impay') && !customStatusLower.contains('partiel')) ||
+                                 (inv.amountPaid >= (inv.totalTTC + inv.timbreFiscal) - 0.01 && (inv.totalTTC + inv.timbreFiscal) > 0);
+                  final isPendingPayment = inv.status == InvoiceStatus.pendingConfirmation ||
+                                          statusLower.contains('attente') ||
+                                          statusLower.contains('pending') ||
+                                          statusLower.contains('confirmation') ||
+                                          customStatusLower.contains('attente') ||
+                                          customStatusLower.contains('pending') ||
+                                          customStatusLower.contains('confirmation');
+
+                  if (!isPaid && !isPendingPayment && canCreatePayment) {
+                    addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
+                  }
+
+                  if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty) {
+                    if (canRead) {
+                      addItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir');
+                    }
+                  } else if (canCreateCreditNote) {
+                    addItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir');
+                  }
+
+                  if (hasAnyAccess) {
+                    addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                    addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  }
+                  if (hasAllAccess) {
+                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                  }
+
+                  return entries;
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -967,28 +966,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
-  void _confirmDelete(PurchaseInvoice inv) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(context.tr('Confirmer la suppression')),
-        content: Text('${context.tr('Voulez-vous vraiment supprimer la facture')} ${inv.number} ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Annuler'))),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<PurchaseInvoicesBloc>().add(DeletePurchaseInvoice(inv.id));
-              context.read<StockBloc>().add(LoadStock());
-              context.read<ProductsBloc>().add(const ResetProductsPagination());
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text(context.tr('Supprimer'), style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _createCreditNoteFromPurchaseInvoice(BuildContext context, PurchaseInvoice inv) {
     showDialog(

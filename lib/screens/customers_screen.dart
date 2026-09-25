@@ -20,6 +20,7 @@ import '../widgets/import_export/contact_import_dialog.dart';
 import 'customer_detail_screen.dart';
 import '../widgets/customer_history_dialog.dart';
 import '../l10n/app_localizations.dart';
+import '../services/trial_service.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -108,7 +109,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
               ],
               SizedBox(
                 width: 250,
-                height: 32,
+                height: 34,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
               const SizedBox(width: 10),
@@ -1363,13 +1364,12 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     ? Column(
                         children: [
                           AppTextField(
-                            label: 'Email Personnel *',
+                            label: 'Email Personnel',
                             hint: 'Ex: contact@client.tn',
                             controller: _emailCtrl,
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
-                              if (v!.trim().isEmpty) return 'L\'email est requis';
-                              if (!v.contains('@')) return 'Email invalide';
+                              if (v != null && v.trim().isNotEmpty && !v.contains('@')) return 'Email invalide';
                               return null;
                             },
                           ),
@@ -1385,13 +1385,12 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         children: [
                           Expanded(
                             child: AppTextField(
-                              label: 'Email Personnel *',
+                              label: 'Email Personnel',
                               hint: 'Ex: contact@client.tn',
                               controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
                               validator: (v) {
-                                if (v!.trim().isEmpty) return 'L\'email est requis';
-                                if (!v.contains('@')) return 'Email invalide';
+                                if (v != null && v.trim().isNotEmpty && !v.contains('@')) return 'Email invalide';
                                 return null;
                               },
                             ),
@@ -1488,7 +1487,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Numéro de Téléphone *',
+                      'Numéro de Téléphone',
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
                     SizedBox(height: 4),
@@ -1540,7 +1539,6 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                           child: TextFormField(
                             controller: _phoneCtrl,
                             keyboardType: TextInputType.phone,
-                            validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                             style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                             decoration: InputDecoration(
                               hintText: 'Ex: 20 123 456',
@@ -2176,7 +2174,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le nom complet'), backgroundColor: AppColors.error));
         return false;
       }
-      if (_emailCtrl.text.trim().isEmpty || !_emailCtrl.text.contains('@')) {
+      if (_emailCtrl.text.trim().isNotEmpty && !_emailCtrl.text.contains('@')) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner un email valide'), backgroundColor: AppColors.error));
         return false;
       }
@@ -2401,7 +2399,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le nom complet (Tab Informations)'), backgroundColor: AppColors.error));
         return;
       }
-      if (_emailCtrl.text.trim().isEmpty || !_emailCtrl.text.contains('@')) {
+      if (_emailCtrl.text.trim().isNotEmpty && !_emailCtrl.text.contains('@')) {
         _tabController.animateTo(0);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner un email valide (Tab Informations)'), backgroundColor: AppColors.error));
         return;
@@ -2475,6 +2473,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     );
 
     if (widget.existing == null) {
+      if (!TrialService.instance.checkCanCreate(context)) return;
       context.read<CustomersBloc>().add(AddCustomer(customer));
     } else {
       context.read<CustomersBloc>().add(UpdateCustomer(customer));

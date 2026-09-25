@@ -197,6 +197,18 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
           infoSections: infoSections,
           articles: articles,
           notes: currentTransfer.notes,
+          hidePricing: true,
+          totals: [
+            PremiumTotalRow(
+              label: 'Nombre d\'articles',
+              formattedValue: '${currentTransfer.items.length}',
+            ),
+            PremiumTotalRow(
+              label: 'Total unités transférées',
+              formattedValue: '${currentTransfer.items.fold(0.0, (sum, i) => sum + i.quantityToTransfer).toInt()}',
+              isGrandTotal: true,
+            ),
+          ],
         ),
       ),
     );
@@ -237,22 +249,37 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       return;
     }
 
+    final wState = context.read<WarehousesBloc>().state;
+    String getWh(String id) {
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id,
+          orElse: () => null,
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+    final sName = getWh(transfer.sourceWarehouseId);
+    final dName = getWh(transfer.destinationWarehouseId);
+
     switch (action) {
       case 'view':
       case 'print':
-        final doc = DocumentWrapper.fromStockTransfer(transfer);
+        final doc = DocumentWrapper.fromStockTransfer(transfer, sName, dName);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
       case 'pdf':
-        final doc = DocumentWrapper.fromStockTransfer(transfer);
+        final doc = DocumentWrapper.fromStockTransfer(transfer, sName, dName);
         PdfService.instance.downloadDocument(context, doc);
         break;
       case 'email':
-        final docEmail = DocumentWrapper.fromStockTransfer(transfer);
+        final docEmail = DocumentWrapper.fromStockTransfer(transfer, sName, dName);
         DocumentShareService.shareDocument(docEmail, isEmail: true);
         break;
       case 'whatsapp':
-        final docWa = DocumentWrapper.fromStockTransfer(transfer);
+        final docWa = DocumentWrapper.fromStockTransfer(transfer, sName, dName);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:

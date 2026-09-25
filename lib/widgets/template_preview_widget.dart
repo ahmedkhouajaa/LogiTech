@@ -653,6 +653,7 @@ class TemplatePreviewWidget extends StatelessWidget {
             _buildTotalsRow('Total HT:', scale, fs),
           if (template.taxesConfig['visible'] != false)
             _buildTotalsRow('TVA:', scale, fs),
+          _buildTotalsRow('FODEC (1%):', scale, fs),
           if (template.timbreConfig['visible'] != false)
             _buildTotalsRow('Timbre Fiscal:', scale, fs),
           if (template.totalTTCConfig['visible'] != false)
@@ -677,7 +678,7 @@ class TemplatePreviewWidget extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '0,00',
+                    '0,000',
                     style: TextStyle(
                       fontSize: (fs * 0.35 * scale).clamp(6.0, 16.0),
                       fontWeight: FontWeight.bold,
@@ -708,7 +709,7 @@ class TemplatePreviewWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(fontSize: sz, color: AppColors.textSecondary)),
-          Text('0,00', style: TextStyle(fontSize: sz, fontWeight: FontWeight.w500)),
+          Text('0,000', style: TextStyle(fontSize: sz, fontWeight: FontWeight.w500)),
         ],
       ),
     );

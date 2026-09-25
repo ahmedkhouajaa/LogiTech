@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/retenue_source_vente.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
@@ -55,6 +56,16 @@ class ResetRetenueSourceVentesPagination extends RetenueSourceVenteEvent {
 
   @override
   List<Object?> get props => [searchQuery, statusFilter, isSales];
+}
+
+class DeleteRetenueSourceVente extends RetenueSourceVenteEvent {
+  final String id;
+  final bool isSales;
+
+  const DeleteRetenueSourceVente(this.id, {this.isSales = true});
+
+  @override
+  List<Object?> get props => [id, isSales];
 }
 
 // States
@@ -128,6 +139,7 @@ class RetenueSourceVenteBloc extends Bloc<RetenueSourceVenteEvent, RetenueSource
     on<LoadFirstRetenueSourceVentes>(_onLoadFirst);
     on<LoadNextRetenueSourceVentes>(_onLoadNext);
     on<ResetRetenueSourceVentesPagination>(_onResetPagination);
+    on<DeleteRetenueSourceVente>(_onDelete);
   }
 
   Future<void> _onLoadFirst(
@@ -198,5 +210,21 @@ class RetenueSourceVenteBloc extends Bloc<RetenueSourceVenteEvent, RetenueSource
       statusFilter: event.statusFilter,
       isSales: event.isSales,
     ));
+  }
+
+  Future<void> _onDelete(
+    DeleteRetenueSourceVente event,
+    Emitter<RetenueSourceVenteState> emit,
+  ) async {
+    try {
+      await FirestoreRepository.instance.softDeleteDocument('paiements', event.id);
+      add(ResetRetenueSourceVentesPagination(
+        searchQuery: state is RetenueSourceVenteLoaded ? (state as RetenueSourceVenteLoaded).searchQuery : null,
+        statusFilter: state is RetenueSourceVenteLoaded ? (state as RetenueSourceVenteLoaded).activeStatusFilter : 'Tous',
+        isSales: event.isSales,
+      ));
+    } catch (e) {
+      emit(RetenueSourceVenteError(ErrorHandler.parseError(e)));
+    }
   }
 }

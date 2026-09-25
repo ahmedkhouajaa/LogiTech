@@ -63,6 +63,15 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
       curve: Curves.easeOutCubic,
     ));
     _fadeController.forward();
+
+    // If navigated from login where Google sign-in was lingering, clear it
+    if (context.read<AuthBloc>().state is AuthLoading) {
+      try {
+        context.read<AuthBloc>().add(AuthResetLoadingRequested());
+      } catch (_) {
+        context.read<AuthBloc>().add(AuthCheckRequested());
+      }
+    }
   }
 
   @override
@@ -76,6 +85,32 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
   }
 
   void _handleSignUp() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading || _isGoogleLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Une opération de connexion (ex. Google) est déjà en cours. Veuillez patienter ou réessayer.',
+                  style: TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: _errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isEmailLoading = true;
@@ -92,6 +127,32 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
   }
 
   void _handleGoogleSignIn() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading || _isEmailLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Une création de compte est déjà en cours. Veuillez patienter.',
+                  style: TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: _errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isGoogleLoading = true;
       _isEmailLoading = false;
@@ -464,7 +525,7 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: isAuthLoading ? null : _handleSignUp,
+                    onPressed: isSignUpLoading ? null : _handleSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       foregroundColor: Colors.white,
@@ -525,7 +586,7 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
                 width: double.infinity,
                 height: 44,
                 child: OutlinedButton(
-                  onPressed: isAuthLoading ? null : _handleGoogleSignIn,
+                  onPressed: isGoogleLoading ? null : _handleGoogleSignIn,
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
                     side: const BorderSide(color: _inputBorder),

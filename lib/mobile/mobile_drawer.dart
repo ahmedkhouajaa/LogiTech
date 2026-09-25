@@ -111,6 +111,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       // Paramètres always visible
                       const _DrawerDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                      _buildItem(AppModule.trash, Icons.delete_outline_rounded, 'Corbeille'),
                       _buildItem(AppModule.appModulesSettings, Icons.widgets_rounded, 'Modules de l\'application'),
                       _buildThemeToggleItem(),
                       _buildLanguageItem(),
@@ -124,6 +125,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
+                      _buildItem(AppModule.userTracking, Icons.manage_history_rounded, 'Traçabilité Utilisateurs'),
                     ],
                   ),
                 ),

@@ -5,12 +5,14 @@ import 'mobile_generic_card.dart';
 class MobileRetenueSourceVenteCard extends StatelessWidget {
   final RetenueSourceVente retenue;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
   final bool isSales;
 
   const MobileRetenueSourceVenteCard({
     super.key,
     required this.retenue,
     required this.onTap,
+    this.onDelete,
     this.isSales = true,
   });
 
@@ -24,6 +26,7 @@ class MobileRetenueSourceVenteCard extends StatelessWidget {
       date: retenue.date,
       amount: retenue.amount,
       onTap: onTap,
+      onDelete: onDelete,
     );
   }
 }

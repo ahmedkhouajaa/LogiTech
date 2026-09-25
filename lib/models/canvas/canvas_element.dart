@@ -608,11 +608,11 @@ class DynamicFieldElement extends CanvasElement {
       case DynamicFieldType.invoiceDueDate:
         return '22/07/2026';
       case DynamicFieldType.totalHT:
-        return '150 000,00';
+        return '150 000,000';
       case DynamicFieldType.totalTVA:
-        return '28 500,00';
+        return '28 500,000';
       case DynamicFieldType.totalTTC:
-        return '178 500,00';
+        return '178 500,000';
       case DynamicFieldType.currency:
         return 'DZD';
       case DynamicFieldType.notes:

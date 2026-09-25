@@ -46,6 +46,7 @@ import '../widgets/shimmer_table_row.dart';
 import '../services/custom_status_service.dart';
 import '../widgets/dialogs/change_status_dialog.dart';
 import '../widgets/document_status_filter_dropdown.dart';
+import '../widgets/dashboard_card.dart';
 import '../l10n/app_localizations.dart';
 
 class DeliveryNotesScreen extends StatefulWidget {
@@ -657,7 +658,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         const SizedBox(width: 8),
         Expanded(flex: 2, child: Text(context.tr('Reference'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text(context.tr('Client'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 3, child: Container(alignment: Alignment.centerLeft, child: Text(context.tr('Statut'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
         Expanded(flex: 2, child: Text(context.tr('Montant'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         SizedBox(width: 60, child: Text(context.tr('Actions'), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
@@ -904,12 +905,12 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
 
   Widget _buildRow(BuildContext context, DeliveryNote note, int index) {
     final statusEnum = DeliveryNoteStatus.values.firstWhere(
-      (e) => e.name == note.status,
+      (e) => e.name == note.status || (e == DeliveryNoteStatus.pendingConfirmation && (note.status == 'en_attente_confirmation' || note.status == 'pendingConfirmation')),
       orElse: () => DeliveryNoteStatus.draft,
     );
     final clientLabel =
         note.customerCompany ?? note.customerName ?? context.tr('Client inconnu');
-    final isDraft = statusEnum == DeliveryNoteStatus.draft;
+    final isDraft = statusEnum == DeliveryNoteStatus.draft && note.status != 'en_attente_confirmation';
 
     final isSelected = _selectedDeliveryIds.contains(note.id);
 
@@ -984,7 +985,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
 
           // Status
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Container(
               alignment: Alignment.centerLeft,
               child: (!note.isSynced || note.number.startsWith('BROUILLON-'))
@@ -996,21 +997,9 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                         fallbackLabel: statusEnum.label,
                         fallbackColor: statusEnum.color,
                       );
-                      return Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: sInfo.color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          sInfo.label,
-                          style: TextStyle(
-                            color: sInfo.color,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                      return StatusBadge(
+                        label: sInfo.label,
+                        color: sInfo.color,
                       );
                     }(),
             ),
@@ -1051,9 +1040,9 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   final canDelete = PermissionService.instance.hasPermission('delivery_notes', action: 'delete');
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission('delivery_notes');
                   final hasAllAccess = PermissionService.instance.hasPermission('delivery_notes', action: 'all');
-                  final canCreateInvoice = hasAllAccess;
-                  final canCreateReturn = hasAllAccess;
-                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
+                  final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                  final canCreateReturn = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesReturnVouchers);
+                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
 
                   debugPrint('[DeliveryNotes.3dot] Note #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
 
@@ -1083,13 +1072,24 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                       addItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé');
                     }
                   } else {
-                    if (note.status != 'paid' && canCreatePayment) {
+                    final statusLower = note.status.trim().toLowerCase();
+                    final isPaid = statusLower == 'paid' ||
+                                   statusLower == 'paye' ||
+                                   statusLower == 'payé' ||
+                                   statusLower == 'payee' ||
+                                   statusLower == 'payée' ||
+                                   (statusLower.contains('pay') && !statusLower.contains('non') && !statusLower.contains('impay') && !statusLower.contains('partiel'));
+                    final isPendingPayment = statusLower.contains('attente') ||
+                                            statusLower.contains('pending') ||
+                                            statusLower.contains('confirmation');
+
+                    if (!isPaid && !isPendingPayment && canCreatePayment) {
                       addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
                     }
                     if (canCreateInvoice) {
                       addItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture');
                     }
-                    if (canCreateReturn) {
+                    if (!isPaid && !isPendingPayment && canCreateReturn) {
                       addItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour');
                     }
                   }
@@ -1269,7 +1269,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           ),
         ).then((created) {
           if (created == true && context.mounted) {
-            context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+            context.read<DeliveryNotesBloc>().add(const ResetDeliveryNotesPagination());
           }
         });
         break;

@@ -120,6 +120,7 @@ class PremiumDetailShell extends StatefulWidget {
   final Widget? customHeaderExtension;
   final Widget? customBottomWidget;
   final bool isScrollable;
+  final bool hidePricing;
 
   const PremiumDetailShell({
     super.key,
@@ -138,6 +139,7 @@ class PremiumDetailShell extends StatefulWidget {
     this.customHeaderExtension,
     this.customBottomWidget,
     this.isScrollable = true,
+    this.hidePricing = false,
   });
 
   @override
@@ -149,6 +151,13 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  bool get shouldHidePricing => widget.hidePricing ||
+      widget.documentType.toUpperCase().contains('INVENTAIRE') ||
+      widget.documentType.toUpperCase().contains('TRANSFERT') ||
+      widget.documentType.toUpperCase().contains('PRÉLÈVEMENT') ||
+      widget.documentType.toUpperCase().contains('PRELEVEMENT') ||
+      widget.documentType.toUpperCase().contains('ENTRÉE') ||
+      widget.documentType.toUpperCase().contains('ENTREE');
 
   @override
   void initState() {
@@ -543,6 +552,132 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
   }
 
   Widget _buildArticlesTableDesktop() {
+    if (shouldHidePricing) {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt,
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 36,
+                  child: Text(
+                    '#',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    context.tr('Référence'),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+                Expanded(
+                  flex: 6,
+                  child: Text(
+                    context.tr('Désignation'),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    context.tr('Unité'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    widget.documentType.toUpperCase().contains('TRANSFERT')
+                        ? context.tr('Qté transférée')
+                        : (widget.documentType.toUpperCase().contains('PRÉLÈVEMENT') || widget.documentType.toUpperCase().contains('PRELEVEMENT'))
+                            ? context.tr('Qté prélevée')
+                            : (widget.documentType.toUpperCase().contains('ENTRÉE') || widget.documentType.toUpperCase().contains('ENTREE'))
+                                ? context.tr('Qté entrée')
+                                : context.tr('Qté comptée'),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...widget.articles.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final item = entry.value;
+            final isEven = idx % 2 == 0;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isEven ? AppColors.surface : AppColors.surfaceAlt.withValues(alpha: 0.3),
+                border: Border(
+                  bottom: idx == widget.articles.length - 1
+                      ? BorderSide.none
+                      : BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      '${idx + 1}',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      (item.reference != null && item.reference!.trim().isNotEmpty)
+                          ? item.reference!
+                          : '—',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 6,
+                    child: Text(
+                      item.designation,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      item.unit ?? 'Piece',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      );
+    }
+
     return Column(
       children: [
         // Table Header (Full Width)
@@ -743,6 +878,69 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
   }
 
   Widget _buildArticlesListMobile() {
+    if (shouldHidePricing) {
+      return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: widget.articles.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, idx) {
+          final item = widget.articles[idx];
+          return Container(
+            padding: const EdgeInsets.all(12),
+            color: idx % 2 == 0 ? AppColors.surface : AppColors.surfaceAlt.withValues(alpha: 0.3),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${idx + 1}',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.designation,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                      ),
+                      if (item.reference != null && item.reference!.isNotEmpty)
+                        Text('${context.tr('Réf')}: ${item.reference}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      if (item.description != null && item.description!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(item.description!, style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+                        ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} ${item.unit ?? "Piece"}',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -891,10 +1089,14 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
         children: [
           Row(
             children: [
-              Icon(Icons.calculate_outlined, size: 18, color: AppColors.primary),
+              Icon(
+                shouldHidePricing ? Icons.inventory_2_outlined : Icons.calculate_outlined,
+                size: 18,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 8),
               Text(
-                context.tr('Récapitulatif des Totaux'),
+                shouldHidePricing ? context.tr('Récapitulatif') : context.tr('Récapitulatif des Totaux'),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -907,7 +1109,11 @@ class _PremiumDetailShellState extends State<PremiumDetailShell>
           ...widget.totals.map((row) {
             final isGrandTotal = row.isGrandTotal;
             final valStr = row.formattedValue ??
-                (row.amount != null ? formatCurrencyDT(row.amount!) : '—');
+                (row.amount != null
+                    ? (shouldHidePricing
+                        ? (row.amount! % 1 == 0 ? '${row.amount!.toInt()}' : '${row.amount}')
+                        : formatCurrencyDT(row.amount!))
+                    : '—');
 
             if (isGrandTotal) {
               return Container(

@@ -1,4 +1,3 @@
-import '../utils/constants.dart';
 import 'inventory_sheet_item.dart';
 
 class InventorySheet {
@@ -92,6 +91,7 @@ class InventorySheet {
     String? reason,
     String? notes,
     String? firebaseUid,
+    String? enterpriseId,
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -108,6 +108,7 @@ class InventorySheet {
       reason: reason ?? this.reason,
       notes: notes ?? this.notes,
       firebaseUid: firebaseUid ?? this.firebaseUid,
+      enterpriseId: enterpriseId ?? this.enterpriseId,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

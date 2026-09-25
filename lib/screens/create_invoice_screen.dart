@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,8 @@ import '../models/invoice.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -28,6 +31,8 @@ import '../services/enterprise_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../widgets/document_tax_settings_dialog.dart';
+import '../services/trial_service.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   final Invoice? existing;
@@ -53,8 +58,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _conditionsCtrl = TextEditingController();
   bool _pricingModeHT = true; // true = HT, false = TTC
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0.0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   
   Key _autocompleteKey = UniqueKey();
   InvoiceStatus _status = InvoiceStatus.unpaid;
@@ -102,7 +111,30 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0;
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
+
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
 
@@ -115,6 +147,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     context.read<WarehousesBloc>().add(LoadWarehouses());
     _loadTemplate();
 
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
+
     // Load existing invoice data if editing
     if (widget.existing != null) {
       final inv = widget.existing!;
@@ -124,7 +161,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _notesCtrl.text = inv.notes ?? '';
       _conditionsCtrl.text = inv.conditionsGenerales ?? '';
       _pricingModeHT = inv.pricingMode == 'ht';
-      _withTimbreFiscal = inv.timbreFiscal > 0;
+      _withTimbreFiscal = inv.timbreFiscal > 0 || inv.customFields['withTimbreFiscal'] == true;
+      _withFodec = inv.customFields['withFodec'] == true || inv.customFields['with_fodec'] == true;
+      if (inv.customFields['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (inv.customFields['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _withGlobalDiscount = inv.globalDiscountPercent > 0;
       _globalDiscountPercent = inv.globalDiscountPercent;
       _selectedProjectId = inv.projectId;
@@ -132,6 +175,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _items = inv.items.toList();
       _customFields = Map<String, dynamic>.from(inv.customFields);
     }
+  }
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
   }
 
   Future<void> _loadTemplate() async {
@@ -148,6 +204,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     super.dispose();
@@ -225,7 +282,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Aperçu', () {}),
           SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
           SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -278,7 +335,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -556,7 +613,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -881,6 +938,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         children: [
@@ -931,10 +989,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
             SizedBox(height: 6),
@@ -943,6 +1008,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
               ),
             ),
             InkWell(
@@ -1005,7 +1083,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ─── Notes Section ───────────────────────────────────────────────
   Widget _buildNotesSection() {
-    return Row(
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
@@ -1058,8 +1144,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   // ─── Add Item Methods ────────────────────────────────────────────
   void _addEmptyItem() {
@@ -1093,6 +1180,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (_isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     _formKey.currentState?.validate();
 
@@ -1167,7 +1257,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         status: _status,
         totalHT: _totalHTAfterDiscount,
         totalTva: _totalTvaAfterDiscount,
-        totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount,
+        totalTTC: _totalTTC,
         stampTax: 0,
         timbreFiscal: _timbreFiscal,
         globalDiscountPercent: _globalDiscountPercent,
@@ -1175,7 +1265,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         items: _items.map((item) => item.copyWith(invoiceId: invoiceId)).toList(),
         createdAt: _isEditing ? widget.existing!.createdAt : null,
         isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,8 @@ import '../models/supplier_order.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -27,6 +30,8 @@ import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../widgets/document_tax_settings_dialog.dart';
+import '../services/trial_service.dart';
 
 enum ReceivingVoucherStatus {
   draft('Brouillon'),
@@ -75,8 +80,12 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   final _conditionsCtrl = TextEditingController();
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   ReceivingVoucherStatus _status = ReceivingVoucherStatus.draft;
   Map<String, dynamic> _customFields = {};
 
@@ -110,10 +119,46 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.000 : 0;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
+
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
   double get _totalTTC =>
-      _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+      _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'purchase',
+    );
+  }
 
   @override
   void initState() {
@@ -123,6 +168,11 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
 
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
+
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
@@ -130,7 +180,13 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields?['withTimbreFiscal'] == true;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (n.customFields!['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _status = ReceivingVoucherStatus.values.firstWhere(
         (e) => e.name == n.status,
         orElse: () => ReceivingVoucherStatus.draft,
@@ -153,6 +209,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     super.dispose();
@@ -161,6 +218,9 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (widget.isReadOnly || _isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() {
       _hasAttemptedSubmit = true;
       _isSaving = true;
@@ -252,7 +312,15 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       conditionsGenerales:
           _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,
-      customFields: _customFields,
+      customFields: {
+        ...?_customFields,
+        'withFodec': _withFodec,
+        'fodecAmount': _fodecAmount,
+        'fodecRate': 1.0,
+        'withTimbreFiscal': _withTimbreFiscal,
+        'activeCustomTaxes': _activeCustomTaxes,
+        'customTaxesTotal': _customTaxesTotal,
+      },
       items: _items.map((item) => ReceivingVoucherItem(
         voucherId: orderId,
         id: item.id,
@@ -386,6 +454,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
               setState(() => _status = ReceivingVoucherStatus.validated);
             }, color: AppColors.success),
+            SizedBox(width: 8),
+            _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
             SizedBox(width: 16),
             ElevatedButton.icon(
               onPressed: _save,
@@ -429,7 +499,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -695,7 +765,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -797,14 +867,14 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                       hasError: isArticleMissing,
                       errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
                             _items[index] = item.copyWith(
                               productId: selection.id,
                               productName: selection.name,
-                              unitPrice: selection.purchasePrice > 0 ? selection.purchasePrice : selection.sellingPrice,
+                              unitPrice: selection.purchasePrice,
                               tvaRate: selection.tvaRate,
                             );
                           });
@@ -990,7 +1060,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {
@@ -1000,7 +1070,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                         productName: product.name,
                         quantityExpected: 1,
                         quantityReceived: 1,
-                        unitPrice: product.purchasePrice > 0 ? product.purchasePrice : product.sellingPrice,
+                        unitPrice: product.purchasePrice,
                         tvaRate: product.tvaRate,
                       ));
                     });
@@ -1024,7 +1094,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                   productName: res.name,
                   quantityExpected: 1,
                   quantityReceived: 1,
-                  unitPrice: res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice,
+                  unitPrice: res.purchasePrice,
                   tvaRate: res.tvaRate,
                 ));
               });
@@ -1131,10 +1201,17 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
             SizedBox(height: 6),
@@ -1143,6 +1220,19 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
               ),
             ),
             InkWell(

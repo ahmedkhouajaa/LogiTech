@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/product.dart';
 import '../blocs/products/products_bloc.dart';
+import '../blocs/product_settings/product_settings_bloc.dart';
+import '../blocs/product_settings/product_settings_event.dart';
+import '../blocs/product_settings/product_settings_state.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
@@ -27,6 +30,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   void initState() {
     super.initState();
     currentProduct = widget.product;
+    context.read<ProductSettingsBloc>().add(LoadFamilies());
   }
 
   void _navigateToEdit() {
@@ -115,7 +119,11 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     String stockLabel = 'En stock (${currentProduct.stockQty.toStringAsFixed(0)} ${currentProduct.unit})';
     IconData stockIcon = Icons.check_circle_outline_rounded;
 
-    if (currentProduct.stockQty <= 0) {
+    if (currentProduct.isService) {
+      stockColor = const Color(0xFF8B5CF6);
+      stockLabel = 'Non stockable';
+      stockIcon = Icons.all_inclusive_rounded;
+    } else if (currentProduct.stockQty <= 0) {
       stockColor = AppColors.error;
       stockLabel = 'Rupture de stock (0 ${currentProduct.unit})';
       stockIcon = Icons.error_outline_rounded;
@@ -396,165 +404,242 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Section 2: Gestion du Stock & Entrepôt
-                  DetailSectionCard(
-                    title: 'Gestion des Stocks & Entrepôt',
-                    icon: Icons.inventory_rounded,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth > 650;
-                        final colCount = isWide ? 3 : 2;
-                        final tileWidth = (constraints.maxWidth - ((colCount - 1) * 12)) / colCount;
-
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
+                  if (currentProduct.isService)
+                    DetailSectionCard(
+                      title: 'Gestion des Stocks & Entrepôt',
+                      icon: Icons.inventory_rounded,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
                           children: [
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Stock physique actuel',
-                                value: '${currentProduct.stockQty.toStringAsFixed(0)} ${currentProduct.unit}',
-                                icon: Icons.inventory_2_outlined,
-                                valueColor: stockColor,
-                                valueFontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Stock minimum de sécurité',
-                                value: '${currentProduct.minStockQty.toStringAsFixed(0)} ${currentProduct.unit}',
-                                icon: Icons.shield_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Alerte stock faible',
-                                value: currentProduct.lowStockAlert
-                                    ? 'Activée (Seuil: ${currentProduct.lowStockThreshold.toStringAsFixed(0)})'
-                                    : 'Désactivée',
-                                icon: Icons.notification_important_outlined,
-                                valueColor: currentProduct.lowStockAlert ? AppColors.warning : AppColors.textTertiary,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Alerte stock élevé',
-                                value: currentProduct.highStockAlert
-                                    ? 'Activée (Seuil: ${currentProduct.highStockThreshold.toStringAsFixed(0)})'
-                                    : 'Désactivée',
-                                icon: Icons.warning_amber_rounded,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Vente en stock négatif',
-                                value: currentProduct.allowNegativeStock ? 'Autorisée' : 'Bloquée (Non autorisée)',
-                                icon: Icons.rule_rounded,
-                                valueColor: currentProduct.allowNegativeStock ? AppColors.warning : AppColors.success,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Entrepôt assigné par défaut',
-                                value: currentProduct.defaultWarehouseId ?? 'Entrepôt Principal',
-                                icon: Icons.warehouse_outlined,
+                            const Icon(Icons.info_outline_rounded, color: Color(0xFF8B5CF6)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Cet article est un Service. Les prestations de services ne font pas l\'objet d\'un suivi d\'inventaire physique et n\'affectent pas les niveaux de stock.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                           ],
-                        );
-                      },
+                        ),
+                      ),
+                    )
+                  else
+                    DetailSectionCard(
+                      title: 'Gestion des Stocks & Entrepôt',
+                      icon: Icons.inventory_rounded,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isWide = constraints.maxWidth > 650;
+                          final colCount = isWide ? 3 : 2;
+                          final tileWidth = (constraints.maxWidth - ((colCount - 1) * 12)) / colCount;
+
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Stock physique actuel',
+                                  value: '${currentProduct.stockQty.toStringAsFixed(0)} ${currentProduct.unit}',
+                                  icon: Icons.inventory_2_outlined,
+                                  valueColor: stockColor,
+                                  valueFontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Stock minimum de sécurité',
+                                  value: '${currentProduct.minStockQty.toStringAsFixed(0)} ${currentProduct.unit}',
+                                  icon: Icons.shield_outlined,
+                                ),
+                              ),
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Alerte stock faible',
+                                  value: currentProduct.lowStockAlert
+                                      ? 'Activée (Seuil: ${currentProduct.lowStockThreshold.toStringAsFixed(0)})'
+                                      : 'Désactivée',
+                                  icon: Icons.notification_important_outlined,
+                                  valueColor: currentProduct.lowStockAlert ? AppColors.warning : AppColors.textTertiary,
+                                ),
+                              ),
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Alerte stock élevé',
+                                  value: currentProduct.highStockAlert
+                                      ? 'Activée (Seuil: ${currentProduct.highStockThreshold.toStringAsFixed(0)})'
+                                      : 'Désactivée',
+                                  icon: Icons.warning_amber_rounded,
+                                ),
+                              ),
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Vente en stock négatif',
+                                  value: currentProduct.allowNegativeStock ? 'Autorisée' : 'Bloquée (Non autorisée)',
+                                  icon: Icons.rule_rounded,
+                                  valueColor: currentProduct.allowNegativeStock ? AppColors.warning : AppColors.success,
+                                ),
+                              ),
+                              SizedBox(
+                                width: tileWidth,
+                                child: DetailInfoTile(
+                                  label: 'Entrepôt assigné par défaut',
+                                  value: currentProduct.defaultWarehouseId ?? 'Entrepôt Principal',
+                                  icon: Icons.warehouse_outlined,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
 
                   // Section 3: Classification & Référencement
                   DetailSectionCard(
                     title: 'Classification & Références',
                     icon: Icons.category_outlined,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth > 650;
-                        final colCount = isWide ? 4 : 2;
-                        final tileWidth = (constraints.maxWidth - ((colCount - 1) * 12)) / colCount;
+                    child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
+                      builder: (context, settingsState) {
+                        String? familyName = currentProduct.familyId;
+                        String? subFamilyName = currentProduct.subFamilyId;
+                        String? categoryName = currentProduct.category;
+                        String? brandName = currentProduct.brandId;
 
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Code Article',
-                                value: currentProduct.code,
-                                icon: Icons.tag_rounded,
-                                copyable: true,
-                                valueFontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Référence Fabricant',
-                                value: currentProduct.reference,
-                                icon: Icons.qr_code_2_rounded,
-                                copyable: true,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Code-barres / EAN',
-                                value: currentProduct.barcode,
-                                icon: Icons.barcode_reader,
-                                copyable: true,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Unité de mesure',
-                                value: currentProduct.unit,
-                                icon: Icons.straighten_rounded,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Catégorie',
-                                value: currentProduct.category,
-                                icon: Icons.folder_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Famille',
-                                value: currentProduct.familyId,
-                                icon: Icons.layers_outlined,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Sous-Famille',
-                                value: currentProduct.subFamilyId,
-                                icon: Icons.alt_route_rounded,
-                              ),
-                            ),
-                            SizedBox(
-                              width: tileWidth,
-                              child: DetailInfoTile(
-                                label: 'Marque',
-                                value: currentProduct.brandId,
-                                icon: Icons.branding_watermark_outlined,
-                              ),
-                            ),
-                          ],
+                        if (settingsState is ProductSettingsLoaded) {
+                          if (currentProduct.familyId != null && currentProduct.familyId!.trim().isNotEmpty) {
+                            final match = settingsState.families
+                                .where((f) => f.id == currentProduct.familyId)
+                                .firstOrNull;
+                            if (match != null) {
+                              familyName = match.name;
+                            }
+                          }
+
+                          if (currentProduct.subFamilyId != null && currentProduct.subFamilyId!.trim().isNotEmpty) {
+                            final match = settingsState.families
+                                .where((f) => f.id == currentProduct.subFamilyId)
+                                .firstOrNull;
+                            if (match != null) {
+                              subFamilyName = match.name;
+                            }
+                          }
+
+                          if (currentProduct.category != null && currentProduct.category!.trim().isNotEmpty) {
+                            final match = settingsState.categories
+                                .where((c) => c.id == currentProduct.category || c.name.toLowerCase() == currentProduct.category!.trim().toLowerCase())
+                                .firstOrNull;
+                            if (match != null) {
+                              categoryName = match.name;
+                            }
+                          }
+
+                          if (currentProduct.brandId != null && currentProduct.brandId!.trim().isNotEmpty) {
+                            final match = settingsState.brands
+                                .where((b) => b.id == currentProduct.brandId || b.name.toLowerCase() == currentProduct.brandId!.trim().toLowerCase())
+                                .firstOrNull;
+                            if (match != null) {
+                              brandName = match.name;
+                            }
+                          }
+                        }
+
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isWide = constraints.maxWidth > 650;
+                            final colCount = isWide ? 4 : 2;
+                            final tileWidth = (constraints.maxWidth - ((colCount - 1) * 12)) / colCount;
+
+                            return Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Code Article',
+                                    value: currentProduct.code,
+                                    icon: Icons.tag_rounded,
+                                    copyable: true,
+                                    valueFontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Référence Fabricant',
+                                    value: currentProduct.reference,
+                                    icon: Icons.qr_code_2_rounded,
+                                    copyable: true,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Code-barres / EAN',
+                                    value: currentProduct.barcode,
+                                    icon: Icons.barcode_reader,
+                                    copyable: true,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Unité de mesure',
+                                    value: currentProduct.unit,
+                                    icon: Icons.straighten_rounded,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Catégorie',
+                                    value: categoryName,
+                                    icon: Icons.folder_outlined,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Famille',
+                                    value: familyName,
+                                    icon: Icons.layers_outlined,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Sous-Famille',
+                                    value: subFamilyName,
+                                    icon: Icons.alt_route_rounded,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: DetailInfoTile(
+                                    label: 'Marque',
+                                    value: brandName,
+                                    icon: Icons.branding_watermark_outlined,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         );
                       },
                     ),

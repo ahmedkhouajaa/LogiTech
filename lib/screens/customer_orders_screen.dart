@@ -857,8 +857,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                    final canDelete = PermissionService.instance.hasPermission('customer_orders', action: 'delete');
                                                    final hasAnyAccess = PermissionService.instance.hasAnyPermission('customer_orders');
                                                    final hasAllAccess = PermissionService.instance.hasPermission('customer_orders', action: 'all');
-                                                   final canCreateInvoice = hasAllAccess;
-                                                   final canCreateDelivery = hasAllAccess;
+                                                   final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                                                   final canCreateDelivery = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes);
 
                                                    debugPrint('[CustomerOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
 

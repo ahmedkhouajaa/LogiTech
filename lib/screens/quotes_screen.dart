@@ -883,9 +883,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                    final canDelete = PermissionService.instance.hasPermission('devis', action: 'delete');
                                                    final hasAnyAccess = PermissionService.instance.hasAnyPermission('devis');
                                                    final hasAllAccess = PermissionService.instance.hasPermission('devis', action: 'all');
-                                                   final canCreateInvoice = hasAllAccess;
-                                                   final canCreateOrder = hasAllAccess;
-                                                   final canCreateDelivery = hasAllAccess;
+                                                   final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                                                   final canCreateOrder = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesOrders);
+                                                   final canCreateDelivery = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes);
 
                                                    debugPrint('[QuotesScreen.3dot] Quote #${quote.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateOrder=$canCreateOrder, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
 

@@ -36,6 +36,7 @@ class MobileArticleForm extends StatefulWidget {
   final ValueChanged<MobileArticleFormResult> onSave;
   final bool isPurchase; // if true, uses purchase price instead of selling price
   final String? warehouseId;
+  final bool excludeServices;
 
   const MobileArticleForm({
     super.key,
@@ -43,12 +44,14 @@ class MobileArticleForm extends StatefulWidget {
     required this.onSave,
     this.isPurchase = false,
     this.warehouseId,
+    this.excludeServices = false,
   });
 
   static Future<MobileArticleFormResult?> show(BuildContext context, {
     MobileArticleFormResult? initialData,
     bool isPurchase = false,
     String? warehouseId,
+    bool excludeServices = false,
   }) {
     return showModalBottomSheet<MobileArticleFormResult>(
       context: context,
@@ -58,6 +61,7 @@ class MobileArticleForm extends StatefulWidget {
         initialData: initialData,
         isPurchase: isPurchase,
         warehouseId: warehouseId,
+        excludeServices: excludeServices,
         onSave: (result) => Navigator.pop(ctx, result),
       ),
     );
@@ -202,7 +206,9 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                           builder: (context, state) {
                             final allProducts = state is ProductsLoaded ? state.products : <Product>[];
                             final selectedProduct = allProducts.cast<Product?>().firstWhere((p) => p?.id == _productId || p?.name == _productName, orElse: () => null);
-                            final products = allProducts.where((p) => widget.isPurchase ? p.isForPurchase : p.isForSale).toList();
+                            final products = allProducts
+                                .where((p) => (widget.isPurchase ? p.isForPurchase : p.isForSale) && (!widget.excludeServices || !p.isService))
+                                .toList();
                             final displayName = selectedProduct != null ? selectedProduct.name : (_productName.isNotEmpty ? _productName : null);
 
                             return SmartSearchableSelector(
@@ -219,6 +225,8 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                                   selectedProductId: _productId,
                                   warehouseId: widget.warehouseId,
                                   destinationFilter: widget.isPurchase ? 'Achat' : 'Vente',
+                                  isPurchase: widget.isPurchase,
+                                  excludeServices: widget.excludeServices,
                                 );
                                 if (res != null && mounted) {
                                   final sel = products.firstWhere((p) => p.id == res);

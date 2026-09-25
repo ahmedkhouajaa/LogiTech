@@ -61,10 +61,15 @@ import '../screens/inventory_sheets_screen.dart';
 import 'screens/mobile_user_management_screen.dart';
 import '../screens/import_export_screen.dart';
 import '../screens/support_tickets_screen.dart';
+import '../screens/trash_screen.dart';
+import '../screens/user_tracking_screen.dart';
 import '../services/trial_service.dart';
 import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
+import '../services/update_service.dart';
+import '../widgets/update_banner_widget.dart';
 import '../services/permission_service.dart';
+import '../services/ai_assistant_settings_service.dart';
 import '../widgets/draggable_ai_floating_button.dart';
 import '../l10n/app_localizations.dart';
 
@@ -94,6 +99,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
     super.initState();
     _checkInitialModule();
     TrialService.instance.initTrial();
+    UpdateService.instance.checkForUpdate();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
       if (mounted) {
@@ -120,17 +126,27 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         setState(() {});
       }
     } else {
+      // If the app previously defaulted to support before permissions were ready, restore to dashboard
+      if (_activeModule == AppModule.support && PermissionService.instance.canAccessModule(AppModule.dashboard)) {
+        _onModuleSelected(AppModule.dashboard);
+        return;
+      }
       setState(() {});
     }
   }
 
   void _checkInitialModule() {
-    if (PermissionService.instance.isLoaded && !PermissionService.instance.canAccessModule(_activeModule)) {
-      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
-      if (firstPermitted != null) {
-        _activeModule = firstPermitted;
-        final navIndex = _bottomNavModules.indexOf(firstPermitted);
-        _bottomNavIndex = navIndex >= 0 ? navIndex : -1;
+    if (PermissionService.instance.isLoaded) {
+      if (!PermissionService.instance.canAccessModule(_activeModule)) {
+        final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+        if (firstPermitted != null) {
+          _activeModule = firstPermitted;
+          final navIndex = _bottomNavModules.indexOf(firstPermitted);
+          _bottomNavIndex = navIndex >= 0 ? navIndex : -1;
+        }
+      } else if (_activeModule == AppModule.support && PermissionService.instance.canAccessModule(AppModule.dashboard)) {
+        _activeModule = AppModule.dashboard;
+        _bottomNavIndex = 0;
       }
     }
   }
@@ -268,6 +284,10 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const ImportExportScreen();
       case AppModule.support:
         return const SupportTicketsScreen();
+      case AppModule.trash:
+        return const TrashScreen();
+      case AppModule.userTracking:
+        return const UserTrackingScreen();
     }
   },
 );
@@ -294,6 +314,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.projects: return 'Projets';
       case AppModule.reports: return 'Rapports et statistiques';
       case AppModule.settings: return 'Parametres';
+      case AppModule.trash: return 'Corbeille';
       case AppModule.purchaseInvoices: return 'Factures d\'achat';
       case AppModule.warehouses: return 'Entrepots';
       case AppModule.exitVouchers: return 'Bons de sortie';
@@ -316,14 +337,19 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.userManagement: return 'Gestion des utilisateurs';
       case AppModule.importExport: return 'Import / Export';
       case AppModule.support: return 'Support client';
+      case AppModule.userTracking: return 'Traçabilité Utilisateurs';
       default: return 'LogiTech Pro';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableAiFloatingButton(
-      child: Scaffold(
+    return ValueListenableBuilder<bool>(
+      valueListenable: AiAssistantSettingsService.instance.isFloatingButtonEnabled,
+      builder: (context, isAiEnabled, _) {
+        return DraggableAiFloatingButton(
+          enabled: isAiEnabled,
+          child: Scaffold(
         backgroundColor: AppColors.background,
       drawer: MobileDrawer(
         activeModule: _activeModule,
@@ -374,6 +400,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         },
         child: Column(
           children: [
+            const UpdateBannerWidget(),
             const TrialBannerWidget(),
             Expanded(
               child: ValueListenableBuilder<bool>(
@@ -434,6 +461,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       //   ),
       // ),
     ),
+    );
+      },
     );
   }
 }

@@ -18,6 +18,7 @@ import 'forms/mobile_inventory_sheet_form_screen.dart';
 import 'mobile_inventory_sheet_detail_screen.dart';
 import '../../models/inventory_sheet.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../widgets/dialogs/print_blank_inventory_dialog.dart';
 
 class MobileInventorySheetsScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -216,6 +217,11 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
           scrollController: _scrollController,
           emptyMessage: context.tr('Aucune fiche trouvée.'),
           itemCount: totalMatchingCount,
+          searchTrailing: IconButton(
+            icon: Icon(Icons.print_outlined, color: AppColors.primary),
+            tooltip: context.tr("Imprimer fiche vierge"),
+            onPressed: () => PrintBlankInventoryDialog.show(context),
+          ),
           fabText: _config.fabText,
           onFabPressed: () {
             Navigator.push(

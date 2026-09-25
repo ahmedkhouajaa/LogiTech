@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/firestore_safe_helper.dart';
 import '../models/purchase_invoice.dart';
 import '../models/payment_model.dart';
+import '../models/check_traite.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
@@ -58,7 +59,14 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   String? _selectedAccountId;
   final _referenceCtrl = TextEditingController();
   DateTime _paymentDate = DateTime.now();
+  DateTime _maturityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
+
+  String? get _selectedAccountName {
+    if (_selectedAccountId == null) return null;
+    final acc = _treasuryAccounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+    return acc?.name;
+  }
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -74,9 +82,12 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
 
   static const _paymentMethods = [
     {'value': 'especes', 'label': 'Espèces', 'icon': Icons.payments_outlined},
+    {'value': 'virement_bancaire', 'label': 'Virement bancaire', 'icon': Icons.account_balance_outlined},
+    {'value': 'versement_bancaire', 'label': 'Versement bancaire', 'icon': Icons.move_to_inbox_outlined},
     {'value': 'cheque', 'label': 'Chèque', 'icon': Icons.description_outlined},
-    {'value': 'virement', 'label': 'Virement', 'icon': Icons.account_balance_outlined},
-    {'value': 'carte', 'label': 'Carte', 'icon': Icons.credit_card_outlined},
+    {'value': 'traite', 'label': 'Traite', 'icon': Icons.receipt_long_outlined},
+    {'value': 'carte', 'label': 'Carte Bancaire', 'icon': Icons.credit_card_outlined},
+    {'value': 'autre', 'label': 'Autre', 'icon': Icons.more_horiz_rounded},
   ];
 
   @override
@@ -101,10 +112,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
         setState(() {
           _treasuryAccounts = accounts;
           _isLoadingAccounts = false;
-          if (_selectedAccountId == null && _treasuryAccounts.isNotEmpty) {
-            final defAcc = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first);
-            _selectedAccountId = defAcc.id;
-          }
         });
       }
     } catch (e) {
@@ -138,18 +145,9 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
     if (_isSaving) return;
     if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
-    if (_selectedAccountId == null) {
-      if (_treasuryAccounts.isNotEmpty) {
-        _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;
-      } else {
-        final state = context.read<TreasuryAccountsBloc>().state;
-        if (state is TreasuryAccountsLoaded && state.accounts.isNotEmpty) {
-          _selectedAccountId = state.accounts.firstWhere((a) => a.isDefault, orElse: () => state.accounts.first).id;
-        }
-      }
-    }
+    final isChequeOrTraite = _paymentMethod == 'cheque' || _paymentMethod == 'traite';
 
-    if (_selectedAccountId == null) {
+    if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.error,
@@ -171,92 +169,128 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
     try {
       final db = context.read<PaymentsBloc>();
       final now = DateTime.now();
-      final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-      final payment = Payment(
-        id: const Uuid().v4(),
-        paymentNumber: paymentNumber,
-        direction: 'decaissement',
-        contactId: widget.purchaseInvoice.supplierId,
-        contactType: 'supplier',
-        contactName: widget.purchaseInvoice.supplierName,
-        amount: parsedAmount,
-        method: _paymentMethod,
-        accountId: _selectedAccountId,
-        reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
-        paymentDate: _paymentDate,
-        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-        status: 'paid',
-        relatedInvoiceId: widget.purchaseInvoice.id,
-        createdAt: now,
-        updatedAt: now,
-      );
+      if (isChequeOrTraite) {
+        // 1. Create CheckTraite record with statut = 'en_attente'
+        final refText = _referenceCtrl.text.trim();
+        final docNum = refText.isNotEmpty
+            ? refText
+            : '${_paymentMethod == 'traite' ? 'TR' : 'CHQ'}-${now.millisecondsSinceEpoch % 1000000}';
+        final checkTraite = CheckTraite(
+          documentNumber: docNum,
+          type: _paymentMethod,
+          entityType: 'fournisseur',
+          partyId: widget.purchaseInvoice.supplierId,
+          partyName: widget.purchaseInvoice.supplierName ?? '',
+          amount: parsedAmount,
+          issueDate: _paymentDate,
+          maturityDate: _maturityDate,
+          status: 'en_attente',
+          compteTresorerieId: _selectedAccountId,
+          compteTresorerieName: _selectedAccountName,
+          documentType: 'facture_achat',
+          documentId: widget.purchaseInvoice.id,
+          documentRef: widget.purchaseInvoice.number,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+        );
+        await DatabaseHelper.instance.insertCheckTraite(checkTraite);
 
-      // Save payment using FirestoreRepository to 'paiements' and update treasury balance
-      await FirestoreRepository.instance.savePayment(payment);
-      db.add(AddPayment(payment));
+        // 2. Do NOT update amountPaid. DO update invoice status to pendingConfirmation
+        final updatedInvoice = widget.purchaseInvoice.copyWith(
+          status: InvoiceStatus.pendingConfirmation,
+          customStatus: 'en_attente_confirmation',
+        );
+        context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
+        await FirestoreRepository.instance.saveDocument('purchase_invoices', updatedInvoice.id, updatedInvoice.toMap());
 
-      // Create TreasuryTransaction to decrease caisse (expense)
-      final treasuryTx = TreasuryTransaction(
-        id: const Uuid().v4(),
-        transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-        accountId: _selectedAccountId!,
-        amount: parsedAmount,
-        type: 'expense',
-        category: 'Paiement Fournisseur',
-        dateTransaction: _paymentDate,
-        description: 'Paiement de la facture ${widget.purchaseInvoice.number}',
-        paymentId: payment.id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+        // Do NOT create TreasuryTransaction yet (only upon deposit).
+      } else {
+        // Immediate payment (Espèces, Virement, Versement, Carte, Autre)
+        final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-      // Update Invoice status and amount paid
-      double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
-
-      if (_applyWithholdingTax && taxAmount > 0) {
-        final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
-        
-        final rsPayment = Payment(
+        final payment = Payment(
           id: const Uuid().v4(),
-          paymentNumber: rsPaymentNumber,
+          paymentNumber: paymentNumber,
           direction: 'decaissement',
           contactId: widget.purchaseInvoice.supplierId,
           contactType: 'supplier',
           contactName: widget.purchaseInvoice.supplierName,
-          amount: taxAmount,
-          method: 'retenue_source',
-          reference: widget.purchaseInvoice.number,
-          paymentDate: _withholdingTaxDate,
-          notes: 'Retenue à la source ($_withholdingTaxRate%)',
+          amount: parsedAmount,
+          method: _paymentMethod,
+          accountId: _selectedAccountId,
+          reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
+          paymentDate: _paymentDate,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
           status: 'paid',
           relatedInvoiceId: widget.purchaseInvoice.id,
-          createdAt: now.add(const Duration(seconds: 1)),
-          updatedAt: now.add(const Duration(seconds: 1)),
+          createdAt: now,
+          updatedAt: now,
         );
+
+        db.add(AddPayment(payment));
+
+        if (_selectedAccountId != null && _selectedAccountId!.isNotEmpty) {
+          final treasuryTx = TreasuryTransaction(
+            id: const Uuid().v4(),
+            transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
+            accountId: _selectedAccountId!,
+            amount: parsedAmount,
+            type: 'expense',
+            category: 'Paiement Fournisseur',
+            dateTransaction: _paymentDate,
+            description: 'Paiement de la facture ${widget.purchaseInvoice.number}',
+            paymentId: payment.id,
+            createdAt: now,
+            updatedAt: now,
+          );
+          context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+        }
+
+        // Update Invoice status and amount paid
+        double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
+
+        if (_applyWithholdingTax && taxAmount > 0) {
+          final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
+          
+          final rsPayment = Payment(
+            id: const Uuid().v4(),
+            paymentNumber: rsPaymentNumber,
+            direction: 'decaissement',
+            contactId: widget.purchaseInvoice.supplierId,
+            contactType: 'supplier',
+            contactName: widget.purchaseInvoice.supplierName,
+            amount: taxAmount,
+            method: 'retenue_source',
+            reference: widget.purchaseInvoice.number,
+            paymentDate: _withholdingTaxDate,
+            notes: 'Retenue à la source ($_withholdingTaxRate%)',
+            status: 'paid',
+            relatedInvoiceId: widget.purchaseInvoice.id,
+            createdAt: now.add(const Duration(seconds: 1)),
+            updatedAt: now.add(const Duration(seconds: 1)),
+          );
+          
+          db.add(AddPayment(rsPayment));
+        }
+
+        double newAmountPaid = widget.purchaseInvoice.amountPaid + parsedAmount + taxAmount;
         
-        await FirestoreRepository.instance.savePayment(rsPayment);
-        db.add(AddPayment(rsPayment));
-      }
+        InvoiceStatus newStatus = widget.purchaseInvoice.status;
+        double totalDue = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal;
+        
+        if (newAmountPaid >= totalDue - 0.01) {
+          newStatus = InvoiceStatus.paid;
+        } else if (newAmountPaid > 0) {
+          newStatus = InvoiceStatus.partial;
+        }
 
-      double newAmountPaid = widget.purchaseInvoice.amountPaid + parsedAmount + taxAmount;
-      
-      InvoiceStatus newStatus = widget.purchaseInvoice.status;
-      double totalDue = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal;
-      
-      if (newAmountPaid >= totalDue - 0.01) { // 0.01 tolerance for floating point issues
-        newStatus = InvoiceStatus.paid;
-      } else if (newAmountPaid > 0) {
-        newStatus = InvoiceStatus.partial;
+        final updatedInvoice = widget.purchaseInvoice.copyWith(
+          amountPaid: newAmountPaid,
+          status: newStatus,
+        );
+        context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
+        await FirestoreRepository.instance.saveDocument('purchase_invoices', updatedInvoice.id, updatedInvoice.toMap());
       }
-
-      final updatedInvoice = widget.purchaseInvoice.copyWith(
-        amountPaid: newAmountPaid,
-        status: newStatus,
-      );
-      context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
-      await FirestoreRepository.instance.saveDocument('invoices', updatedInvoice.id, updatedInvoice.toMap());
 
       // Update stock and create stock movements when payment is created
       for (var item in widget.purchaseInvoice.items) {
@@ -271,6 +305,9 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
             productData['id'] = item.productId;
             final product = Product.fromMap(productData);
             
+            // Service articles must never affect stock (no increase, no decrease)
+            if (product.isService) continue;
+
             final newStock = product.stockQty + item.quantity;
             final updatedProduct = product.copyWith(stockQty: newStock, updatedAt: now);
             
@@ -516,6 +553,14 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
       case InvoiceStatus.partial:
         chipColor = AppColors.warning;
         break;
+      case InvoiceStatus.pendingConfirmation:
+        chipColor = const Color(0xFFF59E0B);
+        label = 'En attente de paiement';
+        break;
+      case InvoiceStatus.impayee:
+        chipColor = AppColors.error;
+        label = 'Impayée';
+        break;
       case InvoiceStatus.unpaid:
         chipColor = AppColors.error;
         break;
@@ -526,15 +571,24 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
         chipColor = AppColors.info;
     }
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppRadius.full),
         border: Border.all(color: chipColor.withOpacity(0.3)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: chipColor),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (status == InvoiceStatus.pendingConfirmation) ...[
+            Icon(Icons.access_time_rounded, size: 12, color: chipColor),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: chipColor),
+          ),
+        ],
       ),
     );
   }
@@ -796,60 +850,67 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 10),
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
             'Mode de paiement',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
           ),
         ),
-        Row(
-          children: _paymentMethods.map((method) {
-            final isSelected = _paymentMethod == method['value'];
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _paymentMethod = method['value'] as String),
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: 200),
-                  margin: EdgeInsets.symmetric(horizontal: 3),
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                      width: isSelected ? 1.5 : 1,
-                    ),
-                    boxShadow: isSelected ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _paymentMethods.map((method) {
+              final isSelected = _paymentMethod == method['value'];
+              return Container(
+                width: 92,
+                margin: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () => setState(() => _paymentMethod = method['value'] as String),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.border,
+                        width: isSelected ? 1.5 : 1,
                       ),
-                    ] : AppShadows.sm,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        method['icon'] as IconData,
-                        size: 22,
-                        color: isSelected ? AppColors.surface : AppColors.textSecondary,
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        method['label'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? AppColors.surface : AppColors.textSecondary,
+                      boxShadow: isSelected ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                      ] : AppShadows.sm,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          method['icon'] as IconData,
+                          size: 20,
+                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          method['label'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -906,6 +967,54 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
           ),
           SizedBox(height: 16),
           _buildMobileFormField(
+            'Référence',
+            Icons.tag,
+            TextField(
+              controller: _referenceCtrl,
+              decoration: _mobileInputDecoration('Saisir la référence'),
+            ),
+          ),
+          if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Date d\'Échéance *',
+              Icons.event_available_outlined,
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _maturityDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (d != null) setState(() => _maturityDate = d);
+                },
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: AppColors.surfaceAlt.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: 16),
+          _buildMobileFormField(
             'Date de paiement',
             Icons.calendar_today_outlined,
             InkWell(
@@ -939,15 +1048,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                   ],
                 ),
               ),
-            ),
-          ),
-          SizedBox(height: 16),
-          _buildMobileFormField(
-            'Référence externe',
-            Icons.tag,
-            TextField(
-              controller: _referenceCtrl,
-              decoration: _mobileInputDecoration('Saisir la référence'),
             ),
           ),
           SizedBox(height: 16),
@@ -1358,9 +1458,12 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                           decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                           items: const [
                                             DropdownMenuItem(value: 'especes', child: Text('Espèces')),
+                                            DropdownMenuItem(value: 'virement_bancaire', child: Text('Virement bancaire')),
+                                            DropdownMenuItem(value: 'versement_bancaire', child: Text('Versement bancaire')),
                                             DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                                            DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                                            DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                                            DropdownMenuItem(value: 'traite', child: Text('Traite')),
+                                            DropdownMenuItem(value: 'carte', child: Text('Carte Bancaire')),
+                                            DropdownMenuItem(value: 'autre', child: Text('Autre')),
                                           ],
                                           onChanged: (v) => setState(() => _paymentMethod = v!),
                                         )),
@@ -1378,7 +1481,9 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _buildFormField('Compte de trésorerie *', BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                                        child: _buildFormField(
+                                          'Compte de trésorerie *',
+                                          BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                           builder: (context, state) {
                                             final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
                                             String? displayName;
@@ -1397,13 +1502,42 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                           },
                                         )),
                                       ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildFormField(
+                                          'Référence',
+                                          TextField(
+                                            controller: _referenceCtrl,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Saisir la référence',
+                                              border: OutlineInputBorder(),
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  SizedBox(height: 16),
-                                  _buildFormField('Référence externe', TextField(
-                                    controller: _referenceCtrl,
-                                    decoration: InputDecoration(hintText: 'Saisir la référence', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                  )),
+                                  if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+                                    SizedBox(height: 16),
+                                    _buildFormField('Date d\'Échéance *', InkWell(
+                                      onTap: () async {
+                                        final d = await showDatePicker(context: context, initialDate: _maturityDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
+                                        if (d != null) setState(() => _maturityDate = d);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate)),
+                                            Icon(Icons.event_available, size: 16, color: AppColors.primary),
+                                          ],
+                                        ),
+                                      ),
+                                    )),
+                                  ],
                                   SizedBox(height: 16),
                                   _buildFormField('Date de paiement', InkWell(
                                     onTap: () async {

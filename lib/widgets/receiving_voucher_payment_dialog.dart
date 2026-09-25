@@ -21,6 +21,7 @@ import '../services/enterprise_service.dart';
 import '../services/firestore_repository.dart';
 import '../services/firestore_pagination_service.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../models/check_traite.dart';
 
 class ReceivingVoucherPaymentDialog extends StatefulWidget {
   final ReceivingVoucher receivingVoucher;
@@ -50,7 +51,15 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
   String? _selectedAccountId;
   final _referenceCtrl = TextEditingController();
   DateTime _paymentDate = DateTime.now();
+  DateTime _maturityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
+  bool _isSaving = false;
+
+  String? get _selectedAccountName {
+    if (_selectedAccountId == null) return null;
+    final acc = _treasuryAccounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+    return acc?.name;
+  }
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -66,9 +75,12 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
 
   static const _paymentMethods = [
     {'value': 'especes', 'label': 'Espèces', 'icon': Icons.payments_outlined},
+    {'value': 'virement_bancaire', 'label': 'Virement bancaire', 'icon': Icons.account_balance_outlined},
+    {'value': 'versement_bancaire', 'label': 'Versement bancaire', 'icon': Icons.move_to_inbox_outlined},
     {'value': 'cheque', 'label': 'Chèque', 'icon': Icons.description_outlined},
-    {'value': 'virement', 'label': 'Virement', 'icon': Icons.account_balance_outlined},
-    {'value': 'carte', 'label': 'Carte', 'icon': Icons.credit_card_outlined},
+    {'value': 'traite', 'label': 'Traite', 'icon': Icons.receipt_long_outlined},
+    {'value': 'carte', 'label': 'Carte Bancaire', 'icon': Icons.credit_card_outlined},
+    {'value': 'autre', 'label': 'Autre', 'icon': Icons.more_horiz_rounded},
   ];
 
   double get _calculatedTotalTTC => widget.receivingVoucher.computedTotalTTC;
@@ -95,10 +107,6 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
         setState(() {
           _treasuryAccounts = accounts;
           _isLoadingAccounts = false;
-          if (_selectedAccountId == null && _treasuryAccounts.isNotEmpty) {
-            final defAcc = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first);
-            _selectedAccountId = defAcc.id;
-          }
         });
       }
     } catch (e) {
@@ -126,23 +134,13 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     super.dispose();
   }
 
-
-
   void _save() async {
+    if (_isSaving) return;
     if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
-    if (_selectedAccountId == null) {
-      if (_treasuryAccounts.isNotEmpty) {
-        _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;
-      } else {
-        final state = context.read<TreasuryAccountsBloc>().state;
-        if (state is TreasuryAccountsLoaded && state.accounts.isNotEmpty) {
-          _selectedAccountId = state.accounts.firstWhere((a) => a.isDefault, orElse: () => state.accounts.first).id;
-        }
-      }
-    }
+    final isChequeOrTraite = _paymentMethod == 'cheque' || _paymentMethod == 'traite';
 
-    if (_selectedAccountId == null) {
+    if (_selectedAccountId == null || _selectedAccountId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.error,
@@ -159,93 +157,143 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       return;
     }
 
-    final db = context.read<PaymentsBloc>();
-    final now = DateTime.now();
-    final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+    setState(() => _isSaving = true);
 
+    try {
+      final db = context.read<PaymentsBloc>();
+      final now = DateTime.now();
 
+      if (isChequeOrTraite) {
+        // 1. Create CheckTraite record with statut = 'en_attente'
+        final refText = _referenceCtrl.text.trim();
+        final docNum = refText.isNotEmpty
+            ? refText
+            : '${_paymentMethod == 'traite' ? 'TR' : 'CHQ'}-${now.millisecondsSinceEpoch % 1000000}';
+        final checkTraite = CheckTraite(
+          documentNumber: docNum,
+          type: _paymentMethod,
+          entityType: 'fournisseur',
+          partyId: widget.receivingVoucher.supplierId,
+          partyName: widget.receivingVoucher.supplierName ?? '',
+          amount: parsedAmount,
+          issueDate: _paymentDate,
+          maturityDate: _maturityDate,
+          status: 'en_attente',
+          compteTresorerieId: _selectedAccountId,
+          compteTresorerieName: _selectedAccountName,
+          documentType: 'bon_reception',
+          documentId: widget.receivingVoucher.id,
+          documentRef: widget.receivingVoucher.number,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+        );
+        await DatabaseHelper.instance.insertCheckTraite(checkTraite);
 
-    final payment = Payment(
-      id: const Uuid().v4(),
-      paymentNumber: paymentNumber,
-      direction: 'decaissement',
-      contactId: widget.receivingVoucher.supplierId,
-      contactType: 'supplier',
-      contactName: widget.receivingVoucher.supplierName,
-      amount: parsedAmount,
-      method: _paymentMethod,
-      accountId: _selectedAccountId,
-      reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
-      paymentDate: _paymentDate,
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      status: 'paid',
-      createdAt: now,
-      updatedAt: now,
-    );
+        // 2. Do NOT update amountPaid. DO update voucher status to en_attente_confirmation
+        final updatedReceivingVoucher = widget.receivingVoucher.copyWith(
+          status: 'en_attente_confirmation',
+        );
+        context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedReceivingVoucher));
+        await FirestoreRepository.instance.saveDocument('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
 
-    await FirestoreRepository.instance.savePayment(payment);
-    db.add(AddPayment(payment));
+        // Do NOT create TreasuryTransaction yet (only upon deposit).
+      } else {
+        // Immediate payment (Espèces, Virement, Versement, Carte, Autre)
+        final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-    // Create TreasuryTransaction to decrease caisse (expense)
-    final treasuryTx = TreasuryTransaction(
-      id: const Uuid().v4(),
-      transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-      accountId: _selectedAccountId!,
-      amount: parsedAmount,
-      type: 'expense',
-      category: 'Paiement Fournisseur',
-      dateTransaction: _paymentDate,
-      description: 'Paiement du bon de réception ${widget.receivingVoucher.number}',
-      paymentId: payment.id,
-      createdAt: now,
-      updatedAt: now,
-    );
-    context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
-    await FirestoreRepository.instance.saveDocument('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
+        final payment = Payment(
+          id: const Uuid().v4(),
+          paymentNumber: paymentNumber,
+          direction: 'decaissement',
+          contactId: widget.receivingVoucher.supplierId,
+          contactType: 'supplier',
+          contactName: widget.receivingVoucher.supplierName,
+          amount: parsedAmount,
+          method: _paymentMethod,
+          accountId: _selectedAccountId,
+          reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
+          paymentDate: _paymentDate,
+          notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+          status: 'paid',
+          createdAt: now,
+          updatedAt: now,
+        );
 
-    // Update ReceivingVoucher status and amount paid
-    double taxAmount = _applyWithholdingTax ? (_calculatedTotalTTC * _withholdingTaxRate) / 100 : 0;
+        db.add(AddPayment(payment));
 
-    if (_applyWithholdingTax && taxAmount > 0) {
-      final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
-      
-      final rsPayment = Payment(
-        id: const Uuid().v4(),
-        paymentNumber: rsPaymentNumber,
-        direction: 'decaissement',
-        contactId: widget.receivingVoucher.supplierId,
-        contactType: 'supplier',
-        contactName: widget.receivingVoucher.supplierName,
-        amount: taxAmount,
-        method: 'retenue_source',
-        reference: widget.receivingVoucher.number,
-        paymentDate: _withholdingTaxDate,
-        notes: 'Retenue à la source ($_withholdingTaxRate%)',
-        status: 'paid',
-        createdAt: now.add(const Duration(seconds: 1)),
-        updatedAt: now.add(const Duration(seconds: 1)),
-      );
-      
-      await FirestoreRepository.instance.savePayment(rsPayment);
-      db.add(AddPayment(rsPayment));
+        if (_selectedAccountId != null && _selectedAccountId!.isNotEmpty) {
+          final treasuryTx = TreasuryTransaction(
+            id: const Uuid().v4(),
+            transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
+            accountId: _selectedAccountId!,
+            amount: parsedAmount,
+            type: 'expense',
+            category: 'Paiement Fournisseur',
+            dateTransaction: _paymentDate,
+            description: 'Paiement du bon de réception ${widget.receivingVoucher.number}',
+            paymentId: payment.id,
+            createdAt: now,
+            updatedAt: now,
+          );
+          context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+        }
+
+        // Update ReceivingVoucher status and amount paid
+        double taxAmount = _applyWithholdingTax ? (_calculatedTotalTTC * _withholdingTaxRate) / 100 : 0;
+
+        if (_applyWithholdingTax && taxAmount > 0) {
+          final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
+          
+          final rsPayment = Payment(
+            id: const Uuid().v4(),
+            paymentNumber: rsPaymentNumber,
+            direction: 'decaissement',
+            contactId: widget.receivingVoucher.supplierId,
+            contactType: 'supplier',
+            contactName: widget.receivingVoucher.supplierName,
+            amount: taxAmount,
+            method: 'retenue_source',
+            reference: widget.receivingVoucher.number,
+            paymentDate: _withholdingTaxDate,
+            notes: 'Retenue à la source ($_withholdingTaxRate%)',
+            status: 'paid',
+            createdAt: now.add(const Duration(seconds: 1)),
+            updatedAt: now.add(const Duration(seconds: 1)),
+          );
+          
+          db.add(AddPayment(rsPayment));
+        }
+
+        double newAmountPaid = widget.receivingVoucher.amountPaid + parsedAmount + taxAmount;
+        
+        String newStatus = widget.receivingVoucher.status;
+        double totalDue = _calculatedTotalTTC;
+        
+        if (newAmountPaid >= totalDue - 0.01) {
+          newStatus = 'payee';
+        } else if (newAmountPaid > 0) {
+          newStatus = 'partiellement_payee';
+        }
+
+        final updatedReceivingVoucher = widget.receivingVoucher.copyWith(
+          amountPaid: newAmountPaid,
+          status: newStatus,
+        );
+        context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedReceivingVoucher));
+        await FirestoreRepository.instance.saveDocument('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
+      }
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
-
-    double newAmountPaid = 0.0 + parsedAmount + taxAmount;
-    
-    String newStatus = widget.receivingVoucher.status;
-    double totalDue = _calculatedTotalTTC;
-    
-    if (newAmountPaid >= totalDue - 0.01) { // 0.01 tolerance for floating point issues
-      newStatus = 'payee';
-    }
-
-    final updatedReceivingVoucher = widget.receivingVoucher.copyWith(
-      status: newStatus,
-    );
-    context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedReceivingVoucher));
-    await FirestoreRepository.instance.saveDocument('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
-
-    Navigator.pop(context, true);
   }
 
   @override
@@ -612,86 +660,132 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                               child: Column(
                                 children: [
                                   isMobile
-                                      ? Column(
-                                          children: [
-                                            _buildFormField('Méthode de paiement', DropdownButtonFormField(
-                                              dropdownColor: AppColors.surfaceAlt,
-                                              borderRadius: BorderRadius.circular(AppRadius.md),
-                                              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                              value: _paymentMethod,
-                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                              items: const [
-                                                DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                                                DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                                                DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                                                DropdownMenuItem(value: 'carte', child: Text('Carte')),
-                                              ],
-                                              onChanged: (v) => setState(() => _paymentMethod = v!),
-                                            )),
-                                            const SizedBox(height: 16),
-                                            _buildFormField('Montant', TextField(
-                                              controller: _amountCtrl,
-                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
-                                            )),
-                                          ],
-                                        )
-                                      : Row(
-                                          children: [
-                                            Expanded(
-                                              child: _buildFormField('Méthode de paiement', DropdownButtonFormField(
-                                                dropdownColor: AppColors.surfaceAlt,
-                                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                                value: _paymentMethod,
-                                                decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                                items: const [
-                                                  DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                                                  DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                                                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                                                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
-                                                ],
-                                                onChanged: (v) => setState(() => _paymentMethod = v!),
-                                              )),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: _buildFormField('Montant', TextField(
-                                                controller: _amountCtrl,
-                                                decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
-                                              )),
-                                            ),
-                                          ],
-                                        ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFormField('Compte de trésorerie *', BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                                          builder: (context, state) {
-                                            final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
-                                            String? displayName;
-                                            if (_selectedAccountId != null) {
-                                              final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
-                                              if (acc != null) displayName = '${acc.name} (${formatCurrencyDT(acc.balance)})';
-                                            }
-                                            return SearchableSelectorField(
-                                              hint: 'Sélectionner un compte',
-                                              selectedText: displayName,
-                                              onTap: () async {
-                                                final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
-                                                if (res != null) setState(() => _selectedAccountId = res);
-                                              },
-                                            );
-                                          },
-                                        )),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildFormField('Référence externe', TextField(
-                                    controller: _referenceCtrl,
-                                    decoration: const InputDecoration(hintText: 'Saisir la référence', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                  )),
+                                       ? Column(
+                                           children: [
+                                             _buildFormField('Méthode de paiement', DropdownButtonFormField<String>(
+                                               dropdownColor: AppColors.surfaceAlt,
+                                               borderRadius: BorderRadius.circular(AppRadius.md),
+                                               style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                               value: _paymentMethod,
+                                               decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                               items: _paymentMethods.map((m) => DropdownMenuItem(
+                                                 value: m['value'] as String,
+                                                 child: Row(
+                                                   children: [
+                                                     Icon(m['icon'] as IconData, size: 18, color: AppColors.primary),
+                                                     const SizedBox(width: 8),
+                                                     Text(m['label'] as String),
+                                                   ],
+                                                 ),
+                                               )).toList(),
+                                               onChanged: (v) => setState(() => _paymentMethod = v!),
+                                             )),
+                                             const SizedBox(height: 16),
+                                             _buildFormField('Montant', TextField(
+                                               controller: _amountCtrl,
+                                               decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
+                                             )),
+                                           ],
+                                         )
+                                       : Row(
+                                           children: [
+                                             Expanded(
+                                               child: _buildFormField('Méthode de paiement', DropdownButtonFormField<String>(
+                                                 dropdownColor: AppColors.surfaceAlt,
+                                                 borderRadius: BorderRadius.circular(AppRadius.md),
+                                                 style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                                 value: _paymentMethod,
+                                                 decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                                 items: _paymentMethods.map((m) => DropdownMenuItem(
+                                                   value: m['value'] as String,
+                                                   child: Row(
+                                                     children: [
+                                                       Icon(m['icon'] as IconData, size: 18, color: AppColors.primary),
+                                                       const SizedBox(width: 8),
+                                                       Text(m['label'] as String),
+                                                     ],
+                                                   ),
+                                                 )).toList(),
+                                                 onChanged: (v) => setState(() => _paymentMethod = v!),
+                                               )),
+                                             ),
+                                             const SizedBox(width: 16),
+                                             Expanded(
+                                               child: _buildFormField('Montant', TextField(
+                                                 controller: _amountCtrl,
+                                                 decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
+                                               )),
+                                             ),
+                                           ],
+                                         ),
+                                   const SizedBox(height: 16),
+                                   Row(
+                                     children: [
+                                       Expanded(
+                                         child: _buildFormField(
+                                           'Compte de trésorerie *',
+                                           BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                                             builder: (context, state) {
+                                               final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
+                                               String? displayName;
+                                               if (_selectedAccountId != null) {
+                                                 final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
+                                                 if (acc != null) displayName = '${acc.name} (${formatCurrencyDT(acc.balance)})';
+                                               }
+                                               return SearchableSelectorField(
+                                                 hint: 'Sélectionner un compte',
+                                                 selectedText: displayName,
+                                                 onTap: () async {
+                                                   final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
+                                                   if (res != null) setState(() => _selectedAccountId = res);
+                                                 },
+                                               );
+                                             },
+                                           ),
+                                         ),
+                                       ),
+                                     ],
+                                   ),
+                                   const SizedBox(height: 16),
+                                   _buildFormField(
+                                     'Référence',
+                                     TextField(
+                                       controller: _referenceCtrl,
+                                       decoration: const InputDecoration(
+                                         hintText: 'Saisir la référence',
+                                         border: OutlineInputBorder(),
+                                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                       ),
+                                     ),
+                                   ),
+                                   if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+                                     const SizedBox(height: 16),
+                                     _buildFormField(
+                                       'Date d\'Échéance *',
+                                       InkWell(
+                                         onTap: () async {
+                                           final d = await showDatePicker(
+                                             context: context,
+                                             initialDate: _maturityDate,
+                                             firstDate: DateTime(2020),
+                                             lastDate: DateTime(2035),
+                                           );
+                                           if (d != null) setState(() => _maturityDate = d);
+                                         },
+                                         child: Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                           decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                           child: Row(
+                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                             children: [
+                                               Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate)),
+                                               Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                             ],
+                                           ),
+                                         ),
+                                       ),
+                                     ),
+                                   ],
                                   const SizedBox(height: 16),
                                   _buildFormField('Date de paiement', InkWell(
                                     onTap: () async {

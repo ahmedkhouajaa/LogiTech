@@ -9,6 +9,7 @@ import '../../database/database_helper.dart';
 import '../../utils/constants.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../services/permission_service.dart';
+import '../../models/retenue_source_vente.dart';
 import '../../models/user_management_model.dart';
 
 class MobileRetenueSourceVentesList extends StatefulWidget {
@@ -113,6 +114,10 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
           isEmpty = state.retenues.isEmpty;
           count = state.totalCount;
 
+          final canDelete = PermissionService.instance.canDelete(widget.isSales ? UserPermissionResources.withholdingTaxSales : UserPermissionResources.withholdingTaxPurchases) ||
+              PermissionService.instance.canDelete(UserPermissionResources.withholdingTax) ||
+              PermissionService.instance.isAdmin;
+
           cards = state.retenues.map<Widget>((retenue) {
             return MobileRetenueSourceVenteCard(
               retenue: retenue,
@@ -120,6 +125,7 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
               onTap: () {
                 // Navigation to details
               },
+              onDelete: canDelete ? () => _confirmDeleteRetenue(retenue) : null,
             );
           }).toList();
 
@@ -177,5 +183,63 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
         );
       },
     );
+  }
+
+  Future<void> _confirmDeleteRetenue(RetenueSourceVente retenue) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.errorLight.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Supprimer la retenue ?',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Voulez-vous supprimer cette retenue à la source (${retenue.invoiceReference}) ? Elle sera déplacée dans la corbeille.',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      context.read<RetenueSourceVenteBloc>().add(
+        DeleteRetenueSourceVente(retenue.id, isSales: widget.isSales),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Retenue à la source déplacée dans la corbeille.'),
+          backgroundColor: AppColors.surfaceAlt,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

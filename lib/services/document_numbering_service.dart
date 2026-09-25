@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../models/document_numbering_config.dart';
 import '../services/enterprise_service.dart';
@@ -19,15 +21,81 @@ class CollectionMetadata {
 }
 
 class DocumentNumberingService {
+  static final DocumentNumberingService instance = DocumentNumberingService._();
+
+  DocumentNumberingService._() {
+    _initEnterpriseListener();
+  }
+
   static final Map<String, DocumentNumberingConfig> _configCache = {};
+  static StreamSubscription<QuerySnapshot>? _countersSub;
+  static String? _subscribedEnterpriseId;
+
+  /// ValueNotifier to trigger real-time UI updates across Desktop, Web, and Android.
+  final ValueNotifier<int> notifier = ValueNotifier<int>(0);
+
+  final _configsController = StreamController<Map<String, DocumentNumberingConfig>>.broadcast();
+  Stream<Map<String, DocumentNumberingConfig>> get configsStream => _configsController.stream;
 
   static String? get _currentEntId =>
       EnterpriseService.instance.currentEnterpriseId ?? DatabaseHelper.instance.currentEnterpriseId;
+
+  void _initEnterpriseListener() {
+    EnterpriseService.instance.enterpriseStream.listen((enterpriseId) {
+      if (enterpriseId != null && enterpriseId.isNotEmpty) {
+        startRealtimeSync(enterpriseId);
+      }
+    });
+
+    final currentId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentId != null && currentId.isNotEmpty) {
+      startRealtimeSync(currentId);
+    }
+  }
+
+  /// Starts real-time Firestore synchronization for document numbering counters.
+  /// Automatically listens to changes made from Android, Web, or Desktop and keeps
+  /// local caches and UI screens synchronized.
+  Future<void> startRealtimeSync([String? enterpriseId]) async {
+    final entId = enterpriseId ?? _currentEntId ?? 'default';
+
+    if (_subscribedEnterpriseId == entId && _countersSub != null) {
+      return;
+    }
+    _subscribedEnterpriseId = entId;
+
+    // 1. Load from SharedPreferences first for instant UI response on mobile boot
+    await _loadFromPrefs(entId);
+
+    // 2. Set up real-time listener to Firestore
+    await _countersSub?.cancel();
+    _countersSub = FirebaseFirestore.instance
+        .collection('enterprises')
+        .doc(entId)
+        .collection('counters')
+        .snapshots()
+        .listen((snap) async {
+      for (var doc in snap.docs) {
+        final key = DocumentTypeDefinition.normalizeKey(doc.id);
+        final data = doc.data();
+        final config = DocumentNumberingConfig.fromMap(key, data);
+        _configCache['${entId}_$key'] = config;
+      }
+      await _saveToPrefs(entId);
+      notifier.value++;
+      _configsController.add(getCachedConfigs(entId));
+    }, onError: (err) {
+      debugPrint('[DocumentNumberingService] Real-time counters sync error: $err');
+    });
+  }
 
   /// Loads all 12 document numbering configurations for the specified enterprise.
   /// If a configuration has not been explicitly saved yet, it auto-detects the current
   /// sequence number and prefix from existing documents in the database.
   static Future<Map<String, DocumentNumberingConfig>> loadAllConfigs(String enterpriseId) async {
+    // Ensure real-time sync is actively running
+    instance.startRealtimeSync(enterpriseId);
+
     final Map<String, DocumentNumberingConfig> result = {};
 
     try {
@@ -39,7 +107,7 @@ class DocumentNumberingService {
           .timeout(const Duration(seconds: 8));
 
       final Map<String, Map<String, dynamic>> existingDocs = {
-        for (var doc in snap.docs) doc.id: doc.data(),
+        for (var doc in snap.docs) DocumentTypeDefinition.normalizeKey(doc.id): doc.data(),
       };
 
       for (var def in DocumentTypeDefinition.allTypes) {
@@ -72,9 +140,17 @@ class DocumentNumberingService {
         result[def.key] = config;
         _configCache['${enterpriseId}_${def.key}'] = config;
       }
+
+      await instance._saveToPrefs(enterpriseId);
+      instance.notifier.value++;
+      instance._configsController.add(result);
     } catch (e) {
-      debugPrint('[DocumentNumberingService] Error loading configs: $e');
-      // Fallback to default definitions
+      debugPrint('[DocumentNumberingService] Error loading configs from Firestore: $e');
+      // Fallback to cached or default definitions
+      final cached = getCachedConfigs(enterpriseId);
+      if (cached.isNotEmpty) {
+        return cached;
+      }
       for (var def in DocumentTypeDefinition.allTypes) {
         final config = DocumentNumberingConfig.fromMap(def.key, null);
         result[def.key] = config;
@@ -84,12 +160,32 @@ class DocumentNumberingService {
     return result;
   }
 
-  /// Gets the configuration for a single document collection, checking cache first.
+  /// Returns cached configs for this enterprise, providing clean defaults for any un-cached items.
+  static Map<String, DocumentNumberingConfig> getCachedConfigs(String enterpriseId) {
+    final Map<String, DocumentNumberingConfig> result = {};
+    for (var def in DocumentTypeDefinition.allTypes) {
+      final cacheKey = '${enterpriseId}_${def.key}';
+      if (_configCache.containsKey(cacheKey)) {
+        result[def.key] = _configCache[cacheKey]!;
+      } else {
+        result[def.key] = DocumentNumberingConfig.fromMap(def.key, null);
+      }
+    }
+    return result;
+  }
+
+  /// Gets the configuration for a single document collection, checking in-memory cache and local storage first.
   static Future<DocumentNumberingConfig> getConfig(String docCollection, {String? enterpriseId}) async {
     final normCol = DocumentTypeDefinition.normalizeKey(docCollection);
     final entId = enterpriseId ?? _currentEntId ?? 'default';
     final cacheKey = '${entId}_$normCol';
 
+    if (_configCache.containsKey(cacheKey)) {
+      return _configCache[cacheKey]!;
+    }
+
+    // Try loading from local storage
+    await instance._loadFromPrefs(entId);
     if (_configCache.containsKey(cacheKey)) {
       return _configCache[cacheKey]!;
     }
@@ -139,7 +235,7 @@ class DocumentNumberingService {
     }
   }
 
-  /// Saves a single document numbering configuration in Firestore.
+  /// Saves a single document numbering configuration in Firestore and local storage.
   static Future<void> saveConfig(String enterpriseId, DocumentNumberingConfig config) async {
     final normCol = DocumentTypeDefinition.normalizeKey(config.docTypeKey);
     final cacheKey = '${enterpriseId}_$normCol';
@@ -152,6 +248,37 @@ class DocumentNumberingService {
         .doc(normCol)
         .set(config.toMap(), SetOptions(merge: true))
         .timeout(const Duration(seconds: 8));
+
+    await instance._saveToPrefs(enterpriseId);
+    instance.notifier.value++;
+    instance._configsController.add(getCachedConfigs(enterpriseId));
+  }
+
+  /// Saves only the modified configurations, preventing overwrite of concurrent changes
+  /// made from other platforms (e.g. Android editing Facture while Desktop edited Devis).
+  static Future<void> saveModifiedConfigs(String enterpriseId, List<DocumentNumberingConfig> configs) async {
+    if (configs.isEmpty) return;
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (final config in configs) {
+      final normCol = DocumentTypeDefinition.normalizeKey(config.docTypeKey);
+      final cacheKey = '${enterpriseId}_$normCol';
+      _configCache[cacheKey] = config;
+
+      final docRef = FirebaseFirestore.instance
+          .collection('enterprises')
+          .doc(enterpriseId)
+          .collection('counters')
+          .doc(normCol);
+
+      batch.set(docRef, config.toMap(), SetOptions(merge: true));
+    }
+
+    await batch.commit().timeout(const Duration(seconds: 8));
+    await instance._saveToPrefs(enterpriseId);
+    instance.notifier.value++;
+    instance._configsController.add(getCachedConfigs(enterpriseId));
   }
 
   /// Scans documents in the collection to extract metadata:
@@ -334,5 +461,44 @@ class DocumentNumberingService {
     await saveConfig(entId, config.copyWith(currentNumber: chosenNumber));
 
     return chosenNumber;
+  }
+
+  // ─── Local SharedPreferences Helpers ─────────────────────────────────────
+  Future<void> _saveToPrefs(String enterpriseId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, dynamic> serializable = {};
+      for (var def in DocumentTypeDefinition.allTypes) {
+        final cacheKey = '${enterpriseId}_${def.key}';
+        final cfg = _configCache[cacheKey];
+        if (cfg != null) {
+          serializable[def.key] = cfg.toMap();
+        }
+      }
+      if (serializable.isNotEmpty) {
+        await prefs.setString('doc_numbering_configs_$enterpriseId', jsonEncode(serializable));
+      }
+    } catch (e) {
+      debugPrint('[DocumentNumberingService] Error saving to SharedPreferences: $e');
+    }
+  }
+
+  Future<void> _loadFromPrefs(String enterpriseId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString('doc_numbering_configs_$enterpriseId');
+      if (str != null && str.isNotEmpty) {
+        final Map<String, dynamic> decoded = jsonDecode(str);
+        for (var entry in decoded.entries) {
+          if (entry.value is Map<String, dynamic>) {
+            final key = DocumentTypeDefinition.normalizeKey(entry.key);
+            final cfg = DocumentNumberingConfig.fromMap(key, entry.value as Map<String, dynamic>);
+            _configCache['${enterpriseId}_$key'] = cfg;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[DocumentNumberingService] Error loading from SharedPreferences: $e');
+    }
   }
 }

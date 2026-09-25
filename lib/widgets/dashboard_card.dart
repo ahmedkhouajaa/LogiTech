@@ -85,22 +85,41 @@ class _DashboardCardState extends State<DashboardCard> {
 class StatusBadge extends StatelessWidget {
   final String label;
   final Color color;
+  final IconData? icon;
 
-  const StatusBadge({super.key, required this.label, required this.color});
+  const StatusBadge({super.key, required this.label, required this.color, this.icon});
 
   @override
   Widget build(BuildContext context) {
+    final effectiveIcon = icon ?? (
+      (label.toLowerCase().contains('attente') || label.toLowerCase().contains('pending'))
+          ? Icons.access_time_rounded
+          : null
+    );
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        context.tr(label),
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (effectiveIcon != null) ...[
+            Icon(effectiveIcon, size: 13, color: color),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              context.tr(label),
+              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

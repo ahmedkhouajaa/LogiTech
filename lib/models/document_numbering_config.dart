@@ -188,6 +188,7 @@ class DocumentNumberingConfig {
       'include_year': includeYear,
       'is_enabled': isEnabled,
       'configured': true,
+      'updated_at': DateTime.now().toIso8601String(),
     };
   }
 
@@ -223,4 +224,32 @@ class DocumentNumberingConfig {
           : map['is_enabled'] == true,
     );
   }
+
+  Map<String, dynamic> toJson() => toMap();
+
+  factory DocumentNumberingConfig.fromJson(Map<String, dynamic> json) {
+    final key = json['doc_type_key']?.toString() ?? '';
+    return DocumentNumberingConfig.fromMap(key, json);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DocumentNumberingConfig &&
+          runtimeType == other.runtimeType &&
+          docTypeKey == other.docTypeKey &&
+          prefix == other.prefix &&
+          currentNumber == other.currentNumber &&
+          numberLength == other.numberLength &&
+          includeYear == other.includeYear &&
+          isEnabled == other.isEnabled;
+
+  @override
+  int get hashCode =>
+      docTypeKey.hashCode ^
+      prefix.hashCode ^
+      currentNumber.hashCode ^
+      numberLength.hashCode ^
+      includeYear.hashCode ^
+      isEnabled.hashCode;
 }

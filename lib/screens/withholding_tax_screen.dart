@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/document_wrapper.dart';
@@ -10,7 +9,6 @@ import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import '../widgets/dashboard_card.dart';
 import '../widgets/tej_export_dialog.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
@@ -426,12 +424,17 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   } else if (val == 'pdf') {
                     final doc = DocumentWrapper.fromWithholdingTax(p, widget.isSales);
                     PdfService.instance.downloadDocument(context, doc);
+                  } else if (val == 'delete') {
+                    _confirmDeleteWithholdingTax(p);
                   }
                 },
                 itemBuilder: (_) {
                   final res = widget.isSales ? UserPermissionResources.withholdingTaxSales : UserPermissionResources.withholdingTaxPurchases;
                   final canRead = PermissionService.instance.canRead(res) || PermissionService.instance.canRead(UserPermissionResources.withholdingTax);
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission(res) || PermissionService.instance.hasAnyPermission(UserPermissionResources.withholdingTax);
+                  final canDelete = PermissionService.instance.canDelete(res) ||
+                      PermissionService.instance.canDelete(UserPermissionResources.withholdingTax) ||
+                      PermissionService.instance.isAdmin;
 
                   final entries = <PopupMenuEntry<String>>[];
                   if (canRead) {
@@ -474,6 +477,22 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                             Icon(Icons.picture_as_pdf_outlined, size: 16, color: AppColors.error),
                             const SizedBox(width: 8),
                             Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (canDelete) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
+                            const SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error)),
                           ],
                         ),
                       ),
@@ -535,6 +554,62 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDeleteWithholdingTax(Payment p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.errorLight.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Supprimer la retenue ?',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Voulez-vous supprimer cette retenue à la source (${p.reference ?? p.paymentNumber}) ? Elle sera déplacée dans la corbeille.',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      context.read<PaymentsBloc>().add(DeletePayment(p.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Retenue à la source déplacée dans la corbeille.'),
+          backgroundColor: AppColors.surfaceAlt,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 

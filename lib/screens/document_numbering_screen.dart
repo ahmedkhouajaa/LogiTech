@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/document_numbering_config.dart';
@@ -35,17 +36,38 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
   late TextEditingController _currentNumberController;
   late TextEditingController _numberLengthController;
 
+  StreamSubscription<String?>? _enterpriseSub;
+  VoidCallback? _serviceListener;
+
   @override
   void initState() {
     super.initState();
     _prefixController = TextEditingController();
     _currentNumberController = TextEditingController();
     _numberLengthController = TextEditingController();
+
+    // Listen to real-time sync updates from Firestore (across Android, Web, Desktop)
+    _serviceListener = () {
+      if (!mounted) return;
+      _onRemoteSyncUpdate();
+    };
+    DocumentNumberingService.instance.notifier.addListener(_serviceListener!);
+
+    // Re-sync if the user switches enterprises/workspaces
+    _enterpriseSub = EnterpriseService.instance.enterpriseStream.listen((entId) {
+      if (!mounted) return;
+      _loadData();
+    });
+
     _loadData();
   }
 
   @override
   void dispose() {
+    if (_serviceListener != null) {
+      DocumentNumberingService.instance.notifier.removeListener(_serviceListener!);
+    }
+    _enterpriseSub?.cancel();
     _prefixController.dispose();
     _currentNumberController.dispose();
     _numberLengthController.dispose();
@@ -96,6 +118,41 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
     _numberLengthController.text = cfg.numberLength.toString();
   }
 
+  /// Handles real-time cloud updates from other platforms (Android, Web, Desktop)
+  void _onRemoteSyncUpdate() {
+    final entId = EnterpriseService.instance.currentEnterpriseId ?? 'default';
+    final cached = DocumentNumberingService.getCachedConfigs(entId);
+    if (cached.isEmpty) return;
+
+    bool currentDocUpdated = false;
+
+    for (final entry in cached.entries) {
+      final key = entry.key;
+      final remote = entry.value;
+      final currentLocal = _configs[key];
+      final original = _originalConfigs[key];
+
+      // Check if this document type was modified locally by the user
+      final isDirty = currentLocal != null && original != null && currentLocal != original;
+
+      if (!isDirty) {
+        // Safe to update with remote changes
+        _configs[key] = remote;
+        _originalConfigs[key] = remote.copyWith();
+        _maxExistingSequences[key] = remote.currentNumber;
+
+        if (key == _selectedKey) {
+          currentDocUpdated = true;
+        }
+      }
+    }
+
+    if (currentDocUpdated && mounted) {
+      _updateControllersFor(_selectedKey);
+      setState(() {});
+    }
+  }
+
   DocumentNumberingConfig get _currentConfig {
     return _configs[_selectedKey] ?? DocumentNumberingConfig.fromMap(_selectedKey, null);
   }
@@ -111,11 +168,7 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
       final orig = _originalConfigs[key];
       if (cur == null || orig == null) continue;
 
-      if (cur.prefix != orig.prefix ||
-          cur.currentNumber != orig.currentNumber ||
-          cur.numberLength != orig.numberLength ||
-          cur.includeYear != orig.includeYear ||
-          cur.isEnabled != orig.isEnabled) {
+      if (cur != orig) {
         count++;
       }
     }
@@ -180,14 +233,25 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
     final entId = EnterpriseService.instance.currentEnterpriseId ?? 'default';
 
     try {
-      // Save all modified configs
+      // Find all genuinely modified configs to prevent clobbering concurrent changes from other devices
+      final modifiedList = <DocumentNumberingConfig>[];
       for (final entry in _configs.entries) {
-        await DocumentNumberingService.saveConfig(entId, entry.value);
+        final orig = _originalConfigs[entry.key];
+        if (orig == null || entry.value != orig) {
+          modifiedList.add(entry.value);
+        }
       }
 
-      _originalConfigs = {
-        for (var e in _configs.entries) e.key: e.value.copyWith(),
-      };
+      if (modifiedList.isEmpty) {
+        if (mounted) setState(() => _isSaving = false);
+        return;
+      }
+
+      await DocumentNumberingService.saveModifiedConfigs(entId, modifiedList);
+
+      for (final cfg in modifiedList) {
+        _originalConfigs[cfg.docTypeKey] = cfg.copyWith();
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -196,7 +260,11 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
               children: [
                 const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
-                Text(context.tr('Paramètres de numérotation enregistrés avec succès !')),
+                Expanded(
+                  child: Text(
+                    context.tr('Paramètres enregistrés et synchronisés sur tous vos appareils !'),
+                  ),
+                ),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -245,25 +313,55 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Row: Title and "Enregistrer (X)" Button
+              // Header Row: Title, Sync Badge, and "Enregistrer (X)" Button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      context.tr('Numérotation des Documents'),
-                      style: TextStyle(
-                        fontSize: isMobile ? 18 : 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 6,
+                      children: [
+                        Text(
+                          context.tr('Numérotation des Documents'),
+                          style: TextStyle(
+                            fontSize: isMobile ? 18 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_done_rounded, size: 14, color: AppColors.success),
+                              const SizedBox(width: 5),
+                              Text(
+                                context.tr('Synchronisé en temps réel'),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
                   SizedBox(
                     height: 40,
                     child: ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _saveAll,
+                      onPressed: (unsavedCount > 0 && !_isSaving) ? _saveAll : null,
                       icon: _isSaving
                           ? const SizedBox(
                               width: 16,
@@ -276,7 +374,7 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: unsavedCount > 0 ? AppColors.primary : AppColors.textTertiary,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

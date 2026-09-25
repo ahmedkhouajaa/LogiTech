@@ -11,6 +11,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileCustomerFormScreen extends StatefulWidget {
   final Customer? existing;
@@ -80,6 +81,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) return;
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty && _companyName.isEmpty) {
@@ -203,11 +205,10 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SmartTextInput(
-                        label: 'Téléphone *',
+                        label: 'Téléphone',
                         initialValue: _phone,
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                       ),
                       const SizedBox(height: 16),
                       SmartTextInput(

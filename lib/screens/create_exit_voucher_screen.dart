@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +10,8 @@ import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/stock_withdrawal.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 
 
 import '../models/customer.dart';
@@ -26,6 +29,8 @@ import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
 import '../widgets/custom_fields_form_section.dart';
+import '../widgets/document_tax_settings_dialog.dart';
+import '../services/trial_service.dart';
 
 class CreateExitVoucherScreen extends StatefulWidget {
   final StockWithdrawal? existing;
@@ -51,9 +56,13 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
   final _driverNameCtrl = TextEditingController();
   DocumentStatus _status = DocumentStatus.draft;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _pricingModeHT = true;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0.0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   Map<String, dynamic> _customFields = {};
 
   // Computed totals
@@ -81,10 +90,45 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0.0;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
 
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
+  }
 
   @override
   void initState() {
@@ -93,6 +137,11 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -104,7 +153,13 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       _pricingModeHT = n.pricingMode == 'ht';
       _globalDiscountPercent = n.globalDiscountPercent;
       _withGlobalDiscount = _globalDiscountPercent > 0;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields?['withTimbreFiscal'] == true;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (n.customFields!['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _notesCtrl.text = n.notes ?? '';
       _conditionsCtrl.text = n.conditionsGenerales ?? '';
       _vehicleRegistrationCtrl.text = n.vehicleRegistration ?? '';
@@ -125,6 +180,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     _vehicleRegistrationCtrl.dispose();
@@ -134,6 +190,9 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() => _hasAttemptedSubmit = true);
     _formKey.currentState?.validate();
 
@@ -225,7 +284,15 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       driverName: _driverNameCtrl.text.trim().isEmpty ? null : _driverNameCtrl.text.trim(),
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-      customFields: _customFields,
+      customFields: {
+        ...?_customFields,
+        'withFodec': _withFodec,
+        'fodecAmount': _fodecAmount,
+        'fodecRate': 1.0,
+        'withTimbreFiscal': _withTimbreFiscal,
+        'activeCustomTaxes': _activeCustomTaxes,
+        'customTaxesTotal': _customTaxesTotal,
+      },
       items: _items.map((item) => StockWithdrawalItem(
         id: item.id,
         withdrawalId: withdrawalId,
@@ -339,6 +406,8 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             setState(() => _status = DocumentStatus.draft);
           }),
           SizedBox(width: 8),
+          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
+          SizedBox(width: 8),
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
@@ -390,7 +459,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -455,7 +524,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Column(
@@ -780,7 +849,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -888,7 +957,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 child: BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, state) {
                     final allProducts = state is ProductsLoaded ? state.products : <Product>[];
-                    final products = allProducts.where((p) => p.isForSale).toList();
+                    final products = allProducts.where((p) => p.isForSale && !p.isService).toList();
                     return SearchableSelectorField(
                       hint: context.tr('Rechercher un article...'),
                       selectedText: item.productName.isNotEmpty
@@ -897,7 +966,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                       hasError: isArticleMissing,
                       errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente');
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente', excludeServices: true);
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -1154,13 +1223,13 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final allProducts = state is ProductsLoaded ? state.products : <Product>[];
-              final products = allProducts.where((p) => p.isForSale).toList();
+              final products = allProducts.where((p) => p.isForSale && !p.isService).toList();
               return SearchableSelectorField(
                 hint: context.tr('Sélectionner un article...'),
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente');
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Vente', excludeServices: true);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {
@@ -1302,6 +1371,19 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
               ),
             ),
             InkWell(

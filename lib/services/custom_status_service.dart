@@ -162,6 +162,26 @@ class CustomStatusService {
         order: 5,
       ),
       CustomStatusDefinition(
+        id: 'default_invoice_en_attente_confirmation',
+        enterpriseId: '',
+        documentType: 'invoice',
+        name: 'En attente de paiement',
+        key: 'en_attente_confirmation',
+        colorValue: const Color(0xFFF59E0B).toARGB32(),
+        isDefault: true,
+        order: 6,
+      ),
+      CustomStatusDefinition(
+        id: 'default_invoice_impayee',
+        enterpriseId: '',
+        documentType: 'invoice',
+        name: 'Impayée',
+        key: 'impayee',
+        colorValue: AppColors.error.toARGB32(),
+        isDefault: true,
+        order: 7,
+      ),
+      CustomStatusDefinition(
         id: 'default_invoice_cancelled',
         enterpriseId: '',
         documentType: 'invoice',
@@ -169,7 +189,7 @@ class CustomStatusService {
         key: 'cancelled',
         colorValue: AppColors.textTertiary.toARGB32(),
         isDefault: true,
-        order: 6,
+        order: 8,
       ),
     ],
 
@@ -310,6 +330,26 @@ class CustomStatusService {
         order: 5,
       ),
       CustomStatusDefinition(
+        id: 'default_dnote_en_attente_confirmation',
+        enterpriseId: '',
+        documentType: 'delivery_note',
+        name: 'En attente de paiement',
+        key: 'en_attente_confirmation',
+        colorValue: const Color(0xFFF59E0B).toARGB32(),
+        isDefault: true,
+        order: 6,
+      ),
+      CustomStatusDefinition(
+        id: 'default_dnote_impayee',
+        enterpriseId: '',
+        documentType: 'delivery_note',
+        name: 'Impayé',
+        key: 'impayee',
+        colorValue: AppColors.error.toARGB32(),
+        isDefault: true,
+        order: 7,
+      ),
+      CustomStatusDefinition(
         id: 'default_dnote_cancelled',
         enterpriseId: '',
         documentType: 'delivery_note',
@@ -317,7 +357,7 @@ class CustomStatusService {
         key: 'cancelled',
         colorValue: AppColors.error.toARGB32(),
         isDefault: true,
-        order: 6,
+        order: 8,
       ),
     ],
 
@@ -506,6 +546,26 @@ class CustomStatusService {
         order: 5,
       ),
       CustomStatusDefinition(
+        id: 'default_pinvoice_en_attente_confirmation',
+        enterpriseId: '',
+        documentType: 'purchase_invoice',
+        name: 'En attente de paiement',
+        key: 'en_attente_confirmation',
+        colorValue: const Color(0xFFF59E0B).toARGB32(),
+        isDefault: true,
+        order: 6,
+      ),
+      CustomStatusDefinition(
+        id: 'default_pinvoice_impayee',
+        enterpriseId: '',
+        documentType: 'purchase_invoice',
+        name: 'Impayée',
+        key: 'impayee',
+        colorValue: AppColors.error.toARGB32(),
+        isDefault: true,
+        order: 7,
+      ),
+      CustomStatusDefinition(
         id: 'default_pinvoice_cancelled',
         enterpriseId: '',
         documentType: 'purchase_invoice',
@@ -513,7 +573,7 @@ class CustomStatusService {
         key: 'cancelled',
         colorValue: AppColors.textTertiary.toARGB32(),
         isDefault: true,
-        order: 6,
+        order: 8,
       ),
     ],
 
@@ -604,6 +664,26 @@ class CustomStatusService {
         order: 1,
       ),
       CustomStatusDefinition(
+        id: 'default_rvoucher_en_attente_confirmation',
+        enterpriseId: '',
+        documentType: 'receiving_voucher',
+        name: 'En attente de paiement',
+        key: 'en_attente_confirmation',
+        colorValue: const Color(0xFFF59E0B).toARGB32(),
+        isDefault: true,
+        order: 2,
+      ),
+      CustomStatusDefinition(
+        id: 'default_rvoucher_impayee',
+        enterpriseId: '',
+        documentType: 'receiving_voucher',
+        name: 'Impayé',
+        key: 'impayee',
+        colorValue: AppColors.error.toARGB32(),
+        isDefault: true,
+        order: 3,
+      ),
+      CustomStatusDefinition(
         id: 'default_rvoucher_cancelled',
         enterpriseId: '',
         documentType: 'receiving_voucher',
@@ -611,7 +691,17 @@ class CustomStatusService {
         key: 'cancelled',
         colorValue: AppColors.error.toARGB32(),
         isDefault: true,
-        order: 2,
+        order: 4,
+      ),
+      CustomStatusDefinition(
+        id: 'default_rvoucher_paid',
+        enterpriseId: '',
+        documentType: 'receiving_voucher',
+        name: 'Payé',
+        key: 'payee',
+        colorValue: AppColors.success.toARGB32(),
+        isDefault: true,
+        order: 5,
       ),
     ],
 
@@ -883,6 +973,24 @@ class CustomStatusService {
       return StatusInfo(
         label: fallbackLabel ?? 'Validé',
         color: fallbackColor ?? AppColors.success,
+      );
+    }
+    if (lower == 'en_attente_confirmation' || lower == 'pendingconfirmation' || lower == 'pending_confirmation') {
+      return StatusInfo(
+        label: fallbackLabel ?? 'En attente de paiement',
+        color: fallbackColor ?? const Color(0xFFF59E0B),
+      );
+    }
+    if (lower == 'impayee' || lower == 'impayé' || lower == 'bounced') {
+      return StatusInfo(
+        label: fallbackLabel ?? 'Impayée',
+        color: fallbackColor ?? AppColors.error,
+      );
+    }
+    if (lower == 'unpaid' || lower == 'non_payee' || lower == 'non paye' || lower == 'non payée') {
+      return StatusInfo(
+        label: fallbackLabel ?? 'Non payée',
+        color: fallbackColor ?? AppColors.error,
       );
     }
     if (lower == 'cancelled' || lower == 'annule' || lower == 'annulé') {

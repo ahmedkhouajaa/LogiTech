@@ -140,6 +140,8 @@ class UserPermissionResources {
   static const String settingsCustomFields = 'settings_custom_fields';
   static const String settingsCustomStatuses = 'settings_custom_statuses';
   static const String importExport = 'import_export';
+  static const String trash = 'trash';
+  static const String userTracking = 'user_tracking';
 
   // 39. User Management (Admin Only)
   static const String userManagement = 'user_management';
@@ -473,6 +475,24 @@ class UserPermissionResources {
       'label': 'Import / Export des données',
       'category': 'Paramètres',
       'icon': Icons.sync_alt_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    // 39. Corbeille
+    {
+      'key': trash,
+      'label': 'Corbeille',
+      'category': 'Paramètres',
+      'icon': Icons.delete_outline_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    // 40. Traçabilité Utilisateurs
+    {
+      'key': userTracking,
+      'label': 'Traçabilité Utilisateurs',
+      'category': 'Paramètres',
+      'icon': Icons.manage_history_rounded,
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
     },

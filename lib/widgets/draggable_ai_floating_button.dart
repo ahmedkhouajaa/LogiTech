@@ -4,10 +4,12 @@ import 'ai_chat_modal_sheet.dart';
 
 class DraggableAiFloatingButton extends StatefulWidget {
   final Widget child;
+  final bool enabled;
 
   const DraggableAiFloatingButton({
     super.key,
     required this.child,
+    this.enabled = true,
   });
 
   @override
@@ -78,6 +80,10 @@ class _DraggableAiFloatingButtonState extends State<DraggableAiFloatingButton>
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.enabled) {
+      return widget.child;
+    }
+
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final screenHeight = mediaQuery.size.height;

@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../models/custom_tax_rate.dart';
+import '../../../../services/custom_tax_service.dart';
 import '../../../../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../../../../blocs/suppliers/suppliers_bloc.dart';
 import '../../../../services/connectivity_service.dart';
@@ -28,11 +31,13 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../widgets/document_tax_settings_dialog.dart';
 import '../../../../screens/suppliers_screen.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobilePurchaseInvoiceFormScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
@@ -58,8 +63,12 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
   String _conditions = '';
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   InvoiceStatus _status = InvoiceStatus.unpaid;
   Map<String, dynamic> _customFields = {};
 
@@ -93,8 +102,45 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
     });
   }
 
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
   double get _timbreFiscal => _withTimbreFiscal ? 1.000 : 0;
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+
+  Map<String, double> get _customTaxesBreakdownMap {
+    final map = <String, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        final label = '${tax.label.isNotEmpty ? tax.label : tax.name} (${tax.isPercentage ? '${tax.value.toStringAsFixed(tax.value.truncateToDouble() == tax.value ? 0 : 2)}%' : '${tax.value.toStringAsFixed(2)} DT'})';
+        map[label] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdownMap.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'purchase',
+    );
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -104,6 +150,11 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final inv = widget.existing!;
@@ -115,7 +166,11 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       _pricingModeHT = inv.pricingMode == 'ht';
       _withGlobalDiscount = inv.globalDiscountPercent > 0;
       _globalDiscountPercent = inv.globalDiscountPercent;
-      _withTimbreFiscal = inv.timbreFiscal > 0;
+      _withTimbreFiscal = inv.timbreFiscal > 0 || inv.customFields?['withTimbreFiscal'] == true;
+      _withFodec = inv.customFields?['withFodec'] == true || inv.customFields?['with_fodec'] == true;
+      if (inv.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(inv.customFields!['activeCustomTaxes']);
+      }
       _status = inv.status;
       _notes = inv.notes ?? '';
       _conditions = inv.conditionsGenerales ?? '';
@@ -135,8 +190,15 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
     }
   }
 
+  @override
+  void dispose() {
+    _customTaxesSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_items.isEmpty) {
@@ -240,7 +302,15 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
         totalTTC: _totalTTC,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         items: _items.map<PurchaseInvoiceItem>((item) => PurchaseInvoiceItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           purchaseInvoiceId: invoiceId,
@@ -349,6 +419,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),
+      onSettingsTap: _openSettingsDialog,
       onSave: () {
         if (!widget.isReadOnly) _save();
       },
@@ -600,7 +671,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                                 productName: newProd.name,
                                 description: newProd.name,
                                 quantity: 1,
-                                unitPrice: newProd.purchasePrice > 0 ? newProd.purchasePrice : newProd.sellingPrice,
+                                unitPrice: newProd.purchasePrice,
                                 tvaRate: newProd.tvaRate,
                                 showDescription: true,
                               ));
@@ -638,9 +709,13 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
             subTotalHT: _totalHTAfterDiscount,
             tvaBreakdown: _tvaBreakdown,
             totalTva: _totalTvaAfterDiscount,
+            withFodec: _withFodec,
+            fodecAmount: _fodecAmount,
+            customTaxesBreakdown: _customTaxesBreakdownMap,
             timbreFiscal: 1.000,
             applyTimbreFiscal: _withTimbreFiscal,
             onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
+            onSettingsTap: _openSettingsDialog,
             totalTTC: _totalTTC,
           ),
         ),

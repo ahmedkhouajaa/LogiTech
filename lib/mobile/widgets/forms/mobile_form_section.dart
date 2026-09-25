@@ -71,7 +71,7 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       clipBehavior: Clip.antiAlias,
@@ -86,7 +86,7 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                   Container(
                     padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(widget.icon, color: AppColors.primary, size: 20),

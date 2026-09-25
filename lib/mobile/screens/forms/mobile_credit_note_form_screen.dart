@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../models/custom_tax_rate.dart';
+import '../../../../services/custom_tax_service.dart';
 import '../../../../blocs/credit_notes/credit_notes_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../blocs/invoices/invoices_bloc.dart';
@@ -27,8 +30,10 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../widgets/document_tax_settings_dialog.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../widgets/custom_fields_form_section.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileCreditNoteFormScreen extends StatefulWidget {
   final CreditNote? existing;
@@ -53,6 +58,10 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   String _notes = '';
   CreditNoteStatus _status = CreditNoteStatus.unused;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   Map<String, dynamic> _customFields = {};
 
   bool get _isEditing => widget.existing != null;
@@ -70,8 +79,45 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   }
 
   double get _totalTva => _items.fold(0, (s, i) => s + (i.totalHT * (i.tvaRate / 100)));
+  double get _fodecAmount => _withFodec ? (_totalHT * 0.01) : 0.0;
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0.0;
-  double get _totalTTC => _totalHT + _totalTva + _timbreFiscal;
+
+  Map<String, double> get _customTaxesBreakdownMap {
+    final map = <String, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHT * (tax.value / 100))
+            : tax.value;
+        final label = '${tax.label.isNotEmpty ? tax.label : tax.name} (${tax.isPercentage ? '${tax.value.toStringAsFixed(tax.value.truncateToDouble() == tax.value ? 0 : 2)}%' : '${tax.value.toStringAsFixed(2)} DT'})';
+        map[label] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdownMap.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHT + _totalTva + _fodecAmount + _customTaxesTotal + _timbreFiscal;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
+  }
 
   @override
   void initState() {
@@ -79,6 +125,11 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<InvoicesBloc>().add(LoadInvoices());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final cn = widget.existing!;
@@ -90,6 +141,11 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       _notes = cn.notes ?? '';
       _status = cn.status;
       _customFields = cn.customFields != null ? Map<String, dynamic>.from(cn.customFields!) : {};
+      _withTimbreFiscal = cn.customFields?['withTimbreFiscal'] != false;
+      _withFodec = cn.customFields?['withFodec'] == true || cn.customFields?['with_fodec'] == true;
+      if (cn.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(cn.customFields!['activeCustomTaxes']);
+      }
       _items = cn.items.map((i) => CreditNoteItem(
         id: i.id,
         productId: i.productId,
@@ -101,8 +157,15 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
     }
   }
 
+  @override
+  void dispose() {
+    _customTaxesSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_items.isEmpty) {
@@ -171,7 +234,15 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
         date: _date,
         reason: _reason.trim().isEmpty ? null : _reason.trim(),
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         status: _status,
         totalHT: _totalHT,
         totalTva: _totalTva,
@@ -249,6 +320,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),
+      onSettingsTap: _openSettingsDialog,
       onSave: () {
         if (!widget.isReadOnly) _save();
       },
@@ -488,9 +560,13 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           subTotalHT: _totalHT,
           tvaBreakdown: _tvaBreakdown,
           totalTva: _totalTva,
+          withFodec: _withFodec,
+          fodecAmount: _fodecAmount,
+          customTaxesBreakdown: _customTaxesBreakdownMap,
           timbreFiscal: 1.0,
           applyTimbreFiscal: _withTimbreFiscal,
           onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+          onSettingsTap: _openSettingsDialog,
           totalTTC: _totalTTC,
         ),
 

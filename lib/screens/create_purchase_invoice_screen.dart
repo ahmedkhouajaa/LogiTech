@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,8 @@ import '../models/purchase_invoice.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/custom_tax_rate.dart';
+import '../services/custom_tax_service.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -26,8 +29,8 @@ import '../services/enterprise_service.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/custom_fields_form_section.dart';
-
-
+import '../widgets/document_tax_settings_dialog.dart';
+import '../services/trial_service.dart';
 
 class CreatePurchaseInvoiceScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
@@ -54,8 +57,12 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   final _conditionsCtrl = TextEditingController();
   bool _pricingModeHT = true; // true = HT, false = TTC
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0.0;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   
   Key _autocompleteKey = UniqueKey();
   InvoiceStatus _status = InvoiceStatus.unpaid;
@@ -101,9 +108,45 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   }
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0;
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
+
+  Map<CustomTaxRate, double> get _customTaxesBreakdown {
+    final map = <CustomTaxRate, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        map[tax] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdown.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'purchase',
+    );
+  }
 
   @override
   void initState() {
@@ -112,6 +155,11 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     // Load existing purchaseInvoice data if editing
     if (widget.existing != null) {
@@ -122,7 +170,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       _notesCtrl.text = inv.notes ?? '';
       _conditionsCtrl.text = inv.conditionsGenerales ?? '';
       _pricingModeHT = inv.pricingMode == 'ht';
-      _withTimbreFiscal = inv.timbreFiscal > 0;
+      _withTimbreFiscal = inv.timbreFiscal > 0 || inv.customFields?['withTimbreFiscal'] == true;
+      _withFodec = inv.customFields?['withFodec'] == true || inv.customFields?['with_fodec'] == true;
+      if (inv.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(
+          (inv.customFields!['activeCustomTaxes'] as Map).map((k, v) => MapEntry(k.toString(), v == true)),
+        );
+      }
       _withGlobalDiscount = inv.globalDiscountPercent > 0;
       _globalDiscountPercent = inv.globalDiscountPercent;
       _selectedProjectId = inv.projectId;
@@ -134,6 +188,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
 
   @override
   void dispose() {
+    _customTaxesSub?.cancel();
     _notesCtrl.dispose();
     _conditionsCtrl.dispose();
     super.dispose();
@@ -215,7 +270,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             SizedBox(width: 8),
             _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
             SizedBox(width: 8),
-            _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
+            _buildHeaderButton(Icons.settings_rounded, 'Paramètres', _openSettingsDialog),
             SizedBox(width: 8),
             SizedBox(
               height: 36,
@@ -263,7 +318,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -538,7 +593,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -641,7 +696,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                       hasError: isArticleMissing,
                       errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -839,7 +894,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat');
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     _addProductItem(product);
@@ -885,8 +940,10 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.sm,
       ),
       child: Column(
         children: [
@@ -900,8 +957,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                            activeColor: AppColors.primary,
+                             side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                             activeColor: AppColors.primary,
                   ),
                 ),
                 SizedBox(width: 8),
@@ -937,10 +994,17 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 350,
+      child: Container(
+        width: 380,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+          boxShadow: AppShadows.sm,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
             SizedBox(height: 6),
@@ -949,6 +1013,19 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               Padding(
                 padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            if (_withFodec) ...[
+              _buildTotalLine('FODEC (1%):', formatCurrencyDT(_fodecAmount)),
+              SizedBox(height: 6),
+            ],
+            ..._customTaxesBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine(
+                  '${entry.key.label.isNotEmpty ? entry.key.label : entry.key.name} (${entry.key.isPercentage ? '${entry.key.value.toStringAsFixed(entry.key.value.truncateToDouble() == entry.key.value ? 0 : 2)}%' : '${entry.key.value.toStringAsFixed(2)} DT'}):',
+                  formatCurrencyDT(entry.value),
+                ),
               ),
             ),
             InkWell(
@@ -1011,59 +1088,68 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
 
   // ─── Notes Section ───────────────────────────────────────────────
   Widget _buildNotesSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _notesCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Visible sur le document final'),
-                  hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Notes'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _notesCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Visible sur le document final'),
+                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              TextFormField(
-                controller: _conditionsCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: context.tr('Conditions generales pour ce document'),
-                  hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  filled: true,
-                  fillColor: AppColors.surfaceAlt,
-                  contentPadding: EdgeInsets.all(14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+          SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.tr('Conditions Generales'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _conditionsCtrl,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: context.tr('Conditions generales pour ce document'),
+                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
+                    contentPadding: EdgeInsets.all(14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                  style: TextStyle(fontSize: 13),
                 ),
-                style: TextStyle(fontSize: 13),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1090,7 +1176,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         productName: product.name,
         description: product.description,
         quantity: 1,
-        unitPrice: product.sellingPrice,
+        unitPrice: product.purchasePrice,
         tvaRate: product.tvaRate,
       ));
     });
@@ -1099,6 +1185,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (widget.isReadOnly || _isSaving) return;
+    if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
+      return;
+    }
     setState(() {
       _hasAttemptedSubmit = true;
       _isSaving = true;
@@ -1190,7 +1279,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       status: _status,
       totalHT: _totalHTAfterDiscount,
       totalTva: _totalTvaAfterDiscount,
-      totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal,
+      totalTTC: _totalTTC,
       stampTax: 0,
       timbreFiscal: _timbreFiscal,
       globalDiscountPercent: _globalDiscountPercent,
@@ -1198,7 +1287,15 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-      customFields: _customFields,
+      customFields: {
+        ...?_customFields,
+        'withFodec': _withFodec,
+        'fodecAmount': _fodecAmount,
+        'fodecRate': 1.0,
+        'withTimbreFiscal': _withTimbreFiscal,
+        'activeCustomTaxes': _activeCustomTaxes,
+        'customTaxesTotal': _customTaxesTotal,
+      },
       items: _items.map((item) => item.copyWith(purchaseInvoiceId: purchaseInvoiceId)).toList(),
       createdAt: _isEditing ? widget.existing!.createdAt : null,
       isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,

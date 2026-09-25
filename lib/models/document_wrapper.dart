@@ -142,6 +142,18 @@ class DocumentWrapper {
     return sum;
   }
 
+  double get fodecAmount {
+    if (customFields['fodecAmount'] != null) {
+      final val = customFields['fodecAmount'];
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString()) ?? 0.0;
+    }
+    if (customFields['withFodec'] == true || customFields['with_fodec'] == true) {
+      return totalHT * 0.01;
+    }
+    return 0.0;
+  }
+
   static String _extractItemName(dynamic item) {
     try {
       if (item.productName != null && item.productName.toString().trim().isNotEmpty) {
@@ -354,6 +366,10 @@ class DocumentWrapper {
   }
 
   static DocumentWrapper fromStockWithdrawal(dynamic doc, [String? warehouseName]) {
+    final String? reason = (doc.conditionsGenerales != null && doc.conditionsGenerales.toString().trim().isNotEmpty)
+        ? doc.conditionsGenerales.toString().trim()
+        : ((doc.notes != null && doc.notes.toString().trim().isNotEmpty) ? doc.notes.toString().trim() : null);
+
     return DocumentWrapper(
       id: doc.id,
       number: doc.number,
@@ -365,12 +381,14 @@ class DocumentWrapper {
       totalTva: doc.totalTVA,
       totalTTC: doc.subTotalTTC,
       notes: doc.notes,
-      conditionsGenerales: doc.conditionsGenerales,
+      conditionsGenerales: null,
       customFields: doc.customFields is Map ? Map<String, dynamic>.from(doc.customFields as Map) : null,
       customData: {
         'warehouseId': doc.warehouseId,
         'warehouseName': warehouseName ?? doc.warehouseId ?? 'Entrepôt par défaut',
+        'reason': reason,
         'createdBy': doc.createdBy ?? 'Admin',
+        'status': doc.status,
         if (doc.customFields is Map) 'customFields': Map<String, dynamic>.from(doc.customFields as Map),
       },
       items: (doc.items as List).map((i) => DocumentItemWrapper(
@@ -644,30 +662,87 @@ class DocumentWrapper {
     );
   }
 
-  static DocumentWrapper fromStockTransfer(dynamic transfer) {
+  static DocumentWrapper fromStockTransfer(dynamic transfer, [String? sourceWarehouseName, String? destinationWarehouseName]) {
+    final srcName = sourceWarehouseName ?? (transfer.sourceWarehouseId == 'default_warehouse' ? 'Entrepôt par défaut' : transfer.sourceWarehouseId?.toString() ?? 'Entrepôt Source');
+    final destName = destinationWarehouseName ?? (transfer.destinationWarehouseId == 'default_warehouse' ? 'Entrepôt par défaut' : transfer.destinationWarehouseId?.toString() ?? 'Entrepôt Destination');
+
+    String status = 'draft';
+    try {
+      status = transfer.status ?? 'draft';
+    } catch (_) {}
+
+    String? reason;
+    try {
+      reason = transfer.reason;
+    } catch (_) {}
+
     return DocumentWrapper(
       id: transfer.id,
       number: transfer.number,
       documentTitle: 'BON DE TRANSFERT',
       documentType: 'stock_transfer',
-      customerName: 'Inter-Entrepôts',
+      customerName: '',
       date: transfer.date,
       totalHT: 0,
       totalTva: 0,
       totalTTC: 0,
       notes: transfer.notes,
-      items: (transfer.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? 'Produit Inconnu',
-        quantity: i.quantityToTransfer,
-        unitPrice: 0,
-        tvaRate: 0,
-        discountPercent: 0,
-        totalHT: 0,
-      )).toList(),
+      customData: {
+        'sourceWarehouseId': transfer.sourceWarehouseId,
+        'destinationWarehouseId': transfer.destinationWarehouseId,
+        'sourceWarehouseName': srcName,
+        'destinationWarehouseName': destName,
+        'reason': reason,
+        'status': status,
+      },
+      items: (transfer.items as List).map((i) {
+        String? sku;
+        try { sku = i.productSku; } catch (_) {}
+        double qty = 0;
+        try { qty = (i.quantityToTransfer as num).toDouble(); } catch (_) {}
+
+        return DocumentItemWrapper(
+          productId: i.productId,
+          reference: _extractItemReference(i) ?? sku,
+          productName: i.productName ?? 'Produit Inconnu',
+          quantity: qty,
+          unitPrice: 0,
+          tvaRate: 0,
+          discountPercent: 0,
+          totalHT: 0,
+          customFields: {
+            'productSku': sku,
+          },
+        );
+      }).toList(),
     );
   }
 
-  static DocumentWrapper fromInventorySheet(dynamic sheet) {
+  static DocumentWrapper fromInventorySheet(dynamic sheet, [String? warehouseName]) {
+    String? whName = warehouseName;
+    if (whName == null || whName.isEmpty) {
+      if (sheet.notes != null && sheet.notes.toString().isNotEmpty) {
+        whName = sheet.notes.toString();
+      } else if (sheet.warehouseId != null && (sheet.warehouseId == 'default_warehouse' || sheet.warehouseId.toString().isEmpty)) {
+        whName = 'Entrepôt par défaut';
+      }
+    }
+
+    DateTime? invDate;
+    try {
+      invDate = sheet.inventoryDate;
+    } catch (_) {}
+
+    String status = 'draft';
+    try {
+      status = sheet.status ?? 'draft';
+    } catch (_) {}
+
+    String? countedBy;
+    try {
+      countedBy = sheet.countedBy;
+    } catch (_) {}
+
     return DocumentWrapper(
       id: sheet.id,
       number: sheet.number,
@@ -679,28 +754,57 @@ class DocumentWrapper {
       totalTva: 0,
       totalTTC: 0,
       notes: sheet.notes,
-      items: (sheet.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? 'Produit Inconnu',
-        quantity: i.actualQty,
-        unitPrice: 0,
-        tvaRate: 0,
-        discountPercent: 0,
-        totalHT: 0,
-      )).toList(),
+      customData: {
+        'warehouseId': sheet.warehouseId,
+        'warehouseName': whName ?? (sheet.warehouseId == 'default_warehouse' ? 'Entrepôt par défaut' : sheet.warehouseId ?? 'Entrepôt par défaut'),
+        'status': status,
+        'inventoryDate': invDate,
+        'countedBy': countedBy,
+      },
+      items: (sheet.items as List).map((i) {
+        String? sku;
+        try { sku = i.productSku; } catch (_) {}
+        double actualQty = 0;
+        try { actualQty = (i.actualQty as num).toDouble(); } catch (_) {}
+        double theoreticalQty = 0;
+        try { theoreticalQty = (i.theoreticalQty as num).toDouble(); } catch (_) {}
+
+        return DocumentItemWrapper(
+          productId: i.productId,
+          reference: _extractItemReference(i) ?? sku,
+          productName: i.productName ?? 'Produit Inconnu',
+          quantity: actualQty,
+          unitPrice: 0,
+          tvaRate: 0,
+          discountPercent: 0,
+          totalHT: 0,
+          customFields: {
+            'productSku': sku,
+            'theoreticalQty': theoreticalQty,
+            'actualQty': actualQty,
+          },
+        );
+      }).toList(),
     );
   }
 
   static DocumentWrapper fromStockEntry(dynamic entry, [String? warehouseName]) {
+    final String? reason = (entry.reason != null && entry.reason.toString().trim().isNotEmpty)
+        ? entry.reason.toString().trim()
+        : ((entry.notes != null && entry.notes.toString().trim().isNotEmpty) ? entry.notes.toString().trim() : null);
+
     return DocumentWrapper(
       id: entry.id,
       number: entry.number,
       documentTitle: "BON D'ENTRÉE",
       documentType: 'stock_entry',
+      customerName: null,
       date: entry.date,
       totalHT: (entry.items as List).fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
       totalTva: 0.0,
       totalTTC: (entry.items as List).fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
       notes: entry.notes,
+      conditionsGenerales: null,
       customFields: (() {
         try {
           if (entry.customFields is Map) return Map<String, dynamic>.from(entry.customFields as Map);
@@ -720,7 +824,10 @@ class DocumentWrapper {
       }).toList(),
       customData: {
         'warehouseId': entry.warehouseId,
-        if (warehouseName != null) 'warehouseName': warehouseName,
+        'warehouseName': warehouseName ?? entry.warehouseId ?? 'Entrepôt par défaut',
+        'reason': reason,
+        'status': entry.status,
+        if (entry.supplierId != null) 'supplierId': entry.supplierId,
       },
     );
   }

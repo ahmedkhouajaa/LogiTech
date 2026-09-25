@@ -233,7 +233,9 @@ class AppModulesService {
         module == AppModule.appModulesSettings ||
         module == AppModule.userManagement ||
         module == AppModule.importExport ||
-        module == AppModule.support;
+        module == AppModule.support ||
+        module == AppModule.trash ||
+        module == AppModule.userTracking;
   }
 
   /// Check if a group is enabled.

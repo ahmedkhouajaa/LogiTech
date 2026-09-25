@@ -70,6 +70,32 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
   }
 
   void _handleLogin() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading || _isGoogleLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Une connexion avec Google est déjà en cours. Veuillez patienter ou réessayer.',
+                  style: TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: _errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isEmailLoading = true;
@@ -85,6 +111,32 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
   }
 
   void _handleGoogleSignIn() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading || _isEmailLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Une tentative de connexion est déjà en cours. Veuillez patienter.',
+                  style: TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: _errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isGoogleLoading = true;
       _isEmailLoading = false;
@@ -301,7 +353,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                       ],
                                     ),
                                     child: ElevatedButton(
-                                      onPressed: isAuthLoading ? null : _handleLogin,
+                                      onPressed: isLoginLoading ? null : _handleLogin,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.transparent,
                                         foregroundColor: Colors.white,
@@ -364,7 +416,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                   width: double.infinity,
                                   height: 44,
                                   child: OutlinedButton(
-                                    onPressed: isAuthLoading ? null : _handleGoogleSignIn,
+                                    onPressed: isGoogleLoading ? null : _handleGoogleSignIn,
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: Colors.white,
                                       side: const BorderSide(color: _inputBorder),

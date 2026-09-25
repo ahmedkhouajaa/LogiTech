@@ -128,18 +128,29 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
         final diff = item.actualQty - item.theoreticalQty;
         if (item.productId.isNotEmpty && diff != 0) {
           String? prodName;
+          bool isService = false;
           try {
-            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
-            final doc = await prodRef.get();
+            final prodRef = FirebaseFirestore.instance.collection('articles').doc(item.productId);
+            var doc = await prodRef.get();
+            if (!doc.exists) {
+              doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+            }
             if (doc.exists && doc.data() != null) {
-              prodName = doc.data()!['name']?.toString();
-              final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
-              await prodRef.update({
-                'stock_qty': currentStock + diff,
-                'updated_at': DateTime.now().toIso8601String(),
-              });
+              final pType = (doc.data()!['product_type'] ?? doc.data()!['productType'])?.toString().toLowerCase();
+              if (pType == 'service') {
+                isService = true;
+              } else {
+                prodName = doc.data()!['name']?.toString();
+                final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
+                await prodRef.update({
+                  'stock_qty': currentStock + diff,
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+              }
             }
           } catch (_) {}
+
+          if (isService) continue;
 
           String? whName;
           final whId = sheetToSave.warehouseId;

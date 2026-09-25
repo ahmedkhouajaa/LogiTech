@@ -24,6 +24,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileStockTransferFormScreen extends StatefulWidget {
   final StockTransfer? existing;
@@ -121,6 +122,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   }
 
   Future<void> _save() async {
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_items.isEmpty) {
@@ -459,7 +461,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                                     final productsState = context.read<ProductsBloc>().state;
                                     List<Product> products = [];
                                     if (productsState is ProductsLoaded) {
-                                      products = productsState.products;
+                                      products = productsState.products.where((p) => !p.isService).toList();
                                     }
 
                                     final stockMap = <String, double>{};
@@ -492,6 +494,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                                       selectedProductId: item.productId,
                                       warehouseId: _sourceWarehouseId,
                                       warehouseStockMap: stockMap,
+                                      excludeServices: true,
                                     );
                                     if (res != null) {
                                       final p = products.firstWhere((element) => element.id == res);

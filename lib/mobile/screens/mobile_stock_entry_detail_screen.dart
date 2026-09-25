@@ -73,14 +73,22 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
       id: entry.id,
       number: entry.number,
       documentTitle: "BON D'ENTRÉE",
+      documentType: 'stock_entry',
+      customerName: null,
       date: entry.date,
       totalHT: entry.items.fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
       totalTva: 0.0,
       totalTTC: entry.items.fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
       notes: entry.notes,
+      conditionsGenerales: null,
       items: entry.items.map((item) {
         final product = _getProduct(item.productId);
+        final refCode = (product?.reference != null && product!.reference!.isNotEmpty) 
+            ? product.reference 
+            : (product?.code ?? '');
         return DocumentItemWrapper(
+          productId: item.productId,
+          reference: refCode,
           productName: product?.name ?? 'Article Inconnu',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -88,10 +96,9 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
           discountPercent: 0.0,
           totalHT: item.quantity * item.unitPrice,
           customFields: {
-            'code': (product?.reference != null && product!.reference!.isNotEmpty) 
-                ? product.reference 
-                : (product?.code ?? ''),
+            'code': refCode,
             'unit': product?.unit ?? 'pièce',
+            'purchasePrice': product?.purchasePrice ?? 0,
           },
         );
       }).toList(),
@@ -110,6 +117,7 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
           return 'Entrepôt par défaut';
         }(),
         'reason': entry.reason,
+        'status': entry.status,
       },
     );
   }
@@ -170,19 +178,14 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
       );
     }).toList();
 
-    final totalAmount = currentEntry.items.fold<double>(
-      0.0,
-      (sum, item) => sum + (item.quantity * item.unitPrice),
-    );
-
     final totals = <PremiumTotalRow>[
       PremiumTotalRow(
-        label: context.tr('Total HT'),
-        amount: totalAmount,
+        label: context.tr('Nombre d\'articles'),
+        formattedValue: '${currentEntry.items.length}',
       ),
       PremiumTotalRow(
-        label: context.tr('Total TTC'),
-        amount: totalAmount,
+        label: context.tr('Total unités entrées'),
+        formattedValue: '${currentEntry.items.fold<double>(0.0, (sum, i) => sum + i.quantity).toInt()}',
         isGrandTotal: true,
       ),
     ];
@@ -249,12 +252,13 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
         body: PremiumDetailShell(
           documentType: context.tr('Bon d\'Entrée'),
           referenceNumber: currentEntry.number,
-          statusLabel: context.tr('Validé'),
-          statusColor: AppColors.success,
+          statusLabel: currentEntry.status == 'cancelled' ? context.tr('Annulé') : context.tr('Validé'),
+          statusColor: currentEntry.status == 'cancelled' ? AppColors.error : AppColors.success,
           infoSections: infoSections,
           articles: articles,
           totals: totals,
-          notes: currentEntry.notes,
+          notes: (currentEntry.notes == currentEntry.reason) ? null : currentEntry.notes,
+          hidePricing: true,
         ),
       ),
     );
@@ -310,12 +314,13 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
   void _executeWriteAction(BuildContext context, String action, StockEntry entry) {
     switch (action) {
       case 'edit':
+        final stockBloc = context.read<StockEntriesBloc>();
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => MultiBlocProvider(
               providers: [
-                BlocProvider.value(value: context.read<StockEntriesBloc>()),
+                BlocProvider.value(value: stockBloc),
                 BlocProvider.value(value: context.read<ProductsBloc>()),
               ],
               child: CreateStockEntryScreen(existing: entry),
@@ -323,7 +328,7 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
           ),
         ).then((_) {
           if (mounted) {
-            context.read<StockEntriesBloc>().add(LoadFirstStockEntries());
+            stockBloc.add(LoadFirstStockEntries());
           }
         });
         break;

@@ -22,6 +22,7 @@ class AppColors {
   static Color get primary => const Color(0xFF1a56db);
   static Color get primaryLight => const Color(0xFF3B82F6);
   static Color get primaryDark => const Color(0xFF1E40AF);
+  static Color get secondary => const Color(0xFF6366F1);
   static Color get accent => const Color(0xFF0EA5E9);
 
   static Color get success => isDarkMode ? const Color(0xFF34D399) : const Color(0xFF10B981);
@@ -43,6 +44,9 @@ class AppColors {
   static Color get textSecondary => isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569);
   static Color get textTertiary => isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
   static Color get textOnPrimary => const Color(0xFFFFFFFF);
+
+  /// Sleek blue border for cards (matching Image 2)
+  static Color get cardBlueBorder => isDarkMode ? const Color(0xFF3B82F6).withValues(alpha: 0.6) : const Color(0xFF81A3EC);
 
   static Color get sidebarBg => const Color(0xFF0F172A);
   static Color get sidebarText => const Color(0xFFCBD5E1);
@@ -180,7 +184,9 @@ enum InvoiceStatus {
   unpaid,
   overdue,
   cancelled,
-  transformed;
+  transformed,
+  pendingConfirmation,
+  impayee;
 
   String get label {
     switch (this) {
@@ -200,6 +206,10 @@ enum InvoiceStatus {
         return 'Annulee';
       case transformed:
         return 'Transformé en avoir';
+      case pendingConfirmation:
+        return 'En attente de paiement';
+      case impayee:
+        return 'Impayée';
     }
   }
 
@@ -221,6 +231,10 @@ enum InvoiceStatus {
         return AppColors.textTertiary;
       case transformed:
         return AppColors.info;
+      case pendingConfirmation:
+        return const Color(0xFFF59E0B);
+      case impayee:
+        return AppColors.error;
     }
   }
 }
@@ -303,7 +317,10 @@ enum DeliveryNoteStatus {
   invoiced,
   returned,
   cancelled,
-  paid;
+  paid,
+  pendingConfirmation,
+  partial,
+  impayee;
 
   String get label {
     switch (this) {
@@ -312,15 +329,21 @@ enum DeliveryNoteStatus {
       case created:
         return 'Créé';
       case delivered:
-        return 'Livre';
+        return 'Livré';
       case invoiced:
-        return 'Livre et Facture';
+        return 'Livré et Facturé';
       case returned:
-        return 'Retourne';
+        return 'Retourné';
       case cancelled:
-        return 'Annule';
+        return 'Annulé';
       case paid:
-        return 'Paye';
+        return 'Payé';
+      case pendingConfirmation:
+        return 'En attente de paiement';
+      case partial:
+        return 'Partiellement payé';
+      case impayee:
+        return 'Impayé';
     }
   }
 
@@ -340,6 +363,12 @@ enum DeliveryNoteStatus {
         return AppColors.error;
       case paid:
         return AppColors.success;
+      case pendingConfirmation:
+        return const Color(0xFFF59E0B);
+      case partial:
+        return AppColors.warning;
+      case impayee:
+        return AppColors.error;
     }
   }
 }
@@ -660,3 +689,10 @@ String translateStatus(String s) {
 
   return s;
 }
+
+class AppConfig {
+  static const String appName = 'LogiTech Pro';
+  static const String appVersion = '1.0.0';
+  static const int appBuildNumber = 1;
+}
+

@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../models/custom_tax_rate.dart';
+import '../../../../services/custom_tax_service.dart';
 import '../../../../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 import '../../../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../../../../services/connectivity_service.dart';
@@ -28,10 +31,12 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../widgets/document_tax_settings_dialog.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../widgets/custom_fields_form_section.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../../../services/trial_service.dart';
 
 class MobileExitVoucherFormScreen extends StatefulWidget {
   final StockWithdrawal? existing;
@@ -63,7 +68,11 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
   String _driverName = '';
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
+  bool _withFodec = false;
   bool _withGlobalDiscount = false;
+  Map<String, bool> _activeCustomTaxes = {};
+  List<CustomTaxRate> _availableCustomTaxes = [];
+  StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   Map<String, dynamic> _customFields = {};
   double _globalDiscountPercent = 0;
   StockWithdrawalStatus _status = StockWithdrawalStatus.draft;
@@ -98,8 +107,45 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
     });
   }
 
+  double get _fodecAmount => _withFodec ? (_totalHTAfterDiscount * 0.01) : 0.0;
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0;
-  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
+
+  Map<String, double> get _customTaxesBreakdownMap {
+    final map = <String, double>{};
+    for (final tax in _availableCustomTaxes) {
+      if (_activeCustomTaxes[tax.id] == true) {
+        final amount = tax.isPercentage
+            ? (_totalHTAfterDiscount * (tax.value / 100))
+            : tax.value;
+        final label = '${tax.label.isNotEmpty ? tax.label : tax.name} (${tax.isPercentage ? '${tax.value.toStringAsFixed(tax.value.truncateToDouble() == tax.value ? 0 : 2)}%' : '${tax.value.toStringAsFixed(2)} DT'})';
+        map[label] = amount;
+      }
+    }
+    return map;
+  }
+
+  double get _customTaxesTotal {
+    double sum = 0;
+    for (final amount in _customTaxesBreakdownMap.values) {
+      sum += amount;
+    }
+    return sum;
+  }
+
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _fodecAmount + _customTaxesTotal + _timbreFiscal;
+
+  void _openSettingsDialog() {
+    DocumentTaxSettingsDialog.show(
+      context: context,
+      withFodec: _withFodec,
+      withTimbreFiscal: _withTimbreFiscal,
+      onFodecChanged: (val) => setState(() => _withFodec = val),
+      onTimbreFiscalChanged: (val) => setState(() => _withTimbreFiscal = val),
+      activeCustomTaxes: _activeCustomTaxes,
+      onCustomTaxesChanged: (taxes) => setState(() => _activeCustomTaxes = Map.from(taxes)),
+      documentType: 'sale',
+    );
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -109,6 +155,11 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProjectsBloc>().add(LoadProjects());
     context.read<WarehousesBloc>().add(LoadWarehouses());
+
+    _availableCustomTaxes = CustomTaxService.instance.cachedTaxes;
+    _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
+      if (mounted) setState(() => _availableCustomTaxes = taxes);
+    });
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -120,7 +171,11 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
-      _withTimbreFiscal = n.timbreFiscal > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0 || n.customFields?['withTimbreFiscal'] == true;
+      _withFodec = n.customFields?['withFodec'] == true || n.customFields?['with_fodec'] == true;
+      if (n.customFields?['activeCustomTaxes'] is Map) {
+        _activeCustomTaxes = Map<String, bool>.from(n.customFields!['activeCustomTaxes']);
+      }
       _status = StockWithdrawalStatus.values.firstWhere(
         (e) => e.name == n.status,
         orElse: () => StockWithdrawalStatus.draft,
@@ -145,7 +200,14 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
     }
   }
 
+  @override
+  void dispose() {
+    _customTaxesSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> _save() async {
+    if (!_isEditing && !TrialService.instance.checkCanCreate(context)) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_items.isEmpty) {
@@ -238,7 +300,15 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
         driverName: _driverName.isNotEmpty ? _driverName : null,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
-        customFields: _customFields,
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
         items: _items.map((item) => StockWithdrawalItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           withdrawalId: noteId,
@@ -322,7 +392,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       );
     }
 
-    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false, warehouseId: _selectedWarehouseId);
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false, warehouseId: _selectedWarehouseId, excludeServices: true);
 
     if (result != null) {
       setState(() {
@@ -359,6 +429,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       isLoading: _isLoading,
       saveLabel: 'Valider',
       onCancel: () => Navigator.pop(context),
+      onSettingsTap: _openSettingsDialog,
       onSave: _save,
       children: [
         MobileFormSection(
@@ -662,9 +733,13 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
             subTotalHT: _totalHTAfterDiscount,
             tvaBreakdown: _tvaBreakdown,
             totalTva: _totalTvaAfterDiscount,
+            withFodec: _withFodec,
+            fodecAmount: _fodecAmount,
+            customTaxesBreakdown: _customTaxesBreakdownMap,
             timbreFiscal: 1.0,
             applyTimbreFiscal: _withTimbreFiscal,
             onTimbreFiscalChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+            onSettingsTap: _openSettingsDialog,
             totalTTC: _totalTTC,
           ),
         ),

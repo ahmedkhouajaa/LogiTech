@@ -203,9 +203,9 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesDeliveryNotes);
                 final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesDeliveryNotes, action: 'all');
-                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
-                final canCreateInvoice = hasAllAccess;
-                final canCreateReturn = hasAllAccess;
+                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                final canCreateInvoice = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                final canCreateReturn = hasAllAccess && PermissionService.instance.canCreate(UserPermissionResources.salesReturnVouchers);
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -222,14 +222,25 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 if (canDelete) {
                   addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
                 }
-                if (canCreatePayment) {
+                final statusLower = currentDeliveryNote.status.trim().toLowerCase();
+                final isPaid = statusLower == 'paid' ||
+                               statusLower == 'paye' ||
+                               statusLower == 'payé' ||
+                               statusLower == 'payee' ||
+                               statusLower == 'payée' ||
+                               (statusLower.contains('pay') && !statusLower.contains('non') && !statusLower.contains('impay') && !statusLower.contains('partiel'));
+                final isPendingPayment = statusLower.contains('attente') ||
+                                        statusLower.contains('pending') ||
+                                        statusLower.contains('confirmation');
+
+                if (!isPaid && !isPendingPayment && canCreatePayment) {
                   addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement');
                 }
                 if (!currentDeliveryNote.isConvertedToInvoice && !currentDeliveryNote.isConvertedToReturn) {
                   if (canCreateInvoice) {
                     addItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture');
                   }
-                  if (canCreateReturn) {
+                  if (!isPaid && !isPendingPayment && canCreateReturn) {
                     addItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Créer un Bon de Retour');
                   }
                 } else {
@@ -414,7 +425,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       ),
     ).then((created) {
       if (created == true && context.mounted) {
-        context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+        context.read<DeliveryNotesBloc>().add(const ResetDeliveryNotesPagination());
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Paiement ajouté avec succès', style: TextStyle(color: Colors.white)),
           backgroundColor: AppColors.success,
