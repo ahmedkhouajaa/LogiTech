@@ -22,6 +22,7 @@ class WithholdingTaxScreen extends StatefulWidget {
 }
 
 class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
+  bool _isFirstLoad = true;
   String _searchQuery = '';
   int _rowsPerPage = 20;
   int _page = 0;
@@ -33,12 +34,28 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
   }
 
   @override
+  void didUpdateWidget(WithholdingTaxScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSales != widget.isSales) {
+      _isFirstLoad = true;
+      context.read<PaymentsBloc>().add(LoadPayments());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PaymentsBloc, PaymentsState>(
+    return BlocConsumer<PaymentsBloc, PaymentsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is PaymentsLoaded || state is PaymentsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
         List<Payment> payments = [];
 
-        if (state is PaymentsLoaded) {
+        if (!_isFirstLoad && state is PaymentsLoaded) {
           payments = state.payments;
         }
 
@@ -265,7 +282,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  child: state is PaymentsLoading || state is PaymentsInitial
+                  child: _isFirstLoad || state is PaymentsLoading || state is PaymentsInitial
                       ? ShimmerTable(
                           headerColumns: [
                             Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),

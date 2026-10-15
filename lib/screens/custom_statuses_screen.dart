@@ -3,6 +3,7 @@ import '../models/custom_status_definition.dart';
 import '../services/custom_status_service.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../services/error_handler.dart';
 import '../widgets/sidebar_menu.dart';
 import 'app_shell_screen.dart';
 
@@ -342,9 +343,7 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-                      );
+                      ErrorHandler.showErrorSnackBar(ctx, e);
                     }
                   }
                 },
@@ -428,9 +427,7 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-          );
+          ErrorHandler.showErrorSnackBar(context, e);
         }
       }
     }
@@ -542,15 +539,19 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
                                   color: isAchat ? const Color(0xFFD97706) : AppColors.primary,
                                 ),
                                 const SizedBox(width: 10),
-                                Text(
-                                  dt['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.textPrimary,
+                                Expanded(
+                                  child: Text(
+                                    dt['label'] as String,
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
@@ -724,7 +725,8 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
                             ),
                             title: Row(
                               children: [
-                                Container(
+                              Flexible(
+                                child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
                                     color: status.color.withValues(alpha: 0.12),
@@ -738,8 +740,11 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w600,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
+                              ),
                                 const SizedBox(width: 10),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -819,18 +824,22 @@ class _CustomStatusesScreenState extends State<CustomStatusesScreen> {
                           ),
                           title: Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: status.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  status.name,
-                                  style: TextStyle(
-                                    color: status.color,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: status.color.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    status.name,
+                                    style: TextStyle(
+                                      color: status.color,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ),

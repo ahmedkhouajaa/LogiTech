@@ -122,6 +122,7 @@ class DetailKpiCard extends StatelessWidget {
   final Color color;
   final String? subtitle;
   final bool isHighlight;
+  final double? height;
 
   const DetailKpiCard({
     super.key,
@@ -131,12 +132,14 @@ class DetailKpiCard extends StatelessWidget {
     this.color = const Color(0xFF1a56db),
     this.subtitle,
     this.isHighlight = false,
+    this.height,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
         color: isHighlight ? color.withValues(alpha: 0.06) : AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -150,7 +153,7 @@ class DetailKpiCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -178,7 +181,7 @@ class DetailKpiCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
@@ -190,19 +193,17 @@ class DetailKpiCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          if (subtitle != null && subtitle!.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              subtitle!,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isHighlight ? color.withValues(alpha: 0.8) : AppColors.textTertiary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 2),
+          Text(
+            (subtitle != null && subtitle!.isNotEmpty) ? subtitle! : '',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: isHighlight ? color.withValues(alpha: 0.8) : AppColors.textTertiary,
             ),
-          ],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

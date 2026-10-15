@@ -5,6 +5,7 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import '../../services/error_handler.dart';
 
 Future<String?> saveAndOpenFileImpl(
   Uint8List bytes,
@@ -39,12 +40,7 @@ Future<String?> saveAndOpenFileImpl(
     return fileName;
   } catch (e) {
     if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors du téléchargement : $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
     }
     rethrow;
   }

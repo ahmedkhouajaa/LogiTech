@@ -5,6 +5,7 @@ import '../services/tej_export_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/file_download_helper.dart';
+import '../services/error_handler.dart';
 
 class TejExportDialog extends StatefulWidget {
   final List<Payment> payments;
@@ -638,35 +639,20 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                       ),
                                     );
                                   } else {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        behavior: SnackBarBehavior.floating,
-                                        margin: EdgeInsets.all(AppSpacing.lg),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                        ),
-                                        content: Text('Erreur lors de la génération du fichier XML'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
+                                    if (context.mounted) {
+                                      ErrorHandler.showErrorSnackBar(
+                                        context,
+                                        "La génération du fichier XML a échoué. Veuillez vérifier la sélection des paiements et réessayer.",
+                                      );
+                                    }
                                   }
                                 }
                               } catch (e) {
-                                if (mounted) {
+                                if (context.mounted) {
                                   setState(() {
                                     _isExporting = false;
                                   });
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      behavior: SnackBarBehavior.floating,
-                                      margin: EdgeInsets.all(AppSpacing.lg),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(AppRadius.md),
-                                      ),
-                                      content: Text('Erreur: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+                                  ErrorHandler.showErrorSnackBar(context, e);
                                 }
                               }
                             },

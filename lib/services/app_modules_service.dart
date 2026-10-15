@@ -68,6 +68,23 @@ class AppModulesService {
   /// Definitions for the 10 main business modules matching the user specifications & mockup.
   static final List<ModuleGroupDefinition> groupDefinitions = [
     ModuleGroupDefinition(
+      key: 'crm',
+      title: 'CRM',
+      description: 'Pipeline de vente visuel, gestion des opportunités, leads, automatisations et emails',
+      icon: Icons.hub_rounded,
+      iconBgColor: const Color(0xFFF5F3FF),
+      iconColor: const Color(0xFF7C3AED),
+      subModules: [
+        ModuleItemDefinition(module: AppModule.crmDashboard, title: 'Tableau de bord CRM', icon: Icons.dashboard_customize_rounded),
+        ModuleItemDefinition(module: AppModule.crmPipeline, title: 'Pipeline de vente', icon: Icons.view_kanban_rounded),
+        ModuleItemDefinition(module: AppModule.crmOpportunities, title: 'Opportunités', icon: Icons.auto_graph_rounded),
+        ModuleItemDefinition(module: AppModule.crmLeads, title: 'Prospects (Leads)', icon: Icons.contact_phone_rounded),
+        ModuleItemDefinition(module: AppModule.crmAutomations, title: 'Automatisations', icon: Icons.smart_toy_rounded),
+        ModuleItemDefinition(module: AppModule.crmReports, title: 'Rapports CRM', icon: Icons.insights_rounded),
+        ModuleItemDefinition(module: AppModule.crmEmails, title: 'Intégration email', icon: Icons.mark_email_read_rounded),
+      ],
+    ),
+    ModuleGroupDefinition(
       key: 'ventes',
       title: 'Ventes',
       description: 'Devis, commandes, factures, bons de livraison et suivi des ventes',
@@ -175,6 +192,24 @@ class AppModulesService {
       ],
     ),
     ModuleGroupDefinition(
+      key: 'production',
+      title: 'Production (GPAO)',
+      description: 'Ordres de fabrication, nomenclatures BOM, planification, suivi des coûts et contrôle qualité',
+      icon: Icons.precision_manufacturing_rounded,
+      iconBgColor: const Color(0xFFEFF6FF),
+      iconColor: const Color(0xFF2563EB),
+      subModules: [
+        ModuleItemDefinition(module: AppModule.productionDashboard, title: 'Tableau de bord Production', icon: Icons.dashboard_customize_rounded),
+        ModuleItemDefinition(module: AppModule.productionOrders, title: 'Ordres de fabrication', icon: Icons.assignment_rounded),
+        ModuleItemDefinition(module: AppModule.productionBoms, title: 'Nomenclatures (BOM)', icon: Icons.account_tree_rounded),
+        ModuleItemDefinition(module: AppModule.productionPlanning, title: 'Planification de production', icon: Icons.calendar_month_rounded),
+        ModuleItemDefinition(module: AppModule.productionCosts, title: 'Suivi des coûts', icon: Icons.price_check_rounded),
+        ModuleItemDefinition(module: AppModule.productionQuality, title: 'Contrôle qualité', icon: Icons.verified_rounded),
+        ModuleItemDefinition(module: AppModule.productionReports, title: 'Rapports de rendement', icon: Icons.bar_chart_rounded),
+        ModuleItemDefinition(module: AppModule.productionWorkcenters, title: 'Postes de travail', icon: Icons.precision_manufacturing_outlined),
+      ],
+    ),
+    ModuleGroupDefinition(
       key: 'projects',
       title: 'Projets',
       description: 'Suivi des projets, rentabilité, temps passé et jalons',
@@ -183,6 +218,27 @@ class AppModulesService {
       iconColor: const Color(0xFFD97706),
       subModules: [
         ModuleItemDefinition(module: AppModule.projects, title: 'Projets & Chantiers', icon: Icons.folder_rounded),
+      ],
+    ),
+    ModuleGroupDefinition(
+      key: 'rh',
+      title: 'RH & Paie',
+      description: 'Gestion du personnel, contrats, congés & absences et bulletins de paie',
+      icon: Icons.badge_rounded,
+      iconBgColor: const Color(0xFFF3E8FF),
+      iconColor: const Color(0xFF9333EA),
+      subModules: [
+        ModuleItemDefinition(module: AppModule.hrDashboard, title: 'Tableau de bord', icon: Icons.dashboard_outlined),
+        ModuleItemDefinition(module: AppModule.hrEmployees, title: 'Personnel (Employés)', icon: Icons.badge_outlined),
+        ModuleItemDefinition(module: AppModule.hrLeaves, title: 'Congés & Absences', icon: Icons.event_available_outlined),
+        ModuleItemDefinition(module: AppModule.hrAttendances, title: 'Présences / Pointages', icon: Icons.access_time_outlined),
+        ModuleItemDefinition(module: AppModule.hrPayroll, title: 'Fiches de Paie', icon: Icons.payments_outlined),
+        ModuleItemDefinition(module: AppModule.hrCnssDeclaration, title: 'Déclaration CNSS', icon: Icons.assignment_turned_in_outlined),
+        ModuleItemDefinition(module: AppModule.hrDocuments, title: 'Documents', icon: Icons.folder_shared_outlined),
+        ModuleItemDefinition(module: AppModule.hrAccounting, title: 'Comptabilité', icon: Icons.account_balance_rounded),
+        ModuleItemDefinition(module: AppModule.hrLegalEntity, title: 'Entité juridique', icon: Icons.account_balance_outlined),
+        ModuleItemDefinition(module: AppModule.hrEstablishments, title: 'Établissements', icon: Icons.apartment_rounded),
+        ModuleItemDefinition(module: AppModule.hrManagers, title: 'Gestionnaires', icon: Icons.manage_accounts_outlined),
       ],
     ),
     ModuleGroupDefinition(
@@ -223,6 +279,7 @@ class AppModulesService {
   /// System modules that cannot and should not be disabled.
   bool isSystemModule(AppModule module) {
     return module == AppModule.dashboard ||
+        module == AppModule.eInvoice ||
         module == AppModule.settings ||
         module == AppModule.personalInfo ||
         module == AppModule.companyInfo ||
@@ -234,6 +291,7 @@ class AppModulesService {
         module == AppModule.userManagement ||
         module == AppModule.importExport ||
         module == AppModule.support ||
+        module == AppModule.affiliate ||
         module == AppModule.trash ||
         module == AppModule.userTracking;
   }

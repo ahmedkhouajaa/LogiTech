@@ -31,6 +31,7 @@ class StockTransfersScreen extends StatefulWidget {
 }
 
 class _StockTransfersScreenState extends State<StockTransfersScreen> {
+  bool _isFirstLoad = true;
   int _rowsPerPage = 20;
   int _currentPage = 0;
   List<Warehouse> _warehouses = [];
@@ -151,7 +152,14 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StockTransfersBloc, StockTransfersState>(
+    return BlocConsumer<StockTransfersBloc, StockTransfersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is StockTransfersLoaded || state is StockTransfersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
         List<StockTransfer> entries = [];
         if (state is StockTransfersLoaded) {
@@ -390,7 +398,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
             Expanded(
               child: Builder(
                 builder: (context) {
-                  if (state is StockTransfersLoading) {
+                  if (_isFirstLoad || state is StockTransfersLoading) {
                     return Center(child: CircularProgressIndicator());
                   }
                   if (state is StockTransfersError) {
@@ -787,7 +795,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               child: Builder(
                 builder: (context) {
-                  if (state is StockTransfersLoading || state is StockTransfersInitial) {
+                  if (_isFirstLoad || state is StockTransfersLoading || state is StockTransfersInitial) {
                     return ShimmerTable(
                       headerColumns: [
                         Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),

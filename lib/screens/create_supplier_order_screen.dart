@@ -29,12 +29,22 @@ import 'create_article_screen.dart';
 import '../widgets/custom_fields_form_section.dart';
 import '../widgets/document_tax_settings_dialog.dart';
 import '../services/trial_service.dart';
+import '../services/ai_document_scanner_service.dart';
 
 class CreateSupplierOrderScreen extends StatefulWidget {
   final SupplierOrder? existing;
   final bool isReadOnly;
   final String? overrideTitle;
-  const CreateSupplierOrderScreen({super.key, this.existing, this.isReadOnly = false, this.overrideTitle});
+  final Product? initialProduct;
+  final ExtractedDocumentData? initialAiData;
+  const CreateSupplierOrderScreen({
+    super.key,
+    this.existing,
+    this.isReadOnly = false,
+    this.overrideTitle,
+    this.initialProduct,
+    this.initialAiData,
+  });
 
   @override
   State<CreateSupplierOrderScreen> createState() =>
@@ -183,6 +193,48 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         showDescription: i.showDescription,
         showDiscount: i.showDiscount,
       )).toList();
+    } else if (widget.initialProduct != null) {
+      final p = widget.initialProduct!;
+      final reorderQty = (p.lowStockThreshold > 0 && p.stockQty < p.lowStockThreshold)
+          ? (p.lowStockThreshold * 2 - p.stockQty).clamp(1.0, 9999.0)
+          : 1.0;
+      _items = [
+        SupplierOrderItem(
+          id: const Uuid().v4(),
+          orderId: '',
+          productId: p.id,
+          productName: p.name,
+          description: p.name,
+          quantity: reorderQty,
+          unitPrice: p.purchasePrice > 0 ? p.purchasePrice : (p.sellingPrice > 0 ? p.sellingPrice : 0.0),
+          tvaRate: p.tvaRate,
+        ),
+      ];
+    } else if (widget.initialAiData != null) {
+      final ai = widget.initialAiData!;
+      if (ai.documentDate != null && ai.documentDate!.isNotEmpty) {
+        try {
+          _date = DateTime.parse(ai.documentDate!);
+        } catch (_) {}
+      }
+      if (ai.rawText.isNotEmpty) {
+        _notesCtrl.text = 'Extraction IA (Réf: ${ai.documentNumber ?? "N/A"}):\n${ai.rawText}';
+      }
+      if (ai.items.isNotEmpty) {
+        _items = ai.items.map((it) {
+          return SupplierOrderItem(
+            id: const Uuid().v4(),
+            orderId: '',
+            productId: it.productCode ?? const Uuid().v4(),
+            productName: it.productName,
+            description: it.productName,
+            quantity: it.quantity > 0 ? it.quantity : 1.0,
+            unitPrice: it.unitPrice,
+            tvaRate: it.tvaRate,
+            discountPercent: it.discountPercent,
+          );
+        }).toList();
+      }
     }
   }
 
@@ -247,22 +299,20 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     final isOnline = ConnectivityService.instance.isOnline;
 
     String number = widget.existing?.number ?? '';
+    bool isDraft = false;
     if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'supplier_orders',
-          docTypeName: 'Commande Fournisseur',
-          prefix: DocPrefix.supplierOrder,
-        );
-        if (seq == null) {
-          setState(() => _isSaving = false);
-          return;
-        }
-        number = generateDocNumber(DocPrefix.supplierOrder, seq, docCollection: 'supplier_orders');
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
+      final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+        context: context,
+        docCollection: 'supplier_orders',
+        docTypeName: 'Commande Fournisseur',
+        defaultPrefix: DocPrefix.supplierOrder,
+      );
+      if (docNumResult.cancelled) {
+        setState(() => _isSaving = false);
+        return;
       }
+      number = docNumResult.number;
+      isDraft = docNumResult.isDraft;
     }
 
     final suppState = context.read<SuppliersBloc>().state;
@@ -296,7 +346,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       projectId: _selectedProjectId,
       projectName: projName,
       date: _date,
-      status: _status.name,
+      status: isDraft ? SupplierOrderStatus.draft.name : _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
       globalDiscountAmount: _globalDiscountAmount,
@@ -325,16 +375,16 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         showDescription: item.showDescription,
         showDiscount: item.showDiscount,
       )).toList(),
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+      isSynced: !isDraft && (widget.existing?.isSynced ?? true),
     );
 
-    if (!isOnline && !_isEditing) {
+    if (isDraft) {
       await OfflineDocumentService.instance.savePendingDocument('supplier_orders', order.toMap());
       bloc.add(LoadFirstSupplierOrders());
       nav.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Commande Fournisseur ${order.number} enregistrée hors-ligne (en attente de sync)'),
+          content: Text('Commande Fournisseur ${order.number} enregistrée en Brouillon (en attente de sync)'),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 3),
         ),
@@ -541,6 +591,21 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                           child: BlocBuilder<SuppliersBloc, SuppliersState>(
                             builder: (context, state) {
                               final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                              if (_selectedSupplierId == null && widget.initialAiData?.supplierName != null && suppliers.isNotEmpty) {
+                                final target = widget.initialAiData!.supplierName!.toLowerCase().trim();
+                                for (final s in suppliers) {
+                                  final sName = s.name.toLowerCase();
+                                  final cName = s.companyName?.toLowerCase() ?? '';
+                                  if (sName.contains(target) || cName.contains(target) || target.contains(sName)) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted && _selectedSupplierId == null) {
+                                        setState(() => _selectedSupplierId = s.id);
+                                      }
+                                    });
+                                    break;
+                                  }
+                                }
+                              }
                               final selectedSupplier = suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null);
                               final displayName = selectedSupplier != null
                                   ? (selectedSupplier.companyName?.isNotEmpty == true
@@ -861,7 +926,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                       hasError: isArticleMissing,
                       errorText: isArticleMissing ? context.tr('Veuillez sélectionner un article') : null,
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: null, isPurchase: true);
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -1055,7 +1120,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: 'Achat', isPurchase: true);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId, destinationFilter: null, isPurchase: true);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {

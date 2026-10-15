@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../../../services/error_handler.dart';
 
 class LicenseExtensionScreen extends StatefulWidget {
   const LicenseExtensionScreen({super.key});
@@ -216,9 +217,7 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
     } catch (e) {
       setState(() => _isProcessing = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${e.toString()}'), backgroundColor: const Color(0xFFDC2626)),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }
@@ -355,9 +354,7 @@ class _LicenseExtensionScreenState extends State<LicenseExtensionScreen> {
     } catch (e) {
       setState(() => _isProcessing = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e'), backgroundColor: const Color(0xFFDC2626)),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

@@ -33,6 +33,8 @@ import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
@@ -534,17 +536,27 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     );
   }
 
-  void _convertToInvoice(BuildContext context, SupplierOrder order) {
+  Future<void> _convertToInvoice(BuildContext context, SupplierOrder order) async {
     final invoiceId = const Uuid().v4();
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'purchase_invoices',
+      docTypeName: 'Facture d\'Achat',
+      defaultPrefix: DocPrefix.purchaseInvoice,
+    );
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final newInvoice = PurchaseInvoice(
       id: invoiceId,
-      number: 'FA-${order.number.replaceAll("CMD-", "")}',
+      number: invoiceNumber,
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: order.subTotalHT,
       totalTva: order.totalTVA,
       totalTTC: order.subTotalTTC,
@@ -558,12 +570,17 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         tvaRate: i.tvaRate,
         totalHT: i.totalHT,
       )).toList(),
+      isSynced: !isDraft,
     );
 
-    try {
-      context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
-    } catch (e) {
-      DatabaseHelper.instance.insertPurchaseInvoice(newInvoice);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', newInvoice.toMap());
+    } else {
+      try {
+        context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+      } catch (e) {
+        DatabaseHelper.instance.insertPurchaseInvoice(newInvoice);
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -573,22 +590,36 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     );
     context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Commande transformée en facture d'achat"), backgroundColor: AppColors.success),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isDraft ? "Facture d'achat enregistrée en Brouillon (en attente de sync)" : "Commande transformée en facture d'achat avec succès"),
+          backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+        ),
+      );
+    }
   }
 
   Future<void> _convertToReceipt(BuildContext context, SupplierOrder order) async {
     final receiptId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'receiving_vouchers',
+      docTypeName: 'Bon de Réception',
+      defaultPrefix: DocPrefix.receivingVoucher,
+    );
+    if (docNumResult.cancelled) return;
+    final receiptNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers'),
+      number: receiptNumber,
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
       date: DateTime.now(),
-      status: 'validated',
+      status: isDraft ? 'draft' : 'validated',
       pricingMode: order.pricingMode,
       globalDiscountPercent: order.globalDiscountPercent,
       globalDiscountAmount: order.globalDiscountAmount,
@@ -605,12 +636,17 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         tvaRate: i.tvaRate,
         discountPercent: i.discountPercent,
       )).toList(),
+      isSynced: !isDraft,
     );
 
-    try {
-      context.read<ReceivingVouchersBloc>().add(AddReceivingVoucher(newReceipt));
-    } catch (e) {
-      DatabaseHelper.instance.insertReceivingVoucher(newReceipt.toMap(), newReceipt.items.map((i) => i.toMap()).toList());
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('receiving_vouchers', newReceipt.toMap());
+    } else {
+      try {
+        context.read<ReceivingVouchersBloc>().add(AddReceivingVoucher(newReceipt));
+      } catch (e) {
+        DatabaseHelper.instance.insertReceivingVoucher(newReceipt.toMap(), newReceipt.items.map((i) => i.toMap()).toList());
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -620,9 +656,14 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     );
     context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Commande transformée en bon de réception"), backgroundColor: AppColors.success),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isDraft ? "Bon de réception enregistré en Brouillon (en attente de sync)" : "Commande transformée en bon de réception avec succès"),
+          backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+        ),
+      );
+    }
   }
 
   void _openConvertedInvoice(BuildContext context, String? invoiceId, SupplierOrder originalOrder) async {
@@ -686,7 +727,15 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
               Navigator.pop(context);
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final String cnNumber = 'AVF-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+                context: context,
+                docCollection: 'supplier_credit_notes',
+                docTypeName: 'Avoir Fournisseur',
+                defaultPrefix: DocPrefix.supplierCreditNote,
+              );
+              if (docNumResult.cancelled) return;
+              final cnNumber = docNumResult.number;
+              final isDraft = docNumResult.isDraft;
               
               final creditNote = SupplierCreditNote(
                 id: cnId,
@@ -707,15 +756,24 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 updatedAt: now,
               );
 
-              try {
-                context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
-              } catch (e) {
-                await DatabaseHelper.instance.insertSupplierCreditNote(creditNote);
+              if (isDraft) {
+                await OfflineDocumentService.instance.savePendingDocument('supplier_credit_notes', creditNote.toMap());
+              } else {
+                try {
+                  context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+                } catch (e) {
+                  await DatabaseHelper.instance.insertSupplierCreditNote(creditNote);
+                }
               }
               
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Avoir $cnNumber créé avec succès'), backgroundColor: AppColors.success),
+                SnackBar(
+                  content: Text(isDraft
+                      ? 'Avoir $cnNumber enregistré en Brouillon (en attente de sync)'
+                      : 'Avoir $cnNumber créé avec succès'),
+                  backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+                ),
               );
             },
             child: Text('Confirmer'),

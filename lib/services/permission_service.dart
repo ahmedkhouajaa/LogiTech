@@ -292,13 +292,16 @@ class PermissionService {
       debugPrint('[PermissionService.loadPermissions] User $uid has NO active membership or roles in enterprise $eid -> ZERO permissions granted.');
       permissionsNotifier.value = !permissionsNotifier.value;
     } catch (e) {
-      debugPrint('[PermissionService.loadPermissions] EXCEPTION loading permissions: $e -> Access LOCKED (fail-secure)');
-      _isLoaded = true;
-      _isAdmin = false;
-      _isOwner = false;
-      _role = 'collaborator';
-      _permissions = {};
-      permissionsNotifier.value = !permissionsNotifier.value;
+      debugPrint('[PermissionService.loadPermissions] EXCEPTION loading permissions: $e');
+      // If we already had valid loaded permissions, retain them to avoid locking out the user during transient network/wake blips
+      if (!_isLoaded) {
+        _isLoaded = true;
+        _isAdmin = false;
+        _isOwner = false;
+        _role = 'collaborator';
+        _permissions = {};
+        permissionsNotifier.value = !permissionsNotifier.value;
+      }
     }
   }
 
@@ -307,6 +310,50 @@ class PermissionService {
   static String normalizeResourceKey(String rawKey) {
     final k = rawKey.toLowerCase().trim().replaceAll('-', '_').replaceAll(' ', '_');
     switch (k) {
+      case 'crm_pipeline':
+      case 'crmpipeline':
+      case 'pipeline':
+        return UserPermissionResources.crmPipeline;
+      case 'crm_leads':
+      case 'crmleads':
+      case 'leads':
+      case 'lead':
+      case 'prospects':
+      case 'prospect':
+        return UserPermissionResources.crmLeads;
+      case 'hr_employees':
+      case 'hremployees':
+      case 'employees':
+      case 'employes':
+      case 'personnel':
+        return UserPermissionResources.hrEmployees;
+      case 'hr_leaves':
+      case 'hrleaves':
+      case 'leaves':
+      case 'conges':
+      case 'absences':
+      case 'conges_absences':
+        return UserPermissionResources.hrLeaves;
+      case 'hr_attendances':
+      case 'hrattendances':
+      case 'attendances':
+      case 'presences':
+      case 'pointages':
+      case 'presences_pointages':
+        return UserPermissionResources.hrAttendances;
+      case 'hr_payroll':
+      case 'hrpayroll':
+      case 'payroll':
+      case 'paie':
+      case 'fiches_de_paie':
+      case 'fiches_paie':
+        return UserPermissionResources.hrPayroll;
+      case 'hr_cnss_declaration':
+      case 'hrcnssdeclaration':
+      case 'cnss':
+      case 'declaration_cnss':
+      case 'cnss_declaration':
+        return UserPermissionResources.hrCnssDeclaration;
       case 'devis':
       case 'quotes':
       case 'quote':
@@ -530,6 +577,11 @@ class PermissionService {
       case 'tracabilite':
       case 'audit_log':
         return UserPermissionResources.userTracking;
+      case 'affiliate':
+      case 'affiliation':
+      case 'parrainage':
+      case 'affiliation_parrainage':
+        return UserPermissionResources.affiliate;
       default:
         return rawKey;
     }
@@ -658,6 +710,42 @@ class PermissionService {
     switch (module) {
       case AppModule.dashboard:
         return UserPermissionResources.dashboard;
+      case AppModule.crmDashboard:
+        return UserPermissionResources.crmDashboard;
+      case AppModule.crmPipeline:
+        return UserPermissionResources.crmPipeline;
+      case AppModule.crmOpportunities:
+        return UserPermissionResources.crmOpportunities;
+      case AppModule.crmLeads:
+        return UserPermissionResources.crmLeads;
+      case AppModule.crmAutomations:
+        return UserPermissionResources.crmAutomations;
+      case AppModule.crmReports:
+        return UserPermissionResources.crmReports;
+      case AppModule.crmEmails:
+        return UserPermissionResources.crmEmails;
+      case AppModule.hrDashboard:
+        return UserPermissionResources.hrDashboard;
+      case AppModule.hrEmployees:
+        return UserPermissionResources.hrEmployees;
+      case AppModule.hrLeaves:
+        return UserPermissionResources.hrLeaves;
+      case AppModule.hrAttendances:
+        return UserPermissionResources.hrAttendances;
+      case AppModule.hrPayroll:
+        return UserPermissionResources.hrPayroll;
+      case AppModule.hrCnssDeclaration:
+        return UserPermissionResources.hrCnssDeclaration;
+      case AppModule.hrDocuments:
+        return UserPermissionResources.hrDocuments;
+      case AppModule.hrAccounting:
+        return UserPermissionResources.hrAccounting;
+      case AppModule.hrLegalEntity:
+        return UserPermissionResources.hrLegalEntity;
+      case AppModule.hrEstablishments:
+        return UserPermissionResources.hrEstablishments;
+      case AppModule.hrManagers:
+        return UserPermissionResources.hrManagers;
       case AppModule.quotes:
         return UserPermissionResources.salesQuotes;
       case AppModule.customerOrders:
@@ -740,9 +828,27 @@ class PermissionService {
         return UserPermissionResources.trash;
       case AppModule.userTracking:
         return UserPermissionResources.userTracking;
+      case AppModule.productionDashboard:
+        return UserPermissionResources.productionDashboard;
+      case AppModule.productionOrders:
+        return UserPermissionResources.productionOrders;
+      case AppModule.productionBoms:
+        return UserPermissionResources.productionBoms;
+      case AppModule.productionPlanning:
+        return UserPermissionResources.productionPlanning;
+      case AppModule.productionCosts:
+        return UserPermissionResources.productionCosts;
+      case AppModule.productionQuality:
+        return UserPermissionResources.productionQuality;
+      case AppModule.productionReports:
+        return UserPermissionResources.productionReports;
+      case AppModule.productionWorkcenters:
+        return UserPermissionResources.productionWorkcenters;
       case AppModule.settings:
       case AppModule.reports:
       case AppModule.support:
+      case AppModule.eInvoice:
+      case AppModule.affiliate:
         return null;
     }
   }
@@ -770,10 +876,10 @@ class PermissionService {
              canRead(UserPermissionResources.settingsCustomStatuses) ||
              canRead(UserPermissionResources.importExport);
     }
-    if (module == AppModule.reports) {
-      return canRead(UserPermissionResources.dashboard);
+    if (module == AppModule.reports || module == AppModule.eInvoice) {
+      return canRead(UserPermissionResources.dashboard) || canRead(UserPermissionResources.salesInvoices);
     }
-    if (module == AppModule.support) {
+    if (module == AppModule.support || module == AppModule.affiliate) {
       return true;
     }
 

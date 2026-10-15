@@ -293,8 +293,24 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       emit(const QuotesError('Permission refusée : Vous n\'avez pas le droit de modifier le statut.'));
       return;
     }
+    final currentState = state;
+    final targetStatus = event.customStatus ?? event.newStatus.name;
+
+    // Optimistic state update in bloc so UI immediately reflects status change without flickering or loading screen
+    if (currentState is QuotesLoaded) {
+      final updatedQuotes = currentState.quotes.map((q) {
+        if (q.id == event.id) {
+          return q.copyWith(
+            status: event.newStatus,
+            customStatus: event.customStatus,
+          );
+        }
+        return q;
+      }).toList();
+      emit(currentState.copyWith(quotes: updatedQuotes));
+    }
+
     try {
-      final targetStatus = event.customStatus ?? event.newStatus.name;
       await FirestoreRepository.instance.updateDocument('quotes', event.id, {
         'status': targetStatus,
         'custom_status': event.customStatus,
@@ -309,8 +325,10 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
         changedAt: DateTime.now(),
       );
       await FirestoreRepository.instance.saveDocument('quote_status_history', history.id, history.toMap());
-      add(const LoadFirstDevis());
     } catch (e) {
+      if (currentState is QuotesLoaded) {
+        emit(currentState);
+      }
       emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }

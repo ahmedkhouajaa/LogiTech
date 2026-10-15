@@ -13,6 +13,8 @@ import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsState> {
@@ -36,6 +38,9 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
   Future<void> _onLoadFirstInventorySheets(LoadFirstInventorySheets event, Emitter<InventorySheetsState> emit) async {
     emit(InventorySheetsLoading());
     try {
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('inventory_sheets');
+      final pendingSheets = pendingMaps.map((m) => InventorySheet.fromMap(m)).toList();
+
       FirestorePaginationService.instance.resetInventorySheetsPagination();
       final sheetsFuture = FirestorePaginationService.instance.getFirstInventorySheets(
         pageSize: pageSize,
@@ -57,9 +62,19 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
       final sheets = results[0] as List<InventorySheet>;
       final totalCount = results[1] as int;
 
+      final combined = <InventorySheet>[...pendingSheets];
+      final pendingIds = pendingSheets.map((s) => s.id).toSet();
+      for (var s in sheets) {
+        if (!pendingIds.contains(s.id)) {
+          combined.add(s);
+        }
+      }
+
+      final finalTotal = totalCount + pendingSheets.length;
+
       emit(InventorySheetsLoaded(
-        sheets,
-        totalCount: totalCount > sheets.length ? totalCount : sheets.length,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
         hasMore: sheets.length >= pageSize,
       ));
     } catch (e) {
@@ -119,7 +134,9 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
       String number = event.sheet.number;
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextInventorySheetSequence();
-        number = generateDocNumber(DocPrefix.inventorySheet, seq);
+        number = seq != null
+            ? generateDocNumber(DocPrefix.inventorySheet, seq)
+            : DocumentNumberingService.generateDraftDocumentNumber();
       }
       final sheetToSave = event.sheet.copyWith(number: number);
       await FirestoreRepository.instance.saveInventorySheet(sheetToSave);

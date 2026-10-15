@@ -233,22 +233,20 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
       final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'customer_orders',
-            docTypeName: 'Commande Client',
-            prefix: 'CC',
-          );
-          if (seq == null) {
-            setState(() => _isLoading = false);
-            return;
-          }
-          number = generateDocNumber('CC', seq, docCollection: 'customer_orders');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'customer_orders',
+          docTypeName: 'Commande Client',
+          defaultPrefix: 'CC',
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
         }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -272,7 +270,7 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
         projectId: _selectedProjectId,
         warehouseId: _selectedWarehouseId,
         date: _date,
-        status: _status.name,
+        status: isDraft ? 'draft' : _status.name,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
         globalDiscountAmount: _globalDiscountAmount,
@@ -300,16 +298,16 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
           showDescription: item.showDescription,
           showDiscount: item.showDiscount,
         )).toList(),
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft) {
         await OfflineDocumentService.instance.savePendingDocument('customer_orders', order.toMap());
         bloc.add(const LoadFirstCustomerOrders());
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Commande ${order.number} enregistrée hors-ligne (en attente de sync)'),
+            content: Text('Commande ${order.number} enregistrée en Brouillon (en attente de sync)'),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 3),
           ));

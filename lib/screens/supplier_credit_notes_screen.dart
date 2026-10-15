@@ -55,6 +55,7 @@ class SupplierCreditNotesScreen extends StatefulWidget {
 }
 
 class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
+  bool _isFirstLoad = true;
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -581,9 +582,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<SupplierCreditNotesBloc, SupplierCreditNotesState>(
+    return BlocConsumer<SupplierCreditNotesBloc, SupplierCreditNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierCreditNotesLoaded || state is SupplierCreditNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is SupplierCreditNotesLoading || state is SupplierCreditNotesInitial) {
+        if (_isFirstLoad || state is SupplierCreditNotesLoading || state is SupplierCreditNotesInitial) {
           return _buildTableShimmer();
         }
         if (state is SupplierCreditNotesError) {

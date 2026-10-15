@@ -142,85 +142,38 @@ class _DraggableAiFloatingButtonState extends State<DraggableAiFloatingButton>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFFFCD535), // Binance Yellow
-                            Colors.amber.shade700,
+                            const Color(0xFF1A56DB),
+                            const Color(0xFF2563EB),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: _isIdle
-                            ? []
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(40),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
                             : [
                                 BoxShadow(
-                                  color: const Color(0xFFFCD535).withAlpha(
-                                    (100 + (pulseValue * 60)).toInt(),
+                                  color: const Color(0xFF1A56DB).withAlpha(
+                                    (70 + (pulseValue * 40)).toInt(),
                                   ),
-                                  blurRadius: 8 + (pulseValue * 4),
+                                  blurRadius: 10 + (pulseValue * 4),
                                   spreadRadius: 1 + (pulseValue * 2),
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                       ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Yellow Rhombus / Mascot diamond look (Binance Icon Style)
-                          Transform.rotate(
-                            angle: 0.785398, // 45 degrees in radians
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withAlpha(25),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ),
-                          // Smile Mascot Face
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 3,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black87,
-                                      borderRadius: BorderRadius.circular(1.5),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    width: 3,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black87,
-                                      borderRadius: BorderRadius.circular(1.5),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Container(
-                                width: 11,
-                                height: 5,
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: Colors.black87,
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                  borderRadius: BorderRadius.vertical(
-                                    bottom: Radius.circular(5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      child: const Center(
+                        child: Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     );
                   },

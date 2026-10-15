@@ -7,6 +7,7 @@ import '../widgets/support_chat_image_viewer.dart';
 import '../utils/constants.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/anti_spam_guard.dart';
+import '../services/error_handler.dart';
 
 class SupportTicketsScreen extends StatefulWidget {
   const SupportTicketsScreen({super.key});
@@ -92,13 +93,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e is AntiSpamException ? e.message : 'Erreur d\'envoi: $e'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e is AntiSpamException ? e.message : e);
       }
     } finally {
       if (mounted) {
@@ -225,12 +220,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 });
               } catch (e) {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(
-                      content: Text(e is AntiSpamException ? e.message : 'Erreur: $e'),
-                      backgroundColor: Colors.red.shade700,
-                    ),
-                  );
+                  ErrorHandler.showErrorSnackBar(ctx, e is AntiSpamException ? e.message : e);
                 }
               }
             },
@@ -261,11 +251,14 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 : _buildTicketsList(isMobile);
           }
 
+          final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.4);
+          final listWidth = (340.0 * textScale).clamp(320.0, 420.0);
+
           return Row(
             children: [
-              // Left Column: Tickets List (Width ~340px)
+              // Left Column: Tickets List (Responsive Width)
               SizedBox(
-                width: 340,
+                width: listWidth,
                 child: _buildTicketsList(isMobile),
               ),
               VerticalDivider(width: 1, color: AppColors.border),
@@ -290,7 +283,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
         children: [
           // Header Action Bar
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border)),
             ),
@@ -301,28 +294,37 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         context.tr('Support client'),
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         context.tr('Vos tickets d\'assistance'),
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _showNewTicketDialog,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(isMobile ? context.tr('Nouveau') : context.tr('Nouveau ticket')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    elevation: 0,
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: context.tr('Nouveau ticket de support'),
+                  child: ElevatedButton.icon(
+                    onPressed: _showNewTicketDialog,
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: Text(context.tr('Nouveau')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      elevation: 0,
+                    ),
                   ),
                 ),
               ],

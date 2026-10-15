@@ -14,6 +14,7 @@ import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 import '../../../services/trial_service.dart';
+import '../../../services/connectivity_service.dart';
 
 class MobileStockAdjustmentForm extends StatefulWidget {
   const MobileStockAdjustmentForm({super.key});
@@ -127,6 +128,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
         return;
       }
 
+      final isOnline = ConnectivityService.instance.isOnline;
       final warehouse = stockState.warehouses.firstWhere((w) => w.id == _selectedWarehouseId);
 
       final movement = StockMovement(
@@ -147,7 +149,13 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('Ajustement de stock enregistré avec succès')), backgroundColor: AppColors.success),
+        SnackBar(
+          content: Text(isOnline 
+              ? context.tr('Ajustement de stock enregistré avec succès')
+              : context.tr('Ajustement enregistré en attente de synchronisation')),
+          backgroundColor: isOnline ? AppColors.success : AppColors.warning,
+          duration: const Duration(seconds: 3),
+        ),
       );
     } catch (e) {
       ErrorHandler.showErrorSnackBar(context, e);

@@ -23,6 +23,8 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
@@ -463,8 +465,15 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
-              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq, docCollection: 'credit_notes');
+              final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+                context: context,
+                docCollection: 'credit_notes',
+                docTypeName: 'Avoir Client',
+                defaultPrefix: 'AV',
+              );
+              if (docNumResult.cancelled) return;
+              final String cnNumber = docNumResult.number;
+              final bool isDraft = docNumResult.isDraft;
               
               final creditNoteItems = inv.items.map((i) => CreditNoteItem(
                 id: const Uuid().v4(),
@@ -482,7 +491,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 customerId: inv.customerId,
                 customerName: inv.customerName,
                 date: now,
-                status: CreditNoteStatus.unused,
+                status: isDraft ? CreditNoteStatus.draft : CreditNoteStatus.unused,
+                customStatus: isDraft ? 'brouillon' : null,
                 totalHT: inv.totalHT,
                 totalTva: inv.totalTva,
                 totalTTC: inv.totalTTC,
@@ -491,7 +501,11 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 updatedAt: now,
               );
 
-              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              if (isDraft) {
+                await OfflineDocumentService.instance.savePendingDocument('credit_notes', creditNote.toMap());
+              } else {
+                context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              }
               
               final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
               context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
@@ -506,8 +520,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Avoir $cnNumber créé et stock réajusté avec succès'),
-                  backgroundColor: AppColors.success,
+                  content: Text(isDraft ? 'Avoir $cnNumber enregistré en Brouillon (en attente de sync)' : 'Avoir $cnNumber créé et stock réajusté avec succès'),
+                  backgroundColor: isDraft ? AppColors.warning : AppColors.success,
                 ),
               );
             },

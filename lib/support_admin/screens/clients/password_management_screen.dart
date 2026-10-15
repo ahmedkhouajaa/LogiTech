@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../../../services/error_handler.dart';
 
 class PasswordManagementScreen extends StatefulWidget {
   const PasswordManagementScreen({super.key});
@@ -42,12 +43,7 @@ class _PasswordManagementScreenState extends State<PasswordManagementScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'envoi : ${e.toString()}'),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

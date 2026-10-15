@@ -7,7 +7,6 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -32,27 +31,51 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 250,
-                height: 32,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 550;
+              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+              final inputHeight = (34.0 * textScale).clamp(32.0, 44.0);
+
+              final searchBar = SizedBox(
+                width: isNarrow ? double.infinity : 250,
+                height: inputHeight,
                 child: AppSearchBar(onChanged: (v) {}),
-              ),
-              const Spacer(),
-              if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Nouvelle transaction', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-            ],
+              );
+
+              final newBtn = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions)
+                  ? ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Nouvelle transaction', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchBar,
+                    const SizedBox(height: 10),
+                    Align(alignment: Alignment.centerLeft, child: newBtn),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  searchBar,
+                  const Spacer(),
+                  newBtn,
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),

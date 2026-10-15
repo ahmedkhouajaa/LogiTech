@@ -19,6 +19,7 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
   String _searchQuery = '';
   String _selectedFilter = 'Tous';
   int _selectedTab = 0; // 0: Clients, 1: Fournisseurs
+  bool _isFirstLoad = true;
 
   final List<String> _statusFilters = ['Tous', 'En attente', 'Déposé', 'Encaissé', 'Rejeté'];
 
@@ -42,16 +43,23 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ChecksTraitesBloc, ChecksTraitesState>(
+    return BlocConsumer<ChecksTraitesBloc, ChecksTraitesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ChecksTraitesLoaded || state is ChecksTraitesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is ChecksTraitesLoading || state is ChecksTraitesInitial;
+        bool isLoading = _isFirstLoad || state is ChecksTraitesLoading || state is ChecksTraitesInitial;
         bool isEmpty = true;
         List<Widget> cards = [];
 
         int clientCount = 0;
         int fournisseurCount = 0;
 
-        if (state is ChecksTraitesLoaded) {
+        if (!_isFirstLoad && state is ChecksTraitesLoaded) {
           clientCount = state.documents.where((d) => d.isClient).length;
           fournisseurCount = state.documents.where((d) => d.isFournisseur).length;
 

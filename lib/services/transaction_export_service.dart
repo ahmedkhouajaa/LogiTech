@@ -8,6 +8,7 @@ import 'package:excel/excel.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/file_download_helper.dart';
+import '../services/error_handler.dart';
 
 class TransactionExportService {
   static Future<void> exportToPdf(BuildContext context, List<TreasuryTransaction> transactions) async {
@@ -85,12 +86,7 @@ class TransactionExportService {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'export PDF: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }
@@ -135,12 +131,7 @@ class TransactionExportService {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'export Excel: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

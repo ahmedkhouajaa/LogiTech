@@ -24,6 +24,8 @@ import '../models/supplier.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/scanner_button.dart';
+import '../services/ai_document_scanner_service.dart';
 import 'create_supplier_order_screen.dart';
 import 'package:uuid/uuid.dart';
 import '../models/purchase_invoice.dart';
@@ -33,6 +35,7 @@ import 'create_purchase_invoice_screen.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'create_receiving_voucher_screen.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -55,6 +58,7 @@ class SupplierOrdersScreen extends StatefulWidget {
 
 class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   final Set<String> _selectedSupplierOrderIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedSupplierId;
@@ -113,6 +117,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     });
   }
 
+  void _navigateToCreateWithAi(AiScanResult result) {
+    if (result.extractedData == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+            BlocProvider.value(value: context.read<SuppliersBloc>()),
+            BlocProvider.value(value: context.read<ProductsBloc>()),
+            BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
+          ],
+          child: CreateSupplierOrderScreen(initialAiData: result.extractedData),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -141,6 +164,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                     _buildBulkActionsDropdown(),
                     const SizedBox(width: 10),
                   ],
+                  ScannerButton(
+                    documentTitle: context.tr('Commande Fournisseur'),
+                    documentType: 'supplier_order',
+                    onScanDataExtracted: _navigateToCreateWithAi,
+                  ),
+                  const SizedBox(width: 10),
                   if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders))
                     AppButton(
                       label: context.tr('Créer une Commande Fournisseur'),
@@ -638,14 +667,21 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
+    return BlocConsumer<SupplierOrdersBloc, SupplierOrdersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierOrdersLoaded || state is SupplierOrdersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is SupplierOrdersLoading || state is SupplierOrdersInitial) {
+        if (_isFirstLoad || state is SupplierOrdersLoading || state is SupplierOrdersInitial) {
           return _buildTableShimmer();
         }
         if (state is SupplierOrdersError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(message: state.message);
+        }
         if (state is SupplierOrdersLoaded) {
           List<SupplierOrder> filteredOrders = state.orders;
           if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
@@ -1183,22 +1219,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
   Future<void> _convertToInvoice(BuildContext context, SupplierOrder order) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'purchase_invoices',
       docTypeName: 'Facture d\'Achat',
-      prefix: DocPrefix.purchaseInvoice,
+      defaultPrefix: DocPrefix.purchaseInvoice,
     );
-    if (seq == null) return;
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final newInvoice = PurchaseInvoice(
       id: invoiceId,
-      number: generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices'),
+      number: invoiceNumber,
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: order.subTotalHT,
       totalTva: order.totalTVA,
       totalTTC: order.subTotalTTC,
@@ -1212,9 +1251,14 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         tvaRate: i.tvaRate,
         totalHT: i.totalHT,
       )).toList(),
+      isSynced: !isDraft,
     );
 
-    context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', newInvoice.toMap());
+    } else {
+      context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+    }
 
     final updatedOrder = order.copyWith(
       isConvertedToInvoice: true,
@@ -1224,27 +1268,35 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Commande transformée en facture d'achat avec succès")),
+      SnackBar(
+        content: Text(isDraft
+            ? "Facture d'achat $invoiceNumber enregistrée en Brouillon (en attente de sync)"
+            : "Commande transformée en facture d'achat avec succès"),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ),
     );
   }
 
   Future<void> _convertToReceipt(BuildContext context, SupplierOrder order) async {
     final receiptId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'receiving_vouchers',
       docTypeName: 'Bon de Réception',
-      prefix: DocPrefix.receivingVoucher,
+      defaultPrefix: DocPrefix.receivingVoucher,
     );
-    if (seq == null) return;
+    if (docNumResult.cancelled) return;
+    final receiptNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers'),
+      number: receiptNumber,
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,
       date: DateTime.now(),
-      status: 'validated',
+      status: isDraft ? 'draft' : 'validated',
       pricingMode: order.pricingMode,
       globalDiscountPercent: order.globalDiscountPercent,
       globalDiscountAmount: order.globalDiscountAmount,
@@ -1261,9 +1313,14 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         tvaRate: i.tvaRate,
         discountPercent: i.discountPercent,
       )).toList(),
+      isSynced: !isDraft,
     );
 
-    context.read<ReceivingVouchersBloc>().add(AddReceivingVoucher(newReceipt));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('receiving_vouchers', newReceipt.toMap());
+    } else {
+      context.read<ReceivingVouchersBloc>().add(AddReceivingVoucher(newReceipt));
+    }
 
     final updatedOrder = order.copyWith(
       isConvertedToReceipt: true,
@@ -1273,7 +1330,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Commande transformée en bon de réception avec succès")),
+      SnackBar(
+        content: Text(isDraft
+            ? "Bon de réception $receiptNumber enregistré en Brouillon (en attente de sync)"
+            : "Bon de réception $receiptNumber créé avec succès"),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ),
     );
   }
 

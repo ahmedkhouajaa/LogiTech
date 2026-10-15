@@ -8,6 +8,7 @@ import '../screens/stock_screen.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/file_download_helper.dart';
+import '../services/error_handler.dart';
 
 class StockExportService {
   static Future<void> exportToPdf(BuildContext context, List<StockLevelItem> items) async {
@@ -86,12 +87,7 @@ class StockExportService {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'export PDF: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }
@@ -134,12 +130,7 @@ class StockExportService {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de l\'export Excel: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

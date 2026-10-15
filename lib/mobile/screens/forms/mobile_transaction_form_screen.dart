@@ -14,6 +14,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../services/trial_service.dart';
+import '../../../../services/error_handler.dart';
 
 class MobileTransactionFormScreen extends StatefulWidget {
   final TreasuryTransaction? existing;
@@ -124,10 +125,9 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
         ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: $e'),
-        backgroundColor: AppColors.error,
-      ));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

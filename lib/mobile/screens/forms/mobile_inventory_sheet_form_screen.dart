@@ -13,11 +13,14 @@ import '../../../models/inventory_sheet_item.dart';
 import '../../../models/product.dart';
 import '../../../models/stock_movement.dart'; // Contains Warehouse
 import '../../../database/database_helper.dart';
+import '../../../services/document_numbering_service.dart';
+import '../../../services/offline_document_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import '../../../utils/offline_action_helper.dart';
 import '../../../services/enterprise_service.dart';
+import '../../../services/error_handler.dart';
 import '../../../widgets/article_selection_modal.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -107,7 +110,22 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     setState(() => _isLoading = true);
 
     try {
-      final number = widget.existing?.number ?? '';
+      String number = widget.existing?.number ?? '';
+      bool forceDraft = false;
+      if (number.isEmpty) {
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'inventory_sheets',
+          docTypeName: "Fiche d'Inventaire",
+          defaultPrefix: DocPrefix.inventorySheet,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        number = docNumResult.number;
+        forceDraft = docNumResult.isDraft;
+      }
 
       final currentEntId = EnterpriseService.instance.currentEnterpriseId;
       final sheet = InventorySheet(
@@ -119,12 +137,25 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
         countedBy: _countedByCtrl.text.trim(),
         reason: _reasonCtrl.text.trim(),
         notes: _notesCtrl.text.trim(),
-        status: widget.existing?.status ?? 'draft',
+        status: forceDraft ? 'draft' : (widget.existing?.status ?? 'validated'),
         enterpriseId: currentEntId,
         items: _items,
         firebaseUid: widget.existing?.firebaseUid,
         createdAt: widget.existing?.createdAt,
       );
+
+      if (forceDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('inventory_sheets', sheet.toMap());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Fiche d\'inventaire ${sheet.number} enregistrée en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (!mounted) return;
 
@@ -135,11 +166,16 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
       }
 
       Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(widget.existing != null 
+            ? 'Fiche d\'inventaire ${sheet.number} mise à jour avec succès'
+            : 'Fiche d\'inventaire ${sheet.number} créée avec succès'),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 3),
+      ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
       setState(() => _isLoading = false);
     }
   }

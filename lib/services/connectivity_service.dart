@@ -34,7 +34,7 @@ class ConnectivityService {
       });
 
       // Periodically check actual internet reachability (e.g. after sleep wake up)
-      _periodicCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _periodicCheckTimer = Timer.periodic(const Duration(seconds: 60), (_) {
         unawaited(_verifyActualInternet());
       });
     } catch (_) {
@@ -42,6 +42,8 @@ class ConnectivityService {
       _controller.add(_isOnline);
     }
   }
+
+  bool _isChecking = false;
 
   void _updateStatus(bool online) {
     if (online != _isOnline) {
@@ -53,6 +55,8 @@ class ConnectivityService {
 
   Future<bool> _verifyActualInternet() async {
     if (kIsWeb) return _isOnline;
+    if (_isChecking) return _isOnline;
+    _isChecking = true;
     try {
       final lookup = await InternetAddress.lookup('8.8.8.8')
           .timeout(const Duration(milliseconds: 1500));
@@ -62,6 +66,8 @@ class ConnectivityService {
     } catch (_) {
       _updateStatus(false);
       return false;
+    } finally {
+      _isChecking = false;
     }
   }
 

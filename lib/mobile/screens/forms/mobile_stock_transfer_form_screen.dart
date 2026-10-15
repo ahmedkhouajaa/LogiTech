@@ -9,6 +9,8 @@ import '../../../../models/stock_transfer.dart';
 import '../../../../models/product.dart';
 import '../../../../models/stock_movement.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../services/document_numbering_service.dart';
+import '../../../../services/offline_document_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../utils/constants.dart';
@@ -164,9 +166,20 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       final bloc = context.read<StockTransfersBloc>();
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
-        number = generateDocNumber(DocPrefix.stockTransfer, seq);
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'stock_transfers',
+          docTypeName: 'Bon de Transfert',
+          defaultPrefix: DocPrefix.stockTransfer,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final transferId = widget.existing?.id ?? _uuid.v4();
@@ -176,7 +189,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
         date: _date,
         sourceWarehouseId: _sourceWarehouseId!,
         destinationWarehouseId: _destWarehouseId!,
-        status: 'validated', // Default status for transfer
+        status: isDraft ? 'draft' : 'validated',
         notes: _notes.isNotEmpty ? _notes : null,
         reason: _reason.isNotEmpty ? _reason : null,
         items: _items.map((item) => StockTransferItem(
@@ -189,6 +202,19 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
         )).toList(),
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
       );
+
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('stock_transfers', transfer.toMap());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Bon de Transfert ${transfer.number} enregistré en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateStockTransfer(transfer));

@@ -12,9 +12,29 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
+import '../widgets/stock_notification_bell.dart';
+import '../services/stock_notification_service.dart';
 import '../utils/constants.dart';
 import 'mobile_drawer.dart';
 import 'mobile_dashboard_screen.dart';
+import 'screens/mobile_crm_dashboard_screen.dart';
+import 'screens/mobile_crm_pipeline_screen.dart';
+import 'screens/mobile_crm_opportunities_screen.dart';
+import 'screens/mobile_crm_leads_screen.dart';
+import 'screens/mobile_crm_automations_screen.dart';
+import 'screens/mobile_crm_reports_screen.dart';
+import 'screens/mobile_crm_emails_screen.dart';
+import 'screens/mobile_hr_employees_screen.dart';
+import 'screens/mobile_hr_leaves_screen.dart';
+import 'screens/mobile_hr_attendance_screen.dart';
+import 'screens/mobile_hr_payroll_screen.dart';
+import 'screens/mobile_hr_cnss_declaration_screen.dart';
+import 'screens/mobile_hr_documents_screen.dart';
+import 'screens/mobile_hr_accounting_screen.dart';
+import 'screens/mobile_hr_legal_entity_screen.dart';
+import 'screens/mobile_hr_establishments_screen.dart';
+import 'screens/mobile_hr_managers_screen.dart';
+import 'screens/mobile_hr_dashboard_screen.dart';
 
 import 'screens/mobile_quotes_screen.dart';
 import 'screens/mobile_customer_orders_screen.dart';
@@ -40,6 +60,15 @@ import 'screens/mobile_stock_movements_screen.dart';
 import 'screens/mobile_projects_screen.dart';
 import 'screens/mobile_withholding_tax_screen.dart';
 import 'screens/mobile_warehouses_screen.dart';
+import 'screens/mobile_inventory_sheets_screen.dart';
+import 'screens/mobile_production_dashboard_screen.dart';
+import 'screens/mobile_production_orders_screen.dart';
+import 'screens/mobile_production_boms_screen.dart';
+import 'screens/mobile_production_planning_screen.dart';
+import 'screens/mobile_production_costs_screen.dart';
+import 'screens/mobile_production_quality_screen.dart';
+import 'screens/mobile_production_reports_screen.dart';
+import 'screens/mobile_production_workcenters_screen.dart';
 
 
 // Placeholder screens for bottom nav tabs until full mobile screens are built
@@ -47,6 +76,7 @@ import 'screens/mobile_warehouses_screen.dart';
 import '../screens/treasury_accounts_screen.dart';
 import 'screens/mobile_reports_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/affiliate_dashboard_screen.dart';
 import '../screens/personal_info_screen.dart';
 import '../screens/company_info_screen.dart';
 import '../screens/document_numbering_screen.dart';
@@ -56,13 +86,12 @@ import '../screens/custom_statuses_screen.dart';
 import '../screens/app_modules_settings_screen.dart';
 import '../screens/product_settings_screen.dart';
 import '../screens/stock_entries_screen.dart';
-import '../screens/stock_withdrawals_screen.dart';
-import '../screens/inventory_sheets_screen.dart';
 import 'screens/mobile_user_management_screen.dart';
 import '../screens/import_export_screen.dart';
 import '../screens/support_tickets_screen.dart';
 import '../screens/trash_screen.dart';
 import '../screens/user_tracking_screen.dart';
+import '../screens/electronic_invoice_screen.dart';
 import '../services/trial_service.dart';
 import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
@@ -81,6 +110,7 @@ class MobileShellScreen extends StatefulWidget {
 }
 
 class _MobileShellScreenState extends State<MobileShellScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _bottomNavIndex = 0;
   AppModule _activeModule = AppModule.dashboard;
 
@@ -100,6 +130,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
     _checkInitialModule();
     TrialService.instance.initTrial();
     UpdateService.instance.checkForUpdate();
+    StockNotificationService.instance.init();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
       if (mounted) {
@@ -167,7 +198,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
   void _onBottomNavTapped(int index) {
     if (index == 4) {
       // "Plus" tab → open drawer
-      Scaffold.of(context).openDrawer();
+      _scaffoldKey.currentState?.openDrawer();
       return;
     }
     final targetMod = _bottomNavModules[index];
@@ -201,6 +232,20 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         switch (_activeModule) {
           case AppModule.dashboard:
             return const MobileDashboardScreen();
+          case AppModule.crmDashboard:
+            return const MobileCrmDashboardScreen();
+          case AppModule.crmPipeline:
+            return const MobileCrmPipelineScreen();
+          case AppModule.crmOpportunities:
+            return const MobileCrmOpportunitiesScreen();
+          case AppModule.crmLeads:
+            return const MobileCrmLeadsScreen();
+          case AppModule.crmAutomations:
+            return const MobileCrmAutomationsScreen();
+          case AppModule.crmReports:
+            return const MobileCrmReportsScreen();
+          case AppModule.crmEmails:
+            return const MobileCrmEmailsScreen();
           case AppModule.customers:
             return const MobileCustomersScreen();
           case AppModule.suppliers:
@@ -229,6 +274,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const MobileProjectsScreen();
       case AppModule.reports:
         return const MobileReportsScreen();
+      case AppModule.eInvoice:
+        return const ElectronicInvoiceScreen();
       case AppModule.settings:
         return const SettingsScreen();
       case AppModule.payments:
@@ -241,17 +288,17 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const MobileReceivingVouchersScreen();
       case AppModule.withholdingTaxSales:
       case AppModule.withholdingTaxPurchase:
-        return MobileWithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
+        return MobileWithholdingTaxScreen(key: ValueKey(_activeModule), isSales: _activeModule == AppModule.withholdingTaxSales);
       case AppModule.warehouses:
         return const MobileWarehousesScreen();
       case AppModule.exitVouchers:
-        return MobileStockWithdrawalsScreen(activeModule: _activeModule);
+        return MobileStockWithdrawalsScreen(activeModule: _activeModule, key: const ValueKey(AppModule.exitVouchers));
       case AppModule.stockWithdrawal:
-        return const StockWithdrawalsScreen();
+        return MobileStockWithdrawalsScreen(activeModule: _activeModule, key: const ValueKey(AppModule.stockWithdrawal));
       case AppModule.stockTransfer:
         return const MobileStockTransfersScreen();
       case AppModule.inventorySheet:
-        return const InventorySheetsScreen();
+        return const MobileInventorySheetsScreen();
       case AppModule.returnVouchers:
         return const MobileReturnNotesScreen();
       case AppModule.creditNotes:
@@ -284,10 +331,50 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const ImportExportScreen();
       case AppModule.support:
         return const SupportTicketsScreen();
+      case AppModule.affiliate:
+        return const AffiliateDashboardScreen();
       case AppModule.trash:
         return const TrashScreen();
+      case AppModule.hrDashboard:
+        return const MobileHrDashboardScreen();
+      case AppModule.hrEmployees:
+        return const MobileHrEmployeesScreen();
+      case AppModule.hrLeaves:
+        return const MobileHrLeavesScreen();
+      case AppModule.hrAttendances:
+        return const MobileHrAttendanceScreen();
+      case AppModule.hrPayroll:
+        return const MobileHrPayrollScreen();
+      case AppModule.hrCnssDeclaration:
+        return const MobileHrCnssDeclarationScreen();
+      case AppModule.hrDocuments:
+        return const MobileHrDocumentsScreen();
+      case AppModule.hrAccounting:
+        return const MobileHrAccountingScreen();
+      case AppModule.hrLegalEntity:
+        return const MobileHrLegalEntityScreen();
+      case AppModule.hrEstablishments:
+        return const MobileHrEstablishmentsScreen();
+      case AppModule.hrManagers:
+        return const MobileHrManagersScreen();
       case AppModule.userTracking:
         return const UserTrackingScreen();
+      case AppModule.productionDashboard:
+        return const MobileProductionDashboardScreen();
+      case AppModule.productionOrders:
+        return const MobileProductionOrdersScreen();
+      case AppModule.productionBoms:
+        return const MobileProductionBomsScreen();
+      case AppModule.productionPlanning:
+        return const MobileProductionPlanningScreen();
+      case AppModule.productionCosts:
+        return const MobileProductionCostsScreen();
+      case AppModule.productionQuality:
+        return const MobileProductionQualityScreen();
+      case AppModule.productionReports:
+        return const MobileProductionReportsScreen();
+      case AppModule.productionWorkcenters:
+        return const MobileProductionWorkcentersScreen();
     }
   },
 );
@@ -296,6 +383,24 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
   String _getModuleTitle() {
     switch (_activeModule) {
       case AppModule.dashboard: return 'Tableau de bord';
+      case AppModule.crmDashboard: return 'Tableau de bord CRM';
+      case AppModule.crmPipeline: return 'Pipeline de vente';
+      case AppModule.crmOpportunities: return 'Opportunités';
+      case AppModule.crmLeads: return 'Prospects (Leads)';
+      case AppModule.crmAutomations: return 'Automatisations';
+      case AppModule.crmReports: return 'Rapports CRM';
+      case AppModule.crmEmails: return 'Intégration email';
+      case AppModule.hrDashboard: return 'Tableau de bord RH';
+      case AppModule.hrEmployees: return 'Personnel (Employés)';
+      case AppModule.hrLeaves: return 'Congés & Absences';
+      case AppModule.hrAttendances: return 'Présences / Pointages';
+      case AppModule.hrPayroll: return 'Fiches de Paie';
+      case AppModule.hrCnssDeclaration: return 'Déclaration CNSS';
+      case AppModule.hrDocuments: return 'Documents';
+      case AppModule.hrAccounting: return 'Comptabilité';
+      case AppModule.hrLegalEntity: return 'Entité juridique';
+      case AppModule.hrEstablishments: return 'Établissements';
+      case AppModule.hrManagers: return 'Gestionnaires';
       case AppModule.customers: return 'Clients';
       case AppModule.suppliers: return 'Fournisseurs';
       case AppModule.products: return 'Articles';
@@ -337,7 +442,17 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.userManagement: return 'Gestion des utilisateurs';
       case AppModule.importExport: return 'Import / Export';
       case AppModule.support: return 'Support client';
+      case AppModule.affiliate: return 'Affiliation & Parrainage';
       case AppModule.userTracking: return 'Traçabilité Utilisateurs';
+      case AppModule.eInvoice: return 'Facture électronique';
+      case AppModule.productionDashboard: return 'Tableau de bord Production';
+      case AppModule.productionOrders: return 'Ordres de fabrication (OF)';
+      case AppModule.productionBoms: return 'Nomenclatures (BOM)';
+      case AppModule.productionPlanning: return 'Planification Production';
+      case AppModule.productionCosts: return 'Suivi des coûts';
+      case AppModule.productionQuality: return 'Contrôle qualité & NC';
+      case AppModule.productionReports: return 'Rapports de rendement';
+      case AppModule.productionWorkcenters: return 'Postes de charge & Ateliers';
       default: return 'LogiTech Pro';
     }
   }
@@ -350,11 +465,12 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return DraggableAiFloatingButton(
           enabled: isAiEnabled,
           child: Scaffold(
-        backgroundColor: AppColors.background,
-      drawer: MobileDrawer(
-        activeModule: _activeModule,
-        onModuleSelected: _onModuleSelected,
-      ),
+            key: _scaffoldKey,
+            backgroundColor: AppColors.background,
+            drawer: MobileDrawer(
+              activeModule: _activeModule,
+              onModuleSelected: _onModuleSelected,
+            ),
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
@@ -375,8 +491,10 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         ),
         centerTitle: false,
         actions: [
+          const StockNotificationBell(),
+          const SizedBox(width: 4),
           SyncIndicator(),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(1),

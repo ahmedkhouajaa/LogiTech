@@ -38,6 +38,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -130,9 +131,16 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CustomerOrdersBloc, CustomerOrdersState>(
+    return BlocConsumer<CustomerOrdersBloc, CustomerOrdersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is CustomerOrdersLoaded || state is CustomerOrdersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is CustomerOrdersLoading || state is CustomerOrdersInitial;
+        bool isLoading = _isFirstLoad || state is CustomerOrdersLoading || state is CustomerOrdersInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -144,7 +152,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           customersList = customersState.customers;
         }
 
-        if (state is CustomerOrdersLoaded) {
+        if (!_isFirstLoad && state is CustomerOrdersLoaded) {
           final items = state.orders;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

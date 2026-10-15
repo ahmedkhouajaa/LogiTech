@@ -15,6 +15,7 @@ class Enterprise {
   final String? rib;
   final String? logoUrl;
   final String? stampUrl;
+  final String? partnerCode;
   final String ownerId;
   final List<EnterpriseMember> members;
   final bool defaultsCreated;
@@ -34,6 +35,7 @@ class Enterprise {
     this.rib,
     this.logoUrl,
     this.stampUrl,
+    this.partnerCode,
     required this.ownerId,
     this.members = const [],
     this.defaultsCreated = false,
@@ -57,6 +59,8 @@ class Enterprise {
         'logoUrl': logoUrl,
         'stamp_url': stampUrl,
         'stampUrl': stampUrl,
+        'partner_code': partnerCode,
+        'partnerCode': partnerCode,
         'owner_id': ownerId,
         'members': members.map((m) => m.toMap()).toList(),
         'defaults_created': defaultsCreated,
@@ -86,6 +90,7 @@ class Enterprise {
       rib: map['rib']?.toString(),
       logoUrl: map['logo_url']?.toString() ?? map['logoUrl']?.toString() ?? map['logoPath']?.toString(),
       stampUrl: map['stamp_url']?.toString() ?? map['stampUrl']?.toString() ?? map['cachet_url']?.toString() ?? map['cachetUrl']?.toString(),
+      partnerCode: map['partner_code']?.toString() ?? map['partnerCode']?.toString(),
       ownerId: map['owner_id']?.toString() ?? map['ownerId']?.toString() ?? map['userId']?.toString() ?? '',
       members: parsedMembers,
       defaultsCreated: map['defaults_created'] == true ||

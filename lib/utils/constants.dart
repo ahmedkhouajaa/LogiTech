@@ -25,6 +25,27 @@ class AppColors {
   static Color get secondary => const Color(0xFF6366F1);
   static Color get accent => const Color(0xFF0EA5E9);
 
+  static const List<String> tunisianBanks = [
+    'Al Baraka Bank',
+    'Amen Bank',
+    'Arab Tunisian Bank (ATB)',
+    'Attijari Bank',
+    'Banque de l\'Habitat (BH)',
+    'Banque Internationale Arabe de Tunisie (BIAT)',
+    'Banque Nationale Agricole (BNA)',
+    'Banque de Tunisie (BT)',
+    'Banque de Tunisie et des Emirats (BTE)',
+    'Banque Zitouna',
+    'Banque Tuniso-Libyenne (BTL)',
+    'Banque Tuniso-Koweitienne (BTK)',
+    'Citi Bank',
+    'Qatar National Bank (QNB)',
+    'Société Tunisienne de Banque (STB)',
+    'Union Bancaire pour le Commerce et l\'Industrie (UBCI)',
+    'Union Internationale de Banques (UIB)',
+    'Wifak Bank',
+  ];
+
   static Color get success => isDarkMode ? const Color(0xFF34D399) : const Color(0xFF10B981);
   static Color get successLight => isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5);
   static Color get warning => isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFF59E0B);
@@ -39,6 +60,7 @@ class AppColors {
   static Color get surfaceAlt => isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
   static Color get border => isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
   static Color get borderLight => isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+  static Color get borderColor => border;
 
   static Color get textPrimary => isDarkMode ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
   static Color get textSecondary => isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569);
@@ -638,6 +660,7 @@ class DocPrefix {
   static const String purchaseInvoice = 'FA';
   static const String exitVoucher = 'BS';
   static const String returnVoucher = 'BR';
+  static const String returnNote = 'BR';
   static const String stockEntry = 'BE';
   static const String stockWithdrawal = 'BP';
   static const String stockTransfer = 'BT';

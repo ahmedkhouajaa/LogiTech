@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../platform_utils.dart';
 import '../constants.dart';
+import '../../services/error_handler.dart';
 
 Future<Directory> _getDownloadsDirectory() async {
   if (PlatformUtils.isAndroid) {
@@ -54,12 +55,7 @@ Future<String?> saveAndOpenFileImpl(
     return filePath;
   } catch (e) {
     if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de l\'enregistrement : $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
     }
     rethrow;
   }
@@ -93,12 +89,7 @@ Future<String?> saveStringFileImpl(
     return filePath;
   } catch (e) {
     if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de l\'enregistrement : $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
     }
     rethrow;
   }

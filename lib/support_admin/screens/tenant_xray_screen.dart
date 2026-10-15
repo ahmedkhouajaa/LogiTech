@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/app_error_widget.dart';
 
 class TenantXRayScreen extends StatelessWidget {
   final String enterpriseId;
@@ -30,7 +31,9 @@ class TenantXRayScreen extends StatelessWidget {
           }
 
           if (snapshot.hasError || !snapshot.hasData) {
-            return Center(child: Text('Erreur lors du chargement : ${snapshot.error}'));
+            return AppErrorWidget(
+              message: snapshot.error ?? "Données introuvables.",
+            );
           }
 
           final enterpriseDoc = snapshot.data![0] as DocumentSnapshot<Map<String, dynamic>>;

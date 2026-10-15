@@ -207,27 +207,45 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displaySubtitle = (subtitle != null && subtitle!.trim().isNotEmpty)
+        ? context.tr(subtitle!)
+        : context.tr("Aucun élément correspondant. Ajustez vos filtres ou créez une nouvelle entrée pour commencer.");
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-            ),
-            child: Icon(icon, size: 36, color: AppColors.primary),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                ),
+                child: Icon(icon, size: 36, color: AppColors.primary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.tr(title),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                displaySubtitle,
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              if (action != null) ...[const SizedBox(height: 20), action!],
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(context.tr(title), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 8),
-            Text(context.tr(subtitle!), style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-          ],
-          if (action != null) ...[const SizedBox(height: 24), action!],
-        ],
+        ),
       ),
     );
   }

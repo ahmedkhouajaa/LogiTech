@@ -34,7 +34,8 @@ import 'package:business_manager_pro/services/error_handler.dart';
 
 class CreateQuoteScreen extends StatefulWidget {
   final Quote? existing;
-  const CreateQuoteScreen({super.key, this.existing});
+  final Customer? initialCustomer;
+  const CreateQuoteScreen({super.key, this.existing, this.initialCustomer});
 
   @override
   State<CreateQuoteScreen> createState() => _CreateQuoteScreenState();
@@ -139,6 +140,11 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     _customTaxesSub = CustomTaxService.instance.taxesStream.listen((taxes) {
       if (mounted) setState(() => _availableCustomTaxes = taxes);
     });
+
+    if (widget.initialCustomer != null) {
+      _selectedCustomerId = widget.initialCustomer!.id;
+      _selectedCustomerName = widget.initialCustomer!.name;
+    }
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -249,26 +255,21 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       final messenger = ScaffoldMessenger.of(context);
       final l10n = AppLocalizations.of(context);
 
-      final isOnline = ConnectivityService.instance.isOnline;
+      final numResult = await DocumentNumberingService.getNextDocumentNumber(
+        context: context,
+        docCollection: 'quotes',
+        docTypeName: 'Devis',
+        defaultPrefix: DocPrefix.quote,
+        existingNumber: widget.existing?.number,
+      );
 
-      String number = widget.existing?.number ?? '';
-      if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'quotes',
-            docTypeName: 'Devis',
-            prefix: DocPrefix.quote,
-          );
-          if (seq == null) {
-            setState(() => _isSaving = false);
-            return;
-          }
-          number = generateDocNumber(DocPrefix.quote, seq, docCollection: 'quotes');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
-        }
+      if (numResult.cancelled) {
+        setState(() => _isSaving = false);
+        return;
       }
+
+      final number = numResult.number;
+      final isDraft = numResult.isDraft;
 
       final custState = context.read<CustomersBloc>().state;
       String? custName = _selectedCustomerName;
@@ -296,7 +297,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         warehouseId: _selectedWarehouseId,
         date: _date,
         validityDate: _validityDate,
-        status: _status,
+        status: isDraft ? DocumentStatus.draft : _status,
         totalHT: _totalHTAfterDiscount,
         totalTva: _totalTvaAfterDiscount,
         totalTTC: _totalTTC,
@@ -331,17 +332,17 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         isConverted: widget.existing?.isConverted ?? false,
         convertedTo: widget.existing?.convertedTo,
         convertedToId: widget.existing?.convertedToId,
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: isDraft ? false : (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft && !_isEditing) {
         await OfflineDocumentService.instance.savePendingDocument('quotes', quote.toMap());
         bloc.add(const LoadFirstDevis());
         nav.pop();
         messenger.showSnackBar(SnackBar(
-          content: Text('${l10n.tr('Devis')} ${quote.number} ${l10n.tr('enregistré hors-ligne (en attente de sync)')}'),
+          content: Text('${l10n.tr('Devis')} ${quote.number} ${l10n.tr('enregistré en Brouillon (en attente de sync)')}'),
           backgroundColor: AppColors.warning,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ));
         return;
       }

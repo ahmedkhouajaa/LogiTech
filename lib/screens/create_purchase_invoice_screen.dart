@@ -31,11 +31,18 @@ import '../services/document_numbering_service.dart';
 import '../widgets/custom_fields_form_section.dart';
 import '../widgets/document_tax_settings_dialog.dart';
 import '../services/trial_service.dart';
+import '../services/ai_document_scanner_service.dart';
 
 class CreatePurchaseInvoiceScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
   final bool isReadOnly;
-  const CreatePurchaseInvoiceScreen({super.key, this.existing, this.isReadOnly = false});
+  final ExtractedDocumentData? initialAiData;
+  const CreatePurchaseInvoiceScreen({
+    super.key,
+    this.existing,
+    this.isReadOnly = false,
+    this.initialAiData,
+  });
 
   @override
   State<CreatePurchaseInvoiceScreen> createState() => _CreatePurchaseInvoiceScreenState();
@@ -183,6 +190,38 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       _selectedWarehouseId = inv.warehouseId;
       _customFields = inv.customFields != null ? Map<String, dynamic>.from(inv.customFields!) : {};
       _items = inv.items.toList();
+    } else if (widget.initialAiData != null) {
+      final ai = widget.initialAiData!;
+      if (ai.documentDate != null && ai.documentDate!.isNotEmpty) {
+        try {
+          _date = DateTime.parse(ai.documentDate!);
+        } catch (_) {}
+      }
+      if (ai.dueDate != null && ai.dueDate!.isNotEmpty) {
+        try {
+          _dueDate = DateTime.parse(ai.dueDate!);
+        } catch (_) {}
+      }
+      if (ai.rawText.isNotEmpty) {
+        _notesCtrl.text = 'Extraction IA (Réf: ${ai.documentNumber ?? "N/A"}):\n${ai.rawText}';
+      }
+      if (ai.items.isNotEmpty) {
+        _items = ai.items.map((it) {
+          final computedHT = it.quantity * it.unitPrice * (1 - (it.discountPercent / 100));
+          return PurchaseInvoiceItem(
+            id: const Uuid().v4(),
+            purchaseInvoiceId: '',
+            productId: it.productCode ?? const Uuid().v4(),
+            productName: it.productName,
+            description: it.productName,
+            quantity: it.quantity > 0 ? it.quantity : 1.0,
+            unitPrice: it.unitPrice,
+            tvaRate: it.tvaRate,
+            discountPercent: it.discountPercent,
+            totalHT: it.totalHt > 0 ? it.totalHt : computedHT,
+          );
+        }).toList();
+      }
     }
   }
 
@@ -368,6 +407,21 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                           child: BlocBuilder<SuppliersBloc, SuppliersState>(
                             builder: (context, state) {
                               final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                              if (_selectedSupplier == null && widget.initialAiData?.supplierName != null && suppliers.isNotEmpty) {
+                                final target = widget.initialAiData!.supplierName!.toLowerCase().trim();
+                                for (final s in suppliers) {
+                                  final sName = s.name.toLowerCase();
+                                  final cName = s.companyName?.toLowerCase() ?? '';
+                                  if (sName.contains(target) || cName.contains(target) || target.contains(sName)) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted && _selectedSupplier == null) {
+                                        setState(() => _selectedSupplier = s);
+                                      }
+                                    });
+                                    break;
+                                  }
+                                }
+                              }
                               final selectedSupplier = _selectedSupplier;
                               final displayName = selectedSupplier != null
                                   ? (selectedSupplier.companyName?.isNotEmpty == true
@@ -1223,26 +1277,21 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       return;
     }
 
-    final isOnline = ConnectivityService.instance.isOnline;
+    final numResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'purchase_invoices',
+      docTypeName: 'Facture d\'Achat',
+      defaultPrefix: DocPrefix.purchaseInvoice,
+      existingNumber: widget.existing?.number,
+    );
 
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'purchase_invoices',
-          docTypeName: 'Facture d\'Achat',
-          prefix: DocPrefix.purchaseInvoice,
-        );
-        if (seq == null) {
-          setState(() => _isSaving = false);
-          return;
-        }
-        number = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
-      }
+    if (numResult.cancelled) {
+      setState(() => _isSaving = false);
+      return;
     }
+
+    final number = numResult.number;
+    final isDraft = numResult.isDraft;
 
     final projState = context.read<ProjectsBloc>().state;
     String? projName;
@@ -1276,7 +1325,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       })(),
       date: _date,
       dueDate: _dueDate,
-      status: _status,
+      status: isDraft ? InvoiceStatus.draft : _status,
       totalHT: _totalHTAfterDiscount,
       totalTva: _totalTvaAfterDiscount,
       totalTTC: _totalTTC,
@@ -1298,19 +1347,19 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       },
       items: _items.map((item) => item.copyWith(purchaseInvoiceId: purchaseInvoiceId)).toList(),
       createdAt: _isEditing ? widget.existing!.createdAt : null,
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+      isSynced: isDraft ? false : (widget.existing?.isSynced ?? true),
     );
 
-    if (!isOnline && !_isEditing) {
+    if (isDraft && !_isEditing) {
       await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', purchaseInvoice.toMap());
       context.read<PurchaseInvoicesBloc>().add(const LoadFirstPurchaseInvoices());
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Facture d\'Achat ${purchaseInvoice.number} enregistrée hors-ligne (en attente de sync)'),
+            content: Text('Facture d\'Achat ${purchaseInvoice.number} enregistrée en Brouillon (en attente de sync)'),
             backgroundColor: AppColors.warning,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
           ),
         );
       }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../utils/file_download_helper.dart';
+import '../../../services/error_handler.dart';
 
 class ClientExportScreen extends StatefulWidget {
   const ClientExportScreen({super.key});
@@ -112,9 +113,7 @@ class _ClientExportScreenState extends State<ClientExportScreen> {
     } catch (e) {
       setState(() => _isExporting = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'export : ${e.toString()}'), backgroundColor: const Color(0xFFDC2626)),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

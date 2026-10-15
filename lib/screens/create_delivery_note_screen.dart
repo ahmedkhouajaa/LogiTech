@@ -248,23 +248,20 @@ class _CreateDeliveryNoteScreenState
     final bloc = context.read<DeliveryNotesBloc>();
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final isOnline = ConnectivityService.instance.isOnline;
+    final numResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'delivery_notes',
+      docTypeName: 'Bon de Livraison',
+      defaultPrefix: 'BL',
+      existingNumber: widget.existing?.number,
+    );
 
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'delivery_notes',
-          docTypeName: 'Bon de Livraison',
-          prefix: 'BL',
-        );
-        if (seq == null) return;
-        number = generateDocNumber('BL', seq, docCollection: 'delivery_notes');
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
-      }
+    if (numResult.cancelled) {
+      return;
     }
+
+    final number = numResult.number;
+    final isDraft = numResult.isDraft;
 
     final custState = context.read<CustomersBloc>().state;
     String? custName;
@@ -287,7 +284,7 @@ class _CreateDeliveryNoteScreenState
       projectId: _selectedProjectId,
       warehouseId: _selectedWarehouseId,
       date: _date,
-      status: _status.name,
+      status: isDraft ? 'draft' : _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
       timbreFiscal: _timbreFiscal,
@@ -318,18 +315,18 @@ class _CreateDeliveryNoteScreenState
         showDescription: item.showDescription,
         showDiscount: item.showDiscount,
       )).toList(),
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+      isSynced: isDraft ? false : (widget.existing?.isSynced ?? true),
     );
 
-    if (!isOnline && !_isEditing) {
+    if (isDraft && !_isEditing) {
       await OfflineDocumentService.instance.savePendingDocument('delivery_notes', note.toMap());
       bloc.add(const LoadFirstDeliveryNotes());
       nav.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Bon de Livraison ${note.number} enregistré hors-ligne (en attente de sync)'),
+          content: Text('Bon de Livraison ${note.number} enregistré en Brouillon (en attente de sync)'),
           backgroundColor: AppColors.warning,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
       return;

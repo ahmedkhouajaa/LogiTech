@@ -19,6 +19,8 @@ import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../utils/mobile_status_colors.dart';
@@ -431,8 +433,15 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
   Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      defaultPrefix: DocPrefix.invoice,
+    );
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -454,20 +463,25 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
       orderId: order.id,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: order.totalHTAfterDiscount,
       totalTva: order.totalTVA,
       totalTTC: order.totalTTC,
       notes: order.notes,
       items: invoiceItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final invoicesBloc = context.read<InvoicesBloc>();
-      invoicesBloc.add(AddInvoice(invoice));
-    } catch (e) {
-      await DatabaseHelper.instance.insertInvoice(invoice);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
+    } else {
+      try {
+        final invoicesBloc = context.read<InvoicesBloc>();
+        invoicesBloc.add(AddInvoice(invoice));
+      } catch (e) {
+        await DatabaseHelper.instance.insertInvoice(invoice);
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -480,8 +494,8 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Commande convertie en facture avec succès'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft ? 'Facture enregistrée en Brouillon (en attente de sync)' : 'Commande convertie en facture avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }
@@ -556,8 +570,15 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
   Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'delivery_notes',
+      docTypeName: 'Bon de Livraison',
+      defaultPrefix: DocPrefix.deliveryNote,
+    );
+    if (docNumResult.cancelled) return;
+    final deliveryNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(),
@@ -577,17 +598,22 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
       customerName: order.customerName,
       orderId: order.id,
       date: DateTime.now(),
-      status: 'delivered',
+      status: isDraft ? 'draft' : 'delivered',
       notes: order.notes,
       items: deliveryItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final deliveryBloc = context.read<DeliveryNotesBloc>();
-      deliveryBloc.add(AddDeliveryNote(deliveryNote));
-    } catch (e) {
-      await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('delivery_notes', deliveryNote.toMap());
+    } else {
+      try {
+        final deliveryBloc = context.read<DeliveryNotesBloc>();
+        deliveryBloc.add(AddDeliveryNote(deliveryNote));
+      } catch (e) {
+        await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -600,8 +626,8 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Commande convertie en bon de livraison avec succès'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft ? 'Bon de livraison enregistré en Brouillon (en attente de sync)' : 'Commande convertie en bon de livraison avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }

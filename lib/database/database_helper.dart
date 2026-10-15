@@ -28,6 +28,8 @@ import '../models/check_traite.dart';
 import '../models/document_template.dart';
 import '../models/product_family.dart';
 import '../models/transaction_model.dart';
+import '../models/document_numbering_config.dart';
+import '../services/document_numbering_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
@@ -56,7 +58,7 @@ class DatabaseHelper {
   Future<int> getQuotesCount({String? searchQuery, String? customerId, DateTime? dateFrom, DateTime? dateTo, String? status}) async => 0;
   Future<void> insertQuote(dynamic quote) async {}
   Future<void> updateQuote(dynamic quote) async {}
-  Future<int> getNextQuoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'quotes');
+  Future<int?> getNextQuoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'quotes');
 
   // Invoices
   Future<List<Invoice>> getInvoices() async => [];
@@ -67,8 +69,8 @@ class DatabaseHelper {
   Future<void> deleteInvoice(String id) async {}
   Future<Invoice?> getInvoice(String id) async => null;
   Future<dynamic> convertInvoiceToCreditNote(dynamic inv, [dynamic arg2]) async => null;
-  Future<int> getNextInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'invoices');
-  Future<int> getNextCreditNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'credit_notes');
+  Future<int?> getNextInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'invoices');
+  Future<int?> getNextCreditNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'credit_notes');
 
   // Purchase Invoices
   Future<List<PurchaseInvoice>> getPurchaseInvoices() async => [];
@@ -79,7 +81,7 @@ class DatabaseHelper {
   Future<void> deletePurchaseInvoice(String id) async {}
   Future<PurchaseInvoice?> getPurchaseInvoice(String id) async => null;
   Future<dynamic> convertPurchaseInvoiceToCreditNote(dynamic inv, [dynamic arg2]) async => null;
-  Future<int> getNextPurchaseInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'purchase_invoices');
+  Future<int?> getNextPurchaseInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'purchase_invoices');
 
   // Customer orders
   Future<List<CustomerOrder>> getCustomerOrders({String? status, String? customerId, DateTime? startDate, DateTime? endDate}) async => [];
@@ -88,7 +90,7 @@ class DatabaseHelper {
   Future<CustomerOrder?> getCustomerOrder(String id) async => null;
   Future<void> insertCustomerOrder(dynamic item) async {}
   Future<void> updateCustomerOrder(dynamic item) async {}
-  Future<int> getNextCustomerOrderSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'customer_orders');
+  Future<int?> getNextCustomerOrderSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'customer_orders');
 
   // Delivery Notes
   Future<List<DeliveryNote>> getDeliveryNotes({String? status, String? customerId, DateTime? startDate, DateTime? endDate}) async => [];
@@ -98,7 +100,7 @@ class DatabaseHelper {
   Future<void> insertDeliveryNote(dynamic item) async {}
   Future<void> updateDeliveryNote(dynamic item) async {}
   Future<int> getTotalDeliveryNotes() async => 0;
-  Future<int> getNextDeliveryNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'delivery_notes');
+  Future<int?> getNextDeliveryNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'delivery_notes');
 
   // Supplier Orders
   Future<List<SupplierOrder>> getSupplierOrders({String? status, String? supplierId, DateTime? startDate, DateTime? endDate}) async => [];
@@ -107,7 +109,7 @@ class DatabaseHelper {
   Future<SupplierOrder?> getSupplierOrderById(String id) async => null;
   Future<void> insertSupplierOrder(dynamic item) async {}
   Future<void> updateSupplierOrder(dynamic item) async {}
-  Future<int> getNextSupplierOrderSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_orders');
+  Future<int?> getNextSupplierOrderSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_orders');
 
   // Receiving Vouchers
   Future<List<ReceivingVoucher>> getReceivingVouchers() async => [];
@@ -116,15 +118,15 @@ class DatabaseHelper {
   Future<dynamic> getReceivingVoucher(String id) async => null;
   Future<void> insertReceivingVoucher(dynamic item, [dynamic arg2]) async {}
   Future<void> updateReceivingVoucher(dynamic item, [dynamic arg2]) async {}
-  Future<int> getNextReceivingVoucherSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'receiving_vouchers');
+  Future<int?> getNextReceivingVoucherSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'receiving_vouchers');
 
   // Stock Withdrawals
   Future<List<StockWithdrawal>> getStockWithdrawals({String? status, DateTime? startDate, DateTime? endDate}) async => [];
   Future<List<StockWithdrawal>> getStockWithdrawalsPaginated({int limit = 10, int offset = 0, String? searchQuery, DateTime? dateFrom, DateTime? dateTo, String? status, String? customerId, String? numberPrefix, DateTime? startDate, DateTime? endDate}) async => [];
   Future<int> getStockWithdrawalsCount({String? searchQuery, DateTime? dateFrom, DateTime? dateTo, String? status, String? customerId, String? numberPrefix, DateTime? startDate, DateTime? endDate}) async => 0;
   Future<StockWithdrawal?> getStockWithdrawal(String id) async => null;
-  Future<int> getNextStockWithdrawalSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_prelevement');
-  Future<int> getNextExitVoucherSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_sortie');
+  Future<int?> getNextStockWithdrawalSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_prelevement');
+  Future<int?> getNextExitVoucherSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_sortie');
 
   // Credit Notes & Return Notes
   Future<List<CreditNote>> getCreditNotes() async => [];
@@ -165,7 +167,7 @@ class DatabaseHelper {
   Future<void> insertSupplierCreditNote(dynamic item) async {}
   Future<void> updateSupplierCreditNote(dynamic item) async {}
   Future<void> deleteSupplierCreditNote(String id) async {}
-  Future<int> getNextSupplierCreditNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_credit_notes');
+  Future<int?> getNextSupplierCreditNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_credit_notes');
 
   Future<List<ReturnNote>> getReturnNotes({String? status, String? customerId, DateTime? startDate, DateTime? endDate}) async => [];
   Future<List<ReturnNote>> getReturnNotesPaginated({int limit = 10, int offset = 0, String? searchQuery, String? customerId, DateTime? dateFrom, DateTime? dateTo, String? status, DateTime? startDate, DateTime? endDate}) async => [];
@@ -174,7 +176,7 @@ class DatabaseHelper {
   Future<void> insertReturnNote(dynamic item) async {}
   Future<void> updateReturnNote(dynamic item) async {}
   Future<void> deleteReturnNote(String id) async {}
-  Future<int> getNextReturnNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'return_notes');
+  Future<int?> getNextReturnNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'return_notes');
 
   Future<List<SupplierReturn>> getSupplierReturns() async => [];
   Future<List<SupplierReturn>> getSupplierReturnsPaginated({int limit = 10, int offset = 0, String? searchQuery, String? supplierId, DateTime? dateFrom, DateTime? dateTo, String? status}) async => [];
@@ -183,7 +185,7 @@ class DatabaseHelper {
   Future<void> insertSupplierReturn(dynamic item) async {}
   Future<void> updateSupplierReturn(dynamic item) async {}
   Future<void> deleteSupplierReturn(String id) async {}
-  Future<int> getNextSupplierReturnSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_returns');
+  Future<int?> getNextSupplierReturnSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'supplier_returns');
 
   // Inventory & Transfers
   Future<List<InventorySheet>> getInventorySheets() async => [];
@@ -405,53 +407,45 @@ class DatabaseHelper {
     }
   }
 
-  Future<int> generateNextDocSequenceAtomic(String? currentEntId, String docCollection) async {
+  Future<int?> generateNextDocSequenceAtomic(String? currentEntId, String docCollection) async {
     String entId = currentEntId ?? currentEnterpriseId ?? 'default';
     if (entId.isEmpty) entId = 'default';
-    final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
+    final normCol = DocumentTypeDefinition.normalizeKey(docCollection);
+    final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(normCol);
 
-    try {
-      // 1. Ensure counter doc exists outside of transaction if needed
-      final counterSnap = await counterRef.get();
-      if (!counterSnap.exists) {
-        int initialCount = 0;
-        try {
-          final querySnap = await _firestore
-              .collection(docCollection)
-              .where('enterprise_id', isEqualTo: entId)
-              .get();
-
-          for (var doc in querySnap.docs) {
-            final data = doc.data();
-            final number = (data['number'] ?? data['transaction_number'] ?? data['transactionNumber'] ?? '').toString();
-            final parts = number.split('-');
-            if (parts.length >= 3) {
-              final numVal = int.tryParse(parts.last) ?? 0;
-              if (numVal > initialCount && numVal < 100000) {
-                initialCount = numVal;
-              }
-            }
-          }
-        } catch (_) {}
-        await counterRef.set({'count': initialCount}, SetOptions(merge: true));
-      }
-
-      // 2. Perform atomic transaction
+    Future<int> executeTransaction() async {
       return await _firestore.runTransaction((transaction) async {
         final snapshot = await transaction.get(counterRef);
         int currentCount = 0;
 
         if (snapshot.exists && snapshot.data() != null && snapshot.data()!['count'] != null) {
           currentCount = (snapshot.data()!['count'] as num).toInt();
+        } else {
+          currentCount = await DocumentNumberingService.getMaxExistingSequence(normCol, entId);
         }
 
         final nextCount = currentCount + 1;
-        transaction.set(counterRef, {'count': nextCount}, SetOptions(merge: true));
+        transaction.set(counterRef, {
+          'count': nextCount,
+          'doc_type_key': normCol,
+          'configured': true,
+          'updated_at': DateTime.now().toIso8601String(),
+        }, SetOptions(merge: true));
         return nextCount;
-      });
+      }, timeout: const Duration(seconds: 4));
+    }
+
+    try {
+      return await executeTransaction();
     } catch (e) {
-      print('❌ [DEBUG] generateNextDocSequenceAtomic failed for $docCollection: $e');
-      return DateTime.now().millisecondsSinceEpoch % 1000000;
+      debugPrint('⚠️ [DEBUG] generateNextDocSequenceAtomic attempt 1 failed for $normCol: $e. Retrying in 400ms...');
+      try {
+        await Future.delayed(const Duration(milliseconds: 400));
+        return await executeTransaction();
+      } catch (retryErr) {
+        debugPrint('❌ [DEBUG] generateNextDocSequenceAtomic attempt 2 failed for $normCol: $retryErr');
+        return null;
+      }
     }
   }
 
@@ -675,11 +669,20 @@ class DatabaseHelper {
   Future<List<Product>> getProducts() async {
     try {
       final entId = currentEnterpriseId;
-      final snap = await _firestore.collection('articles').get();
+      QuerySnapshot snap;
+      if (entId != null && entId.isNotEmpty) {
+        try {
+          snap = await _firestore.collection('articles').where('enterprise_id', isEqualTo: entId).get();
+        } catch (_) {
+          snap = await _firestore.collection('articles').get();
+        }
+      } else {
+        snap = await _firestore.collection('articles').get();
+      }
       return snap.docs
           .map((d) {
             try {
-              final data = Map<String, dynamic>.from(d.data());
+              final data = Map<String, dynamic>.from(d.data() as Map);
               data['id'] = d.id;
               return Product.fromMap(data);
             } catch (_) {
@@ -700,7 +703,29 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Product>> getLowStockProducts() async => [];
+  Future<List<Product>> getLowStockProducts() async {
+    try {
+      final all = await getProducts();
+      return all.where((p) => p.isLowStock).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Product>> getHighStockProducts() async {
+    try {
+      final all = await getProducts();
+      return all
+          .where((p) =>
+              !p.isService &&
+              p.highStockAlert &&
+              p.highStockThreshold > 0 &&
+              p.stockQty >= p.highStockThreshold)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   Future<Product?> getProduct(String id) async {
     if (id.isEmpty) return null;
@@ -749,11 +774,11 @@ class DatabaseHelper {
   Future<void> softDeletePayment(String id) async {}
   Future<List<PaymentAccount>> getPaymentAccounts() async => [];
   Future<void> insertPaymentAccount(dynamic item) async {}
-  Future<int> getNextPaymentSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'paiements');
-  Future<int> getNextTreasuryTransactionSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'treasury_transactions');
-  Future<int> getNextStockEntrySequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_entries');
-  Future<int> getNextStockTransferSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_transfers');
-  Future<int> getNextInventorySheetSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'inventory_sheets');
+  Future<int> getNextPaymentSequence() async => (await generateNextDocSequenceAtomic(currentEnterpriseId, 'paiements')) ?? (DateTime.now().millisecondsSinceEpoch % 100000);
+  Future<int> getNextTreasuryTransactionSequence() async => (await generateNextDocSequenceAtomic(currentEnterpriseId, 'treasury_transactions')) ?? (DateTime.now().millisecondsSinceEpoch % 100000);
+  Future<int?> getNextStockEntrySequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_entries');
+  Future<int?> getNextStockTransferSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_transfers');
+  Future<int?> getNextInventorySheetSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'inventory_sheets');
 
   // Stock Movements & Warehouses
   Future<List<StockMovement>> getStockMovements() async => [];

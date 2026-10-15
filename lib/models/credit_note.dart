@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../utils/constants.dart';
 
 enum CreditNoteStatus {
+  draft,
   unused,
   partiallyUsed,
   used,
@@ -11,6 +12,8 @@ enum CreditNoteStatus {
 
   String get label {
     switch (this) {
+      case draft:
+        return 'Brouillon';
       case unused:
         return 'Non utilisé';
       case partiallyUsed:
@@ -24,6 +27,8 @@ enum CreditNoteStatus {
 
   Color get color {
     switch (this) {
+      case draft:
+        return AppColors.textSecondary;
       case unused:
         return AppColors.info;
       case partiallyUsed:

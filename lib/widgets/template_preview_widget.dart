@@ -177,8 +177,8 @@ class TemplatePreviewWidget extends StatelessWidget {
     final cfg = template.logoConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? 15;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 15;
-    final wMm = (cfg['width'] as num?)?.toDouble() ?? 20;
-    final hMm = (cfg['height'] as num?)?.toDouble() ?? 15;
+    final wMm = (cfg['width'] as num?)?.toDouble() ?? 30.0;
+    final hMm = (cfg['height'] as num?)?.toDouble() ?? 22.5;
     final w = wMm * scale;
     final h = hMm * scale;
 
@@ -221,7 +221,7 @@ class TemplatePreviewWidget extends StatelessWidget {
     if (template.companyInfoConfig['showName'] == false) return const SizedBox.shrink();
 
     final showLogo = template.companyInfoConfig['showLogo'] != false;
-    final defaultX = showLogo ? 40.0 : 15.0;
+    final defaultX = showLogo ? 48.0 : 15.0;
     final cfg = template.companyNameConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 15.0;
@@ -256,7 +256,7 @@ class TemplatePreviewWidget extends StatelessWidget {
   Widget _buildDraggableCompanyDetails(double scale) {
     final comp = template.companyInfoConfig;
     final showLogo = comp['showLogo'] != false;
-    final defaultX = showLogo ? 40.0 : 15.0;
+    final defaultX = showLogo ? 48.0 : 15.0;
     final cfg = template.companyDetailsConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 22.0;
@@ -534,11 +534,13 @@ class TemplatePreviewWidget extends StatelessWidget {
                   child: Text(
                     (c['label'] as String).toUpperCase(),
                     style: TextStyle(
-                      fontSize: (fs * 0.25 * scale).clamp(5.0, 14.0),
+                      fontSize: (fs * 0.25 * scale).clamp(3.0, 14.0),
                       fontWeight: FontWeight.bold,
                       color: headerFg,
                     ),
                     textAlign: isDesignation ? TextAlign.left : TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 );
               }).toList(),
@@ -669,18 +671,23 @@ class TemplatePreviewWidget extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'TOTAL TTC:',
-                    style: TextStyle(
-                      fontSize: (fs * 0.35 * scale).clamp(6.0, 16.0),
-                      fontWeight: FontWeight.bold,
-                      color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+                  Expanded(
+                    child: Text(
+                      'TOTAL TTC:',
+                      style: TextStyle(
+                        fontSize: (fs * 0.35 * scale).clamp(3.0, 16.0),
+                        fontWeight: FontWeight.bold,
+                        color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 4),
                   Text(
                     '0,000',
                     style: TextStyle(
-                      fontSize: (fs * 0.35 * scale).clamp(6.0, 16.0),
+                      fontSize: (fs * 0.35 * scale).clamp(3.0, 16.0),
                       fontWeight: FontWeight.bold,
                       color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
                     ),
@@ -702,13 +709,21 @@ class TemplatePreviewWidget extends StatelessWidget {
   }
 
   Widget _buildTotalsRow(String label, double scale, [double fontSize = 10.0]) {
-    final sz = (fontSize * 0.28 * scale).clamp(5.0, 14.0);
+    final sz = (fontSize * 0.28 * scale).clamp(3.0, 14.0);
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 0.8 * scale),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: sz, color: AppColors.textSecondary)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: sz, color: AppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
           Text('0,000', style: TextStyle(fontSize: sz, fontWeight: FontWeight.w500)),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../tenant_xray_screen.dart';
 import '../../services/user_presence_helper.dart';
+import '../../../services/error_handler.dart';
 
 class AllClientsScreen extends StatefulWidget {
   const AllClientsScreen({super.key});
@@ -258,9 +259,7 @@ class _AllClientsScreenState extends State<AllClientsScreen> {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${e.toString()}'), backgroundColor: const Color(0xFFDC2626)),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }
@@ -703,6 +702,28 @@ class _AllClientsScreenState extends State<AllClientsScreen> {
                                                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                                                           ),
                                                         ),
+                                                        if (data['partnerCode'] != null && data['partnerCode'].toString().isNotEmpty) ...[
+                                                          const SizedBox(width: 6),
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                                            decoration: BoxDecoration(
+                                                              color: const Color(0xFFFAF5FF),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                              border: Border.all(color: const Color(0xFFD8B4FE)),
+                                                            ),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                const Icon(Icons.local_offer_outlined, size: 10, color: Color(0xFF7E22CE)),
+                                                                const SizedBox(width: 3),
+                                                                Text(
+                                                                  'Promo: ${data['partnerCode']}',
+                                                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF7E22CE)),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ],
                                                     ),
                                                     const SizedBox(height: 4),

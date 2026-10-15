@@ -243,6 +243,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         final width = constraints.maxWidth;
                         int crossAxisCount = width > 850 ? 4 : 2;
                         double itemWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
+                        const double cardHeight = 110.0;
 
                         return Wrap(
                           spacing: 12,
@@ -250,6 +251,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           children: [
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Solde en cours',
                                 value: formatCurrency(currentCustomer.balance),
@@ -257,33 +259,40 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                 color: balanceColor,
                                 isHighlight: hasDebt,
                                 subtitle: hasDebt ? 'Montant à recouvrer' : 'Compte en règle',
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Plafond de Crédit',
                                 value: formatCurrency(currentCustomer.creditLimit),
                                 icon: Icons.speed_rounded,
                                 color: AppColors.info,
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Grille Tarifaire',
                                 value: currentCustomer.priceList.toUpperCase(),
                                 icon: Icons.price_change_outlined,
                                 color: AppColors.primary,
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Régime Fiscal',
                                 value: currentCustomer.tvaSuspension ? 'En suspension' : 'Standard',
                                 icon: Icons.receipt_long_outlined,
                                 color: currentCustomer.tvaSuspension ? AppColors.warning : AppColors.success,
+                                height: cardHeight,
                               ),
                             ),
                           ],

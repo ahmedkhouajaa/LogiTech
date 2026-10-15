@@ -56,6 +56,9 @@ class AuthService with WidgetsBindingObserver {
   Stream<User?> get idTokenChanges => FirebaseAuth.instance.idTokenChanges();
   Stream<String> get onAccountDeactivated => _accountDeactivatedController.stream;
 
+  Set<String> _cachedEntIds = {};
+  DateTime? _lastEnterpriseBanCheck;
+
   /// Start real-time Firestore listener to detect if the account or enterprise is deactivated remotely.
   void _startUserStatusListener(String uid) {
     _userStatusSubscription?.cancel();
@@ -81,7 +84,7 @@ class AuthService with WidgetsBindingObserver {
             return;
           }
 
-          // Check all user's enterprises
+          // Check all user's enterprises only if enterprise list changed or > 5 minutes passed
           final entIds = <String>{};
           final curEnt = data?['currentEnterpriseId'] ?? data?['enterpriseId'];
           if (curEnt != null && curEnt.toString().isNotEmpty) entIds.add(curEnt.toString());
@@ -92,19 +95,28 @@ class AuthService with WidgetsBindingObserver {
             }
           }
 
-          for (final eid in entIds) {
-            try {
-              final entDoc = await FirebaseFirestore.instance.collection('enterprises').doc(eid).get();
-              if (entDoc.exists) {
-                final entData = entDoc.data() ?? {};
-                if (entData['isBanned'] == true || entData['status'] == 'banned' || entData['status'] == 'disabled') {
-                  final entName = entData['name'] ?? 'Entreprise';
-                  final reason = entData['banReason'] ?? 'Suspension administrative';
-                  await triggerDeactivation('L\'accès de votre entreprise "$entName" a été suspendu par le SuperAdmin.\nMotif : $reason');
-                  return;
+          final now = DateTime.now();
+          final entIdsChanged = entIds.length != _cachedEntIds.length || !entIds.containsAll(_cachedEntIds);
+          final timeExpired = _lastEnterpriseBanCheck == null || now.difference(_lastEnterpriseBanCheck!).inMinutes >= 5;
+
+          if (entIdsChanged || timeExpired) {
+            _cachedEntIds = Set.from(entIds);
+            _lastEnterpriseBanCheck = now;
+
+            for (final eid in entIds) {
+              try {
+                final entDoc = await FirebaseFirestore.instance.collection('enterprises').doc(eid).get();
+                if (entDoc.exists) {
+                  final entData = entDoc.data() ?? {};
+                  if (entData['isBanned'] == true || entData['status'] == 'banned' || entData['status'] == 'disabled') {
+                    final entName = entData['name'] ?? 'Entreprise';
+                    final reason = entData['banReason'] ?? 'Suspension administrative';
+                    await triggerDeactivation('L\'accès de votre entreprise "$entName" a été suspendu par le SuperAdmin.\nMotif : $reason');
+                    return;
+                  }
                 }
-              }
-            } catch (_) {}
+              } catch (_) {}
+            }
           }
         }
       }, onError: (e) async {
@@ -112,10 +124,10 @@ class AuthService with WidgetsBindingObserver {
         try {
           final user = FirebaseAuth.instance.currentUser;
           if (user != null) {
-            await user.reload();
+            await user.reload().timeout(const Duration(seconds: 4));
           }
         } on FirebaseAuthException catch (authErr) {
-          if (authErr.code == 'user-disabled' || authErr.code == 'user-not-found') {
+          if (authErr.code == 'user-disabled') {
             await triggerDeactivation("Votre compte a été désactivé.");
           }
         } catch (_) {}
@@ -213,9 +225,8 @@ class AuthService with WidgetsBindingObserver {
       rethrow;
     } on FirebaseException catch (fe) {
       if (fe.code == 'permission-denied' || (fe.message != null && fe.message!.contains('permission-denied'))) {
-        const msg = "Accès refusé. Ce compte ou votre entreprise a été suspendu par l'administrateur.";
-        await triggerDeactivation(msg);
-        throw FirebaseAuthException(code: 'user-disabled', message: msg);
+        debugPrint('[AuthService] Firestore permission-denied warning: $fe');
+        // Do not falsely deactivate user; rules might be evaluating or token refreshing
       }
     } catch (_) {}
   }
@@ -290,8 +301,16 @@ class AuthService with WidgetsBindingObserver {
       final token = await user.getIdToken(forceRefresh);
       return token != null && token.isNotEmpty;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-disabled' || e.code == 'user-token-expired' || e.code == 'invalid-user-token') {
+      if (e.code == 'user-disabled') {
         await logout();
+      } else if (e.code == 'user-token-expired' || e.code == 'invalid-user-token') {
+        try {
+          // Attempt automatic token refresh instead of logging user out
+          final refreshed = await user.getIdToken(true);
+          return refreshed != null && refreshed.isNotEmpty;
+        } catch (_) {
+          return false;
+        }
       }
       return false;
     } catch (_) {
@@ -372,7 +391,7 @@ class AuthService with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> signUpWithEmail(String email, String password, String name) async {
+  Future<bool> signUpWithEmail(String email, String password, String name, {String? partnerCode}) async {
     // 1. Anti-Spam / Rate Limit Check
     final spamCheck = AntiSpamGuard.instance.checkSignUpAllowed();
     if (!spamCheck.isAllowed) {
@@ -396,7 +415,7 @@ class AuthService with WidgetsBindingObserver {
 
         // Create user profile in Firestore (without auto-creating enterprise)
         try {
-          await _createUserProfile(userCredential.user!, name: name);
+          await _createUserProfile(userCredential.user!, name: name, partnerCode: partnerCode);
         } catch (firestoreError) {
           // Rollback on Firestore failure
           try {
@@ -574,14 +593,18 @@ class AuthService with WidgetsBindingObserver {
 
   /// Creates a clean user profile in Firestore without auto-creating a default enterprise.
   /// Self-registered users are assigned the admin role and full permissions for all resources.
-  Future<void> _createUserProfile(User user, {String? name}) async {
+  Future<void> _createUserProfile(User user, {String? name, String? partnerCode}) async {
     final uid = user.uid;
     final displayName = name ?? user.displayName ?? (user.email?.split('@').first ?? 'Utilisateur');
     final email = user.email ?? '';
     final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
         .map((k, v) => MapEntry(k, v.toMap()));
 
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
+    final cleanPartnerCode = (partnerCode != null && partnerCode.trim().isNotEmpty)
+        ? partnerCode.trim().toUpperCase()
+        : null;
+
+    final Map<String, dynamic> userMap = {
       'uid': uid,
       'name': displayName,
       'email': email,
@@ -593,7 +616,15 @@ class AuthService with WidgetsBindingObserver {
       'isActive': true,
       'createdAt': FieldValue.serverTimestamp(),
       'lastLoginAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+
+    if (cleanPartnerCode != null) {
+      userMap['partnerCode'] = cleanPartnerCode;
+      userMap['hasPartner'] = true;
+      userMap['partnerLinkedAt'] = FieldValue.serverTimestamp();
+    }
+
+    await FirebaseFirestore.instance.collection('users').doc(uid).set(userMap, SetOptions(merge: true));
   }
 
   Future<void> enableOfflineMode() async {
@@ -694,7 +725,7 @@ class AuthService with WidgetsBindingObserver {
     await EnterpriseService.instance.clearCache();
   }
 
-  /// Starts a 25-second heartbeat for the logged-in user to maintain real-time online status.
+  /// Starts a 60-second heartbeat for the logged-in user to maintain real-time online status.
   /// Also cancels any pending offline debounce (user is back online).
   void startUserPresenceHeartbeat(String uid) {
     if (uid.isEmpty) return;
@@ -706,13 +737,13 @@ class AuthService with WidgetsBindingObserver {
     // Immediately mark online
     _updateUserPresence(uid, true);
 
-    _presenceHeartbeatTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+    _presenceHeartbeatTimer = Timer.periodic(const Duration(seconds: 60), (_) {
       _updateUserPresence(uid, true);
     });
   }
 
   /// Stops user presence heartbeat and schedules an offline mark after a
-  /// 35-second grace period. If the user resumes before the timer fires,
+  /// 70-second grace period. If the user resumes before the timer fires,
   /// the offline mark is cancelled — preventing false offline flips.
   void stopUserPresenceHeartbeat([String? uid]) {
     _presenceHeartbeatTimer?.cancel();
@@ -723,8 +754,8 @@ class AuthService with WidgetsBindingObserver {
 
     // Cancel any existing debounce before starting a new one
     _presenceOfflineDebounceTimer?.cancel();
-    // Wait 35 seconds before marking offline — if user comes back, this is cancelled
-    _presenceOfflineDebounceTimer = Timer(const Duration(seconds: 35), () {
+    // Wait 70 seconds before marking offline — if user comes back, this is cancelled
+    _presenceOfflineDebounceTimer = Timer(const Duration(seconds: 70), () {
       _updateUserPresence(targetUid, false);
       _presenceOfflineDebounceTimer = null;
     });

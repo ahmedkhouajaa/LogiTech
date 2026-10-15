@@ -15,12 +15,14 @@ enum AdminNavModule {
   // 3. Client Management (GESTION DES CLIENTS)
   clientsAll,             // 1. Tous les Clients
   userActivation,         // 2. User Activation (Activation Utilisateurs)
-  clientsSearch,          // 3. Rechercher un Client
-  clientsBanned,          // 4. Clients Bannis/Désactivés
-  clientsPasswords,       // 5. Gestion des Mots de Passe
-  clientsLicenseExtend,   // 6. Extension de Licence
-  clientsHistory,         // 7. Historique Clients
-  clientsExport,          // 8. Exporter Clients (Excel/CSV)
+  articleUser,            // 3. Article User (Articles par Utilisateur)
+  userDocuments,          // 4. Documents & Modules Utilisateur (Vente, Achat, Stock, etc.)
+  clientsSearch,          // 5. Rechercher un Client
+  clientsBanned,          // 6. Clients Bannis/Désactivés
+  clientsPasswords,       // 7. Gestion des Mots de Passe
+  clientsLicenseExtend,   // 8. Extension de Licence
+  clientsHistory,         // 9. Historique Clients
+  clientsExport,          // 10. Exporter Clients (Excel/CSV)
 
   // 3. Tenant Management (Legacy/Direct inspection)
   tenantXRay,
@@ -31,6 +33,8 @@ enum AdminNavModule {
   paymentValidation,
   paymentHistory,
   paymentPlans,
+  promoCodes,          // Codes Promo & Offres
+  affiliateManagement, // Affiliation & Parrainage
 
   // 5. Agent Management (SuperAdmin)
   agentsTeam,

@@ -238,12 +238,15 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                         int crossAxisCount = width > 850 ? 4 : 2;
                         double itemWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
 
+                        const double cardHeight = 110.0;
+
                         return Wrap(
                           spacing: 12,
                           runSpacing: 12,
                           children: [
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Solde Dû (Encours)',
                                 value: formatCurrency(currentSupplier.balance),
@@ -251,28 +254,34 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                                 color: balanceColor,
                                 isHighlight: hasDebt,
                                 subtitle: hasDebt ? 'Montant à payer au fournisseur' : 'Compte fournisseur soldé',
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Type Fournisseur',
                                 value: currentSupplier.supplierType.toUpperCase(),
                                 icon: Icons.category_outlined,
                                 color: AppColors.primary,
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Matricule Fiscal',
                                 value: currentSupplier.taxId ?? 'Non renseigné',
                                 icon: Icons.receipt_long_outlined,
                                 color: AppColors.info,
+                                height: cardHeight,
                               ),
                             ),
                             SizedBox(
                               width: itemWidth,
+                              height: cardHeight,
                               child: DetailKpiCard(
                                 label: 'Coordonnées Bancaires',
                                 value: currentSupplier.bankAccount != null && currentSupplier.bankAccount!.isNotEmpty
@@ -282,6 +291,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                                 color: currentSupplier.bankAccount != null && currentSupplier.bankAccount!.isNotEmpty
                                     ? AppColors.success
                                     : AppColors.textTertiary,
+                                height: cardHeight,
                               ),
                             ),
                           ],

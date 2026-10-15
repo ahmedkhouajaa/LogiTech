@@ -17,6 +17,7 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../l10n/app_localizations.dart';
+import '../services/error_handler.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -26,6 +27,7 @@ class TreasuryAccountsScreen extends StatefulWidget {
 }
 
 class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
+  bool _isFirstLoad = true;
   final String _search = '';
   int _currentPage = 0;
   int _rowsPerPage = 20;
@@ -87,8 +89,11 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
         // Header
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: isMobile 
-            ? Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 780;
+
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -101,63 +106,13 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showAccountDialog(context),
-                            icon: const Icon(Icons.add_rounded, size: 16),
-                            label: Text(context.tr('Ajouter Compte'), style: const TextStyle(fontSize: 12)),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textPrimary,
-                              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                          ),
-                        ),
-                        if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
-                          const SizedBox(width: 8),
-                      ],
-                      if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showExpenseDialog(context),
-                            icon: const Icon(Icons.attach_money_rounded, size: 16),
-                            label: Text(context.tr('Ajouter Dépense'), style: const TextStyle(fontSize: 12)),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  const SizedBox(height: 2),
+                  Text(context.tr('Gérer vos comptes de trésorerie'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              )
-            : Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            context.tr('Comptes de Trésorerie'),
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(context.tr('Gérer vos comptes de trésorerie'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    ],
-                  ),
-                  const Spacer(),
-                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
-                    OutlinedButton.icon(
+              );
+
+              final addAccountBtn = PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)
+                  ? OutlinedButton.icon(
                       onPressed: () => _showAccountDialog(context),
                       icon: const Icon(Icons.add_rounded, size: 18),
                       label: Text(context.tr('Ajouter un Compte'), style: const TextStyle(fontSize: 13)),
@@ -167,11 +122,11 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
-                    ElevatedButton.icon(
+                    )
+                  : const SizedBox.shrink();
+
+              final addExpenseBtn = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions)
+                  ? ElevatedButton.icon(
                       onPressed: () => _showExpenseDialog(context),
                       icon: const Icon(Icons.attach_money_rounded, size: 18),
                       label: Text(context.tr('Ajouter une Dépense'), style: const TextStyle(fontSize: 13)),
@@ -179,17 +134,58 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts))
+                          addAccountBtn,
+                        if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                          addExpenseBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  titleWidget,
+                  const Spacer(),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
+                    addAccountBtn,
+                    const SizedBox(width: 10),
+                  ],
+                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                    addExpenseBtn,
                 ],
-              ),
+              );
+            },
+          ),
         ),
         const SizedBox(height: 10),
 
         // Table
         Expanded(
-          child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+          child: BlocConsumer<TreasuryAccountsBloc, TreasuryAccountsState>(
+            listener: (context, state) {
+              if (_isFirstLoad && (state is TreasuryAccountsLoaded || state is TreasuryAccountsError)) {
+                setState(() {
+                  _isFirstLoad = false;
+                });
+              }
+            },
             builder: (context, state) {
-              if (state is TreasuryAccountsLoading || state is TreasuryAccountsInitial) {
+              if (_isFirstLoad || state is TreasuryAccountsLoading || state is TreasuryAccountsInitial) {
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
@@ -1588,7 +1584,9 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
       
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
       setState(() => _isSubmitting = false);
     }
   }
@@ -1816,7 +1814,9 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
       
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
       setState(() => _isSubmitting = false);
     }
   }

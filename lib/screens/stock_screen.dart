@@ -8,15 +8,14 @@ import '../models/stock_movement.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../services/stock_export_service.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../services/permission_service.dart';
+import '../services/connectivity_service.dart';
 import '../models/user_management_model.dart';
 import '../l10n/app_localizations.dart';
 
@@ -27,6 +26,8 @@ class StockScreen extends StatefulWidget {
 }
 
 class _StockScreenState extends State<StockScreen> {
+  bool _isFirstLoad = true;
+
   @override
   void initState() {
     super.initState();
@@ -36,9 +37,16 @@ class _StockScreenState extends State<StockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StockBloc, StockState>(
+    return BlocConsumer<StockBloc, StockState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is StockLoaded || state is StockError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is StockLoading || state is StockInitial) {
+        if (_isFirstLoad || state is StockLoading || state is StockInitial) {
           return Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: ShimmerTable(
@@ -60,66 +68,114 @@ class _StockScreenState extends State<StockScreen> {
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(context.tr('Vue d\'ensemble du Stock'), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        const SizedBox(height: 4),
-                        Text(context.tr('Gérer votre stock'), style: TextStyle(color: AppColors.textSecondary)),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.tr('Vue d\'ensemble du Stock'),
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            context.tr('Gérer votre stock'),
+                            style: TextStyle(color: AppColors.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     if (PermissionService.instance.canCreate(UserPermissionResources.stockOverview) || PermissionService.instance.canCreate(UserPermissionResources.stockMovements))
-                      ElevatedButton.icon(
-                        onPressed: () => showDialog(context: context, builder: (_) => const _StockAdjustmentDialog()),
-                        icon: const Icon(Icons.add_box_rounded, size: 18),
-                        label: Text(context.tr('Nouvel ajustement de stock')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      Tooltip(
+                        message: context.tr('Nouvel ajustement de stock'),
+                        child: ElevatedButton.icon(
+                          onPressed: () => showDialog(context: context, builder: (_) => const _StockAdjustmentDialog()),
+                          icon: const Icon(Icons.add_box_rounded, size: 18),
+                          label: Text(context.tr('Nouvel ajustement')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          ),
                         ),
                       ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  children: [
-                    Expanded(child: DashboardCard(
+                LayoutBuilder(
+                  builder: (context, cardConstraints) {
+                    final isCompact = cardConstraints.maxWidth < 900;
+                    final card1 = DashboardCard(
                       title: context.tr('Valeur du stock'),
                       value: formatCurrencyCompact(state.totalStockValue),
                       icon: Icons.inventory_rounded,
                       gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
-                    )),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(child: DashboardCard(
+                    );
+                    final card2 = DashboardCard(
                       title: context.tr('Entrepots'),
                       value: state.warehouses.length.toString(),
                       icon: Icons.warehouse_rounded,
                       gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-                    )),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(child: DashboardCard(
+                    );
+                    final card3 = DashboardCard(
                       title: context.tr('Mouvements (total)'),
                       value: state.movements.length.toString(),
                       icon: Icons.swap_horiz_rounded,
                       gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
-                    )),
-                    const SizedBox(width: AppSpacing.md),
-                    BlocBuilder<ProductsBloc, ProductsState>(
+                    );
+
+                    Widget buildCard4() => BlocBuilder<ProductsBloc, ProductsState>(
                       builder: (context, pState) {
                         final lowCount = pState is ProductsLoaded ? pState.lowStockProducts.length : 0;
-                        return Expanded(child: DashboardCard(
+                        return DashboardCard(
                           title: context.tr('Alertes stock bas'),
                           value: lowCount.toString(),
                           icon: Icons.warning_rounded,
                           gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
-                        ));
+                        );
                       },
-                    ),
-                  ],
+                    );
+
+                    if (isCompact) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: card1),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(child: card2),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(child: card3),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(child: buildCard4()),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: card1),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: card2),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: card3),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: buildCard4()),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 // Low stock products
@@ -186,6 +242,7 @@ class StockMovementsScreen extends StatefulWidget {
 }
 
 class _StockMovementsScreenState extends State<StockMovementsScreen> {
+  bool _isFirstLoad = true;
   String _searchQuery = '';
   MovementType? _filterType;
   DateTimeRange? _filterDateRange;
@@ -202,9 +259,16 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-      child: BlocBuilder<StockBloc, StockState>(
+      child: BlocConsumer<StockBloc, StockState>(
+        listener: (context, state) {
+          if (_isFirstLoad && (state is StockLoaded || state is StockError)) {
+            setState(() {
+              _isFirstLoad = false;
+            });
+          }
+        },
         builder: (context, state) {
-          if (state is StockLoading || state is StockInitial) {
+          if (_isFirstLoad || state is StockLoading || state is StockInitial) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -687,6 +751,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
   String _adjustmentAction = 'add'; // add, exit, correct
   final _quantityCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -952,7 +1017,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
               child: Text(context.tr('Annuler'), style: TextStyle(color: AppColors.textSecondary))
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: _isSaving ? null : () {
                 if (_formKey.currentState!.validate()) {
                   _save(context, stockState.warehouses);
                 }
@@ -963,7 +1028,9 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: Text(context.tr('Enregistrer l\'ajustement')),
+              child: _isSaving 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(context.tr('Enregistrer l\'ajustement')),
             ),
           ],
         );
@@ -971,7 +1038,8 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
     );
   }
 
-  void _save(BuildContext context, List<Warehouse> warehouses) {
+  Future<void> _save(BuildContext context, List<Warehouse> warehouses) async {
+    if (_isSaving) return;
     if (_selectedProduct == null || _selectedProduct!.isService) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Les services ne peuvent pas faire l\'objet d\'un ajustement de stock.')), backgroundColor: AppColors.error));
       return;
@@ -997,24 +1065,42 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
       return;
     }
 
-    final movement = StockMovement(
-      id: _uuid.v4(),
-      productId: _selectedProduct!.id,
-      productName: _selectedProduct!.name,
-      warehouseId: _selectedWarehouseId!,
-      warehouseName: warehouses.firstWhere((w) => w.id == _selectedWarehouseId).name,
-      type: type,
-      quantity: qtyToRegister,
-      referenceType: 'Ajustement',
-      date: DateTime.now(),
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : context.tr('Ajustement manuel'),
-    );
+    setState(() => _isSaving = true);
+    try {
+      final isOnline = ConnectivityService.instance.isOnline;
+      final movement = StockMovement(
+        id: _uuid.v4(),
+        productId: _selectedProduct!.id,
+        productName: _selectedProduct!.name,
+        warehouseId: _selectedWarehouseId!,
+        warehouseName: warehouses.firstWhere((w) => w.id == _selectedWarehouseId).name,
+        type: type,
+        quantity: qtyToRegister,
+        referenceType: 'Ajustement',
+        date: DateTime.now(),
+        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : context.tr('Ajustement manuel'),
+      );
 
-    context.read<StockBloc>().add(AddStockMovement(movement));
-    context.read<ProductsBloc>().add(LoadProducts());
+      context.read<StockBloc>().add(AddStockMovement(movement));
+      context.read<ProductsBloc>().add(LoadProducts());
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Ajustement enregistré avec succès')), backgroundColor: AppColors.success));
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isOnline 
+                ? context.tr('Ajustement enregistré avec succès') 
+                : context.tr('Ajustement enregistré en attente de synchronisation')),
+            backgroundColor: isOnline ? AppColors.success : AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 }
 

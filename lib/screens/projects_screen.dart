@@ -102,30 +102,51 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 550;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(context.tr('Projets'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
                   Text(context.tr('Gérez vos projets et suivez leur avancement'), style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                 ],
-              ),
-              const Spacer(),
-              if (PermissionService.instance.canCreate(UserPermissionResources.projects))
-                ElevatedButton.icon(
-                  onPressed: () => _editProject(null),
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(context.tr('Nouveau Projet'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-            ],
+              );
+
+              final newBtn = PermissionService.instance.canCreate(UserPermissionResources.projects)
+                  ? ElevatedButton.icon(
+                      onPressed: () => _editProject(null),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: Text(context.tr('Nouveau Projet'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    newBtn,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  titleWidget,
+                  const Spacer(),
+                  newBtn,
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -139,7 +160,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               border: Border.all(color: AppColors.border),
             ),
             child: SizedBox(
-              height: 32,
+              height: (34.0 * MediaQuery.textScalerOf(context).scale(1.0)).clamp(32.0, 44.0),
               child: AppSearchBar(
                 onChanged: (v) {
                   setState(() {

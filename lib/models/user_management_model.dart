@@ -82,6 +82,28 @@ class UserPermissionResources {
   // 1. Dashboard
   static const String dashboard = 'dashboard';
 
+  // CRM
+  static const String crmDashboard = 'crm_dashboard';
+  static const String crmPipeline = 'crm_pipeline';
+  static const String crmOpportunities = 'crm_opportunities';
+  static const String crmLeads = 'crm_leads';
+  static const String crmAutomations = 'crm_automations';
+  static const String crmReports = 'crm_reports';
+  static const String crmEmails = 'crm_emails';
+
+  // RH & Paie
+  static const String hrDashboard = 'hr_dashboard';
+  static const String hrEmployees = 'hr_employees';
+  static const String hrLeaves = 'hr_leaves';
+  static const String hrAttendances = 'hr_attendances';
+  static const String hrPayroll = 'hr_payroll';
+  static const String hrCnssDeclaration = 'hr_cnss_declaration';
+  static const String hrDocuments = 'hr_documents';
+  static const String hrAccounting = 'hr_accounting';
+  static const String hrLegalEntity = 'hr_legal_entity';
+  static const String hrEstablishments = 'hr_establishments';
+  static const String hrManagers = 'hr_managers';
+
   // 2-8. Sales (Ventes)
   static const String salesQuotes = 'sales_quotes';
   static const String salesOrders = 'sales_orders';
@@ -128,6 +150,16 @@ class UserPermissionResources {
   static const String stockInventorySheets = 'stock_inventory_sheets';
   static const String stockWarehouses = 'stock_warehouses';
 
+  // Production
+  static const String productionDashboard = 'production_dashboard';
+  static const String productionOrders = 'production_orders';
+  static const String productionBoms = 'production_boms';
+  static const String productionPlanning = 'production_planning';
+  static const String productionCosts = 'production_costs';
+  static const String productionQuality = 'production_quality';
+  static const String productionReports = 'production_reports';
+  static const String productionWorkcenters = 'production_workcenters';
+
   // 32. Projects
   static const String projects = 'projects';
 
@@ -146,6 +178,9 @@ class UserPermissionResources {
   // 39. User Management (Admin Only)
   static const String userManagement = 'user_management';
 
+  // 40. Affiliation & Parrainage
+  static const String affiliate = 'affiliate';
+
   static const List<Map<String, dynamic>> allResources = [
     // 1. Tableau de bord
     {
@@ -155,6 +190,161 @@ class UserPermissionResources {
       'icon': Icons.dashboard_outlined,
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
+    },
+    // Affiliation & Parrainage
+    {
+      'key': affiliate,
+      'label': 'Affiliation & Parrainage',
+      'category': 'Général',
+      'icon': Icons.handshake_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    // CRM
+    {
+      'key': crmDashboard,
+      'label': 'CRM - Tableau de bord',
+      'category': 'CRM',
+      'icon': Icons.dashboard_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmPipeline,
+      'label': 'CRM - Pipeline de vente',
+      'category': 'CRM',
+      'icon': Icons.view_kanban_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmOpportunities,
+      'label': 'CRM - Opportunités',
+      'category': 'CRM',
+      'icon': Icons.auto_graph_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmLeads,
+      'label': 'CRM - Prospects (Leads)',
+      'category': 'CRM',
+      'icon': Icons.contact_phone_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmAutomations,
+      'label': 'CRM - Automatisations',
+      'category': 'CRM',
+      'icon': Icons.smart_toy_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmReports,
+      'label': 'CRM - Rapports de performance',
+      'category': 'CRM',
+      'icon': Icons.insights_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': crmEmails,
+      'label': 'CRM - Intégration email',
+      'category': 'CRM',
+      'icon': Icons.mark_email_read_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    // RH & Paie
+    {
+      'key': hrDashboard,
+      'label': 'RH - Tableau de bord',
+      'category': 'RH & Paie',
+      'icon': Icons.dashboard_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.standardCollaborator,
+    },
+    {
+      'key': hrEmployees,
+      'label': 'RH - Personnel & Employés',
+      'category': 'RH & Paie',
+      'icon': Icons.badge_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.standardCollaborator,
+    },
+    {
+      'key': hrLeaves,
+      'label': 'RH - Congés & Absences',
+      'category': 'RH & Paie',
+      'icon': Icons.event_available_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.standardCollaborator,
+    },
+    {
+      'key': hrAttendances,
+      'label': 'RH - Présences & Pointages',
+      'category': 'RH & Paie',
+      'icon': Icons.access_time_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.standardCollaborator,
+    },
+    {
+      'key': hrPayroll,
+      'label': 'RH - Fiches de Paie',
+      'category': 'RH & Paie',
+      'icon': Icons.payments_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.readOnly,
+    },
+    {
+      'key': hrCnssDeclaration,
+      'label': 'RH - Déclaration CNSS',
+      'category': 'RH & Paie',
+      'icon': Icons.assignment_turned_in_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.readOnly,
+    },
+    {
+      'key': hrDocuments,
+      'label': 'RH - Documents',
+      'category': 'RH & Paie',
+      'icon': Icons.folder_shared_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': hrAccounting,
+      'label': 'RH - Comptabilité',
+      'category': 'RH & Paie',
+      'icon': Icons.account_balance_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': hrLegalEntity,
+      'label': 'RH - Entité juridique',
+      'category': 'RH & Paie',
+      'icon': Icons.account_balance_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': hrEstablishments,
+      'label': 'RH - Établissements',
+      'category': 'RH & Paie',
+      'icon': Icons.apartment_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': hrManagers,
+      'label': 'RH - Gestionnaires',
+      'category': 'RH & Paie',
+      'icon': Icons.manage_accounts_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
     },
     // 2-8. Ventes
     {
@@ -403,6 +593,71 @@ class UserPermissionResources {
       'icon': Icons.warehouse_outlined,
       'defaultAdmin': UserResourcePermission.full,
       'defaultCollab': UserResourcePermission.empty,
+    },
+    // Production
+    {
+      'key': productionDashboard,
+      'label': 'Production - Tableau de bord',
+      'category': 'Production',
+      'icon': Icons.dashboard_customize_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionOrders,
+      'label': 'Production - Ordres de fabrication',
+      'category': 'Production',
+      'icon': Icons.assignment_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionBoms,
+      'label': 'Production - Nomenclatures (BOM)',
+      'category': 'Production',
+      'icon': Icons.account_tree_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionPlanning,
+      'label': 'Production - Planification',
+      'category': 'Production',
+      'icon': Icons.calendar_month_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionCosts,
+      'label': 'Production - Suivi des coûts',
+      'category': 'Production',
+      'icon': Icons.price_check_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionQuality,
+      'label': 'Production - Contrôle qualité',
+      'category': 'Production',
+      'icon': Icons.verified_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionReports,
+      'label': 'Production - Rapports de rendement',
+      'category': 'Production',
+      'icon': Icons.bar_chart_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
+    },
+    {
+      'key': productionWorkcenters,
+      'label': 'Production - Postes de travail',
+      'category': 'Production',
+      'icon': Icons.precision_manufacturing_outlined,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.full,
     },
     // 32. Projets
     {

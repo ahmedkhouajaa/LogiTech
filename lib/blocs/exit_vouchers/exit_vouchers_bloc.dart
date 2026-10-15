@@ -157,8 +157,14 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   Future<void> _onLoadFirstExitVouchers(LoadFirstExitVouchers event, Emitter<ExitVouchersState> emit) async {
     emit(ExitVouchersLoading());
     try {
-      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('exit_vouchers');
-      final pendingVouchers = pendingMaps.map((m) => StockWithdrawal.fromMap(m)).toList();
+      final pendingMaps1 = await OfflineDocumentService.instance.getPendingDocuments('exit_vouchers');
+      final pendingMaps2 = await OfflineDocumentService.instance.getPendingDocuments('bons_sortie');
+      final uniqueMap = <String, Map<String, dynamic>>{};
+      for (var m in [...pendingMaps1, ...pendingMaps2]) {
+        final id = m['id']?.toString();
+        if (id != null && id.isNotEmpty) uniqueMap[id] = m;
+      }
+      final pendingVouchers = uniqueMap.values.map((m) => StockWithdrawal.fromMap(m)).toList();
 
       List<StockWithdrawal> remoteVouchers = [];
       int totalCount = 0;

@@ -12,7 +12,6 @@ import '../../services/article_import_export_service.dart';
 import '../../widgets/import_export/article_import_dialog.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
-import '../../models/product.dart';
 import '../../screens/article_detail_screen.dart';
 
 class MobileProductsScreen extends StatefulWidget {
@@ -27,6 +26,7 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
   String _selectedFilter = 'Tous';
   late MobileModuleConfig _config;
   final ScrollController _scrollController = ScrollController();
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -86,7 +86,6 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
   }
 
   Widget _buildActionsButton(BuildContext context, ProductsState state) {
-    final products = state is ProductsLoaded ? state.products : <Product>[];
     return PopupMenuButton<String>(
       tooltip: 'Actions Import / Export Articles',
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -158,19 +157,19 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
           if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
           await ArticleImportExportService.instance.exportArticlesToExcel(
             context: context,
-            products: products,
+            exportAll: true,
           );
         } else if (val == 'export_csv') {
           if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
           await ArticleImportExportService.instance.exportArticlesToCsv(
             context: context,
-            products: products,
+            exportAll: true,
           );
         } else if (val == 'export_json') {
           if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
           await ArticleImportExportService.instance.exportArticlesToJson(
             context: context,
-            products: products,
+            exportAll: true,
           );
         } else if (val == 'import_excel') {
           if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
@@ -195,14 +194,21 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProductsBloc, ProductsState>(
+    return BlocConsumer<ProductsBloc, ProductsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ProductsLoaded || state is ProductsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is ProductsLoading || state is ProductsInitial;
+        bool isLoading = _isFirstLoad || state is ProductsLoading || state is ProductsInitial;
         bool isEmpty = true;
         int count = 0;
         List<Widget> cards = [];
 
-        if (state is ProductsLoaded) {
+        if (!_isFirstLoad && state is ProductsLoaded) {
           isEmpty = state.products.isEmpty;
           count = state.totalCount;
 

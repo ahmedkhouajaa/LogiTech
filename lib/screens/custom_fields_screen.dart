@@ -3,6 +3,7 @@ import '../models/custom_field_definition.dart';
 import '../services/custom_fields_service.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../services/error_handler.dart';
 import '../widgets/sidebar_menu.dart';
 import 'app_shell_screen.dart';
 
@@ -377,9 +378,7 @@ class _CustomFieldsScreenState extends State<CustomFieldsScreen> {
                     if (ctx.mounted) Navigator.pop(ctx, true);
                   } catch (e) {
                     if (ctx.mounted) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-                      );
+                      ErrorHandler.showErrorSnackBar(ctx, e);
                     }
                   }
                 },
@@ -463,9 +462,7 @@ class _CustomFieldsScreenState extends State<CustomFieldsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-          );
+          ErrorHandler.showErrorSnackBar(context, e);
         }
       }
     }
@@ -577,15 +574,19 @@ class _CustomFieldsScreenState extends State<CustomFieldsScreen> {
                                   color: isAchat ? const Color(0xFFD97706) : AppColors.primary,
                                 ),
                                 const SizedBox(width: 10),
-                                Text(
-                                  dt['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.textPrimary,
+                                Expanded(
+                                  child: Text(
+                                    dt['label'] as String,
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(

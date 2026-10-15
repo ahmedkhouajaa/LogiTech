@@ -24,4 +24,9 @@ class AppNavigationService {
 
     _navController.add(module);
   }
+
+  /// Navigates directly to an AppModule by emitting the navigation event.
+  void navigateTo(AppModule module) {
+    _navController.add(module);
+  }
 }

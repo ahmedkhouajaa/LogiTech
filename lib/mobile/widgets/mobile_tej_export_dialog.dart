@@ -6,6 +6,7 @@ import '../../models/payment_model.dart';
 import '../../services/tej_export_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
+import '../../services/error_handler.dart';
 
 class MobileTejExportDialog extends StatefulWidget {
   final List<Payment> payments;
@@ -556,12 +557,7 @@ class _MobileTejExportDialogState extends State<MobileTejExportDialog> {
                                 setState(() {
                                   _isExporting = false;
                                 });
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text('Erreur lors de la génération du fichier TEJ: $e'),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
+                                ErrorHandler.showErrorSnackBar(context, e);
                               }
                             }
                           },

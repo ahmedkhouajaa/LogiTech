@@ -46,7 +46,7 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: nameController,
-                  decoration: const InputDecoration(hintText: 'Ex: Amine Ben Salem', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(hintText: 'Ex: Ahmed Khouaja', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 14),
                 const Text('Email professionnel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),

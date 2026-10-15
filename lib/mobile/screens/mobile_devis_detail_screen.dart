@@ -22,6 +22,8 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import 'mobile_invoice_detail_screen.dart';
 import 'forms/mobile_quote_form_screen.dart';
@@ -414,8 +416,16 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      defaultPrefix: DocPrefix.invoice,
+    );
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(), invoiceId: invoiceId, productId: qi.productId, productName: qi.productName,
       description: qi.description, quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate,
@@ -424,49 +434,95 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     final invoice = Invoice(
       id: invoiceId, number: invoiceNumber, customerId: quote.customerId, customerName: quote.customerName,
       devisId: quote.id, date: DateTime.now(), dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid, totalHT: quote.totalHT, totalTva: quote.totalTva, totalTTC: quote.totalTTC,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid, totalHT: quote.totalHT, totalTva: quote.totalTva, totalTTC: quote.totalTTC,
       notes: quote.notes, items: invoiceItems, createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
-    try { context.read<InvoicesBloc>().add(AddInvoice(invoice)); } catch (e) { await DatabaseHelper.instance.insertInvoice(invoice); }
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
+    } else {
+      try { context.read<InvoicesBloc>().add(AddInvoice(invoice)); } catch (e) { await DatabaseHelper.instance.insertInvoice(invoice); }
+    }
     final updatedQuote = quote.copyWith(isConverted: true, convertedTo: 'invoice', convertedToId: invoiceId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en facture avec succes'), backgroundColor: AppColors.success));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft ? 'Facture enregistrée en Brouillon (en attente de sync)' : 'Devis converti en facture avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq, docCollection: 'customer_orders');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'customer_orders',
+      docTypeName: 'Commande Client',
+      defaultPrefix: DocPrefix.customerOrder,
+    );
+    if (docNumResult.cancelled) return;
+    final orderNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
       id: const Uuid().v4(), orderId: orderId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,
     )).toList();
     final order = CustomerOrder(
       id: orderId, number: orderNumber, customerId: quote.customerId, customerName: quote.customerName,
-      quoteId: quote.id, date: DateTime.now(), status: 'created', notes: quote.notes, items: orderItems, createdAt: DateTime.now(),
+      quoteId: quote.id, date: DateTime.now(), status: isDraft ? 'draft' : 'created', notes: quote.notes, items: orderItems, createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
-    try { context.read<CustomerOrdersBloc>().add(AddCustomerOrder(order)); } catch (e) { await DatabaseHelper.instance.insertCustomerOrder(order); }
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('customer_orders', order.toMap());
+    } else {
+      try { context.read<CustomerOrdersBloc>().add(AddCustomerOrder(order)); } catch (e) { await DatabaseHelper.instance.insertCustomerOrder(order); }
+    }
     final updatedQuote = quote.copyWith(isConvertedToOrder: true, convertedToOrderId: orderId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en commande client avec succes'), backgroundColor: AppColors.success));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft ? 'Commande enregistrée en Brouillon (en attente de sync)' : 'Devis converti en commande client avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'delivery_notes',
+      docTypeName: 'Bon de Livraison',
+      defaultPrefix: DocPrefix.deliveryNote,
+    );
+    if (docNumResult.cancelled) return;
+    final deliveryNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
+
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(), deliveryNoteId: deliveryId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,
     )).toList();
     final deliveryNote = DeliveryNote(
       id: deliveryId, number: deliveryNumber, customerId: quote.customerId, customerName: quote.customerName,
-      devisId: quote.id, date: DateTime.now(), status: 'delivered', notes: quote.notes, items: deliveryItems, createdAt: DateTime.now(),
+      devisId: quote.id, date: DateTime.now(), status: isDraft ? 'draft' : 'delivered', notes: quote.notes, items: deliveryItems, createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
-    try { context.read<DeliveryNotesBloc>().add(AddDeliveryNote(deliveryNote)); } catch (e) { await DatabaseHelper.instance.insertDeliveryNote(deliveryNote); }
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('delivery_notes', deliveryNote.toMap());
+    } else {
+      try { context.read<DeliveryNotesBloc>().add(AddDeliveryNote(deliveryNote)); } catch (e) { await DatabaseHelper.instance.insertDeliveryNote(deliveryNote); }
+    }
     final updatedQuote = quote.copyWith(isConvertedToDelivery: true, convertedToDeliveryId: deliveryId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en bon de livraison avec succes'), backgroundColor: AppColors.success));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft ? 'Bon de livraison enregistré en Brouillon (en attente de sync)' : 'Devis converti en bon de livraison avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   Future<void> _openConvertedInvoice(BuildContext context, String? invoiceId) async {

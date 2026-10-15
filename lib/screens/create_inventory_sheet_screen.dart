@@ -16,7 +16,8 @@ import '../../models/product.dart';
 import '../../models/stock_movement.dart' show Warehouse;
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
-import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 import '../../services/enterprise_service.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
@@ -49,6 +50,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
   String _status = 'draft';
+  bool _isSaving = false;
 
   List<InventorySheetItem> _items = [];
   List<Warehouse> _warehouses = [];
@@ -107,6 +109,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   }
 
   Future<void> _save({bool isDraft = false}) async {
+    if (_isSaving) return;
     if (widget.sheet == null && !TrialService.instance.checkCanCreate(context)) {
       return;
     }
@@ -126,38 +129,79 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       return;
     }
 
-    String sheetNumber = _number;
-    if (sheetNumber.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextInventorySheetSequence();
-      sheetNumber = generateDocNumber(DocPrefix.inventorySheet, seq);
-    }
+    setState(() => _isSaving = true);
 
-    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
-    final newSheet = InventorySheet(
-      id: _id,
-      number: sheetNumber,
-      date: _date,
-      inventoryDate: _inventoryDate,
-      warehouseId: _warehouseId!,
-      countedBy: _countedByController.text,
-      reason: _reasonController.text,
-      notes: _notesController.text,
-      status: isDraft ? 'draft' : 'validated',
-      enterpriseId: currentEntId,
-      items: _items,
-      createdAt: widget.sheet?.createdAt,
-    );
+    try {
+      String sheetNumber = _number;
+      bool forceDraft = false;
+      if (sheetNumber.isEmpty) {
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'inventory_sheets',
+          docTypeName: "Fiche d'Inventaire",
+          defaultPrefix: DocPrefix.inventorySheet,
+        );
+        if (docNumResult.cancelled) return;
+        sheetNumber = docNumResult.number;
+        forceDraft = docNumResult.isDraft;
+      }
 
-    if (widget.sheet == null) {
-      context.read<InventorySheetsBloc>().add(InventorySheetAdded(newSheet));
-    } else {
-      context.read<InventorySheetsBloc>().add(InventorySheetUpdated(newSheet));
-    }
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+      final newSheet = InventorySheet(
+        id: _id,
+        number: sheetNumber,
+        date: _date,
+        inventoryDate: _inventoryDate,
+        warehouseId: _warehouseId!,
+        countedBy: _countedByController.text,
+        reason: _reasonController.text,
+        notes: _notesController.text,
+        status: (isDraft || forceDraft) ? 'draft' : (widget.sheet != null ? _status : 'validated'),
+        enterpriseId: currentEntId,
+        items: _items,
+        createdAt: widget.sheet?.createdAt,
+      );
 
-    if (mounted) {
-      context.read<StockBloc>().add(LoadStock());
-      context.read<ProductsBloc>().add(LoadProducts());
-      Navigator.pop(context);
+      if (forceDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('inventory_sheets', newSheet.toMap());
+        context.read<InventorySheetsBloc>().add(LoadFirstInventorySheets());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Fiche d\'inventaire ${newSheet.number} enregistrée en Brouillon (en attente de sync)'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (widget.sheet == null) {
+        context.read<InventorySheetsBloc>().add(InventorySheetAdded(newSheet));
+      } else {
+        context.read<InventorySheetsBloc>().add(InventorySheetUpdated(newSheet));
+      }
+
+      if (mounted) {
+        context.read<StockBloc>().add(LoadStock());
+        context.read<ProductsBloc>().add(LoadProducts());
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.sheet != null
+                ? 'Fiche d\'inventaire ${newSheet.number} mise à jour avec succès'
+                : 'Fiche d\'inventaire ${newSheet.number} créée avec succès'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -254,7 +298,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _save(isDraft: false),
+                        onPressed: _isSaving ? null : () => _save(isDraft: false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -262,7 +306,9 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                           elevation: 0,
                         ),
-                        child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: _isSaving
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ],

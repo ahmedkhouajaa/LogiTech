@@ -23,6 +23,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../widgets/document_tax_settings_dialog.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/custom_fields_form_section.dart';
@@ -258,18 +259,20 @@ class _CreateSupplierCreditNoteScreenState
     final messenger = ScaffoldMessenger.of(context);
 
     String number = widget.existing?.number ?? '';
+    bool isDraft = false;
     if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
+      final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
         context: context,
         docCollection: 'supplier_credit_notes',
         docTypeName: 'Avoir Fournisseur',
-        prefix: DocPrefix.supplierCreditNote,
+        defaultPrefix: DocPrefix.supplierCreditNote,
       );
-      if (seq == null) {
+      if (docNumResult.cancelled) {
         setState(() => _isSaving = false);
         return;
       }
-      number = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
+      number = docNumResult.number;
+      isDraft = docNumResult.isDraft;
     }
 
     final suppState = context.read<SuppliersBloc>().state;
@@ -291,7 +294,7 @@ class _CreateSupplierCreditNoteScreenState
       supplierId: _selectedsupplierId!,
       supplierName: suppName,
       date: _date,
-      status: _status.name,
+      status: isDraft ? SupplierCreditNoteStatus.draft.name : _status.name,
       reason: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       customFields: {
         ..._customFields,
@@ -316,6 +319,21 @@ class _CreateSupplierCreditNoteScreenState
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
+
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('supplier_credit_notes', note.toMap());
+      if (mounted) {
+        nav.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Avoir Fournisseur ${note.number} enregistré en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     if (_isEditing) {
       bloc.add(UpdateSupplierCreditNote(note));

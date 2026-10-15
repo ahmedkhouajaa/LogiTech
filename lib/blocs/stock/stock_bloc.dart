@@ -3,8 +3,11 @@ import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import '../../models/stock_movement.dart';
+import 'package:flutter/foundation.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
+import '../../services/connectivity_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class StockEvent extends Equatable { const StockEvent(); @override List<Object?> get props => []; }
@@ -23,6 +26,7 @@ class StockLoaded extends StockState {
   const StockLoaded(this.movements, this.warehouses, this.totalStockValue);
   @override List<Object?> get props => [movements, warehouses, totalStockValue];
 }
+
 class StockError extends StockState { final String message; const StockError(this.message); @override List<Object?> get props => [message]; }
 
 class StockBloc extends Bloc<StockEvent, StockState> {
@@ -51,10 +55,24 @@ class StockBloc extends Bloc<StockEvent, StockState> {
           data['id'] = doc.id;
           return StockMovement.fromMap(data);
         }).where((m) => !m.isDeleted).toList();
-        movements.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       } catch (_) {
         movements = await DatabaseHelper.instance.getStockMovements();
       }
+
+      // Combine with local pending offline movements
+      try {
+        final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('stock_movements');
+        final pendingMovements = pendingMaps.map((m) => StockMovement.fromMap(m)).toList();
+        final pendingIds = pendingMovements.map((m) => m.id).toSet();
+        final combined = <StockMovement>[...pendingMovements];
+        for (var m in movements) {
+          if (!pendingIds.contains(m.id)) {
+            combined.add(m);
+          }
+        }
+        movements = combined;
+      } catch (_) {}
+      movements.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       // 2. Fetch Warehouses
       List<Warehouse> warehouses = [];
@@ -106,7 +124,18 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
   Future<void> _onAddMovement(AddStockMovement event, Emitter<StockState> emit) async {
     try {
-      await FirestoreRepository.instance.saveDocument('stock_movements', event.movement.id, event.movement.toMap());
+      if (!ConnectivityService.instance.isOnline) {
+        await OfflineDocumentService.instance.savePendingDocument('stock_movements', event.movement.toMap());
+      } else {
+        try {
+          await FirestoreRepository.instance
+              .saveDocument('stock_movements', event.movement.id, event.movement.toMap())
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('⚠️ [StockBloc] Firestore timeout or weak network, saving movement locally as pending: $e');
+          await OfflineDocumentService.instance.savePendingDocument('stock_movements', event.movement.toMap());
+        }
+      }
       add(LoadStock());
     } catch (e) {
       emit(StockError(ErrorHandler.parseError(e)));

@@ -102,31 +102,52 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 550;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(context.tr('Entrepôts'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 2),
                   Text(context.tr('Gérer vos entrepôts'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              const Spacer(),
-              if (PermissionService.instance.canCreate(UserPermissionResources.stockWarehouses))
-                ElevatedButton.icon(
-                  onPressed: () => _showWarehouseDialog(),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(context.tr('Ajouter un Entrepôt')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-            ],
+              );
+
+              final newBtn = PermissionService.instance.canCreate(UserPermissionResources.stockWarehouses)
+                  ? ElevatedButton.icon(
+                      onPressed: () => _showWarehouseDialog(),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(context.tr('Ajouter un Entrepôt')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    newBtn,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  titleWidget,
+                  const Spacer(),
+                  newBtn,
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),

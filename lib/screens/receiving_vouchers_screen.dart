@@ -17,6 +17,7 @@ import '../models/supplier.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/scanner_button.dart';
 import 'create_receiving_voucher_screen.dart';
 import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../models/purchase_invoice.dart';
@@ -26,6 +27,7 @@ import '../blocs/supplier_returns/supplier_returns_event.dart';
 import '../models/supplier_return.dart';
 import 'document_preview_screen.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
@@ -77,6 +79,7 @@ class ReceivingVouchersScreen extends StatefulWidget {
 
 class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   final Set<String> _selectedVoucherIds = {};
+  bool _isFirstLoad = true;
 
   String? _selectedSupplierId;
   DateTime? _dateFrom;
@@ -159,6 +162,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 _buildBulkActionsDropdown(),
                 const SizedBox(width: 10),
               ],
+              ScannerButton(
+                documentTitle: context.tr('Bons de réception'),
+                documentType: 'receiving_voucher',
+              ),
+              const SizedBox(width: 10),
               if (PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers))
                 AppButton(
                   label: context.tr('Nouveau bon'),
@@ -652,14 +660,21 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(
+    return BlocConsumer<ReceivingVouchersBloc, ReceivingVouchersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ReceivingVouchersLoaded || state is ReceivingVouchersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is ReceivingVouchersLoading || state is ReceivingVouchersInitial) {
+        if (_isFirstLoad || state is ReceivingVouchersLoading || state is ReceivingVouchersInitial) {
           return _buildTableShimmer();
         }
         if (state is ReceivingVouchersError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(message: state.message);
+        }
         if (state is ReceivingVouchersLoaded) {
           // Local filtering
           var filteredVouchers = state.vouchers.where((v) {
@@ -1101,14 +1116,15 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
   Future<void> _executeConversion(ReceivingVoucher voucher) async {
     final newInvoiceId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'purchase_invoices',
       docTypeName: 'Facture d\'Achat',
-      prefix: DocPrefix.purchaseInvoice,
+      defaultPrefix: DocPrefix.purchaseInvoice,
     );
-    if (seq == null) return;
-    final invoiceNumber = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     List<PurchaseInvoiceItem> newItems = [];
 
@@ -1137,7 +1153,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       orderId: voucher.orderId,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: voucher.computedTotalHT,
       totalTva: voucher.computedTotalTvaAfterDiscount,
       totalTTC: voucher.computedTotalTTC,
@@ -1149,10 +1165,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       amountPaid: 0,
       items: newItems,
       notes: voucher.notes,
+      isSynced: !isDraft,
     );
 
-    // Save invoice
-    context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', newInvoice.toMap());
+    } else {
+      context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+    }
 
     // Update Receiving Voucher
     final updatedVoucher = voucher.copyWith(
@@ -1163,8 +1183,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${context.tr('Facture d\'achat créée avec succès')} ($invoiceNumber)'),
-      backgroundColor: AppColors.success,
+      content: Text(isDraft
+          ? 'Facture d\'achat $invoiceNumber enregistrée en Brouillon (en attente de sync)'
+          : '${context.tr('Facture d\'achat créée avec succès')} ($invoiceNumber)'),
+      backgroundColor: isDraft ? AppColors.warning : AppColors.success,
     ));
   }
 
@@ -1256,14 +1278,15 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
   Future<void> _executeConvertToReturn(ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'supplier_returns',
       docTypeName: 'Retour Fournisseur',
-      prefix: DocPrefix.supplierReturn,
+      defaultPrefix: DocPrefix.supplierReturn,
     );
-    if (seq == null) return;
-    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
+    if (docNumResult.cancelled) return;
+    final returnNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     List<SupplierReturnItem> newItems = [];
 
@@ -1290,15 +1313,18 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       supplierName: voucher.supplierName,
       receivingVoucherId: voucher.id,
       date: DateTime.now(),
-      status: 'validated',
+      status: isDraft ? 'draft' : 'validated',
       isDeleted: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       items: newItems,
     );
 
-    // Save return
-    context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('supplier_returns', newReturn.toMap());
+    } else {
+      context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
+    }
 
     // Update Receiving Voucher
     final updatedVoucher = voucher.copyWith(
@@ -1309,8 +1335,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${context.tr('Bon de retour créé avec succès')} ($returnNumber)'),
-      backgroundColor: AppColors.success,
+      content: Text(isDraft
+          ? 'Bon de retour $returnNumber enregistré en Brouillon (en attente de sync)'
+          : '${context.tr('Bon de retour créé avec succès')} ($returnNumber)'),
+      backgroundColor: isDraft ? AppColors.warning : AppColors.success,
     ));
   }
 

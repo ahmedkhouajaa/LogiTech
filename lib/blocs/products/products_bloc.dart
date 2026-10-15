@@ -1,12 +1,17 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../models/product.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
+import '../../services/enterprise_service.dart';
 import '../../models/user_management_model.dart';
 import '../../database/database_helper.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
+import '../../services/stock_notification_service.dart';
 
 abstract class ProductsEvent extends Equatable {
   const ProductsEvent();
@@ -164,7 +169,124 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   }
 
   Future<void> _onLoad(LoadProducts event, Emitter<ProductsState> emit) async {
-    add(const LoadFirstProducts());
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+
+    emit(ProductsLoading());
+
+    List<Product> parseDocs(Iterable<DocumentSnapshot> docs) {
+      final Map<String, Product> productMap = {};
+      for (final doc in docs) {
+        try {
+          final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+          data['id'] = doc.id;
+          final isDel = data['is_deleted'] == 1 ||
+              data['is_deleted'] == true ||
+              data['is_deleted'] == '1' ||
+              data['isDeleted'] == 1 ||
+              data['isDeleted'] == true;
+          if (isDel) continue;
+          final prod = Product.fromMap(data);
+          if (!prod.isDeleted) {
+            productMap[doc.id] = prod;
+          }
+        } catch (e) {
+          print("Error parsing product ${doc.id}: $e");
+        }
+      }
+      return productMap.values.toList();
+    }
+
+    Query buildPrimaryQuery() {
+      Query query = FirebaseFirestore.instance.collection('articles');
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        return query.where('enterprise_id', isEqualTo: currentEntId);
+      } else if (uid != null && uid.isNotEmpty) {
+        return query.where('userId', isEqualTo: uid);
+      }
+      return query;
+    }
+
+    // Phase 1: Try cache first for instant display
+    bool shownFromCache = false;
+    try {
+      final cacheSnap = await buildPrimaryQuery().get(const GetOptions(source: Source.cache));
+      if (cacheSnap.docs.isNotEmpty && !emit.isDone) {
+        final cached = parseDocs(cacheSnap.docs);
+        if (cached.isNotEmpty) {
+          final lowStock = cached.where((p) => p.isLowStock).toList();
+          emit(ProductsLoaded(
+            cached,
+            lowStock,
+            totalCount: cached.length,
+            hasMore: false,
+          ));
+          shownFromCache = true;
+        }
+      }
+    } catch (_) {}
+
+    // Phase 2: Fetch fresh data from server
+    try {
+      final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 15);
+      final serverSnap = await buildPrimaryQuery().get().timeout(timeout);
+      var items = parseDocs(serverSnap.docs);
+
+      // If primary query returned empty but user is logged in, try fallback queries
+      if (items.isEmpty && uid != null && uid.isNotEmpty) {
+        final List<QuerySnapshot?> results = await Future.wait([
+          FirebaseFirestore.instance
+              .collection('articles')
+              .where('userId', isEqualTo: uid)
+              .get()
+              .timeout(timeout)
+              .catchError((_) => null as dynamic),
+          FirebaseFirestore.instance
+              .collection('articles')
+              .where('firebase_uid', isEqualTo: uid)
+              .get()
+              .timeout(timeout)
+              .catchError((_) => null as dynamic),
+        ]);
+        final allDocs = <DocumentSnapshot>[];
+        for (final res in results) {
+          if (res != null) {
+            allDocs.addAll(res.docs);
+          }
+        }
+        if (allDocs.isNotEmpty) {
+          items = parseDocs(allDocs);
+        }
+      }
+
+      // If still empty, try DatabaseHelper fallback
+      if (items.isEmpty) {
+        final local = await DatabaseHelper.instance.getProducts();
+        if (local.isNotEmpty) {
+          items = local;
+        }
+      }
+
+      final lowStock = items.where((p) => p.isLowStock).toList();
+      if (!emit.isDone) {
+        emit(ProductsLoaded(
+          items,
+          lowStock,
+          totalCount: items.length,
+          hasMore: false,
+        ));
+      }
+    } catch (e) {
+      if (!shownFromCache && !emit.isDone) {
+        try {
+          final local = await DatabaseHelper.instance.getProducts();
+          final lowStock = local.where((p) => p.isLowStock).toList();
+          emit(ProductsLoaded(local, lowStock, totalCount: local.length, hasMore: false));
+        } catch (_) {
+          emit(const ProductsError("Erreur lors du chargement des articles"));
+        }
+      }
+    }
   }
 
   Future<void> _onLoadFirst(
@@ -245,7 +367,13 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     }
     try {
       await FirestoreRepository.instance.saveProduct(event.product);
-      add(const LoadFirstProducts());
+      StockNotificationService.instance.checkStockAlerts(notifyOnNew: true);
+      final currentState = state;
+      if (currentState is ProductsLoaded && !currentState.hasMore) {
+        add(LoadProducts());
+      } else {
+        add(const LoadFirstProducts());
+      }
     } catch (e) {
       emit(ProductsError(ErrorHandler.parseError(e)));
     }
@@ -258,7 +386,13 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     }
     try {
       await FirestoreRepository.instance.saveProduct(event.product);
-      add(const LoadFirstProducts());
+      StockNotificationService.instance.checkStockAlerts(notifyOnNew: true);
+      final currentState = state;
+      if (currentState is ProductsLoaded && !currentState.hasMore) {
+        add(LoadProducts());
+      } else {
+        add(const LoadFirstProducts());
+      }
     } catch (e) {
       emit(ProductsError(ErrorHandler.parseError(e)));
     }
@@ -290,6 +424,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       try {
         await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
         await DatabaseHelper.instance.deleteProduct(event.id);
+        StockNotificationService.instance.checkStockAlerts(notifyOnNew: false);
       } catch (e) {
         print("Error deleting product in Firestore: $e");
       }
@@ -327,6 +462,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
           await FirestoreRepository.instance.softDeleteDocument('articles', id);
           await DatabaseHelper.instance.deleteProduct(id);
         }
+        StockNotificationService.instance.checkStockAlerts(notifyOnNew: false);
       }
     } catch (e) {
       print("Error in bulk deleting products: $e");

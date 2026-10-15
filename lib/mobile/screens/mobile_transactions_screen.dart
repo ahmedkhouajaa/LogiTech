@@ -21,6 +21,7 @@ class _MobileTreasuryTransactionsScreenState extends State<MobileTreasuryTransac
   String _selectedFilter = 'Tous';
   late MobileModuleConfig _config;
   final ScrollController _scrollController = ScrollController();
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -62,15 +63,22 @@ class _MobileTreasuryTransactionsScreenState extends State<MobileTreasuryTransac
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+    return BlocConsumer<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is TreasuryTransactionsLoaded || state is TreasuryTransactionsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is TreasuryTransactionsLoading || state is TreasuryTransactionsInitial;
+        bool isLoading = _isFirstLoad || state is TreasuryTransactionsLoading || state is TreasuryTransactionsInitial;
         bool isEmpty = true;
         List<Widget> cards = [];
         int totalMatchingCount = 0;
         bool isLoadingMore = false;
 
-        if (state is TreasuryTransactionsLoaded) {
+        if (!_isFirstLoad && state is TreasuryTransactionsLoaded) {
           final items = state.transactions;
           isEmpty = items.isEmpty;
           totalMatchingCount = state.totalCount;

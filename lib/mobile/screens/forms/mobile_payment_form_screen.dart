@@ -1,3 +1,5 @@
+import '../../../../widgets/traite_editor_dialog.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +25,8 @@ import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../screens/suppliers_screen.dart';
 import '../../../../services/trial_service.dart';
+import '../../../../services/offline_document_service.dart';
+import '../../../../services/error_handler.dart';
 import '../../../../models/check_traite.dart';
 
 class MobilePaymentFormScreen extends StatefulWidget {
@@ -52,7 +56,9 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
   String _method = 'especes'; // especes, virement_bancaire, versement_bancaire, cheque, traite, carte, autre
   double _amount = 0;
   DateTime _paymentDate = DateTime.now();
-  DateTime _maturityDate = DateTime.now().add(const Duration(days: 30));
+  DateTime? _maturityDate;
+  String _issuerName = '';
+  String _bankName = '';
   String _reference = '';
   String _notes = '';
   String _status = 'paid';
@@ -94,10 +100,33 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
       _method = p.method;
       _amount = p.amount;
       _paymentDate = p.paymentDate;
+      _maturityDate = p.maturityDate;
+      _issuerName = p.issuerName ?? '';
+      _bankName = p.bankName ?? '';
       _reference = p.reference ?? '';
       _notes = p.notes ?? '';
       _status = p.status;
     }
+  }
+
+  void _openTraiteEditor() {
+    TraiteEditorDialog.show(
+      context,
+      initialAmount: _amount,
+      initialNumber: _reference,
+      initialIssuer: _issuerName,
+      initialCreationDate: _paymentDate,
+      initialMaturityDate: _maturityDate,
+      onApply: (data) {
+        setState(() {
+          if (data.documentNumber.isNotEmpty) _reference = data.documentNumber;
+          if (data.amount > 0) _amount = data.amount;
+          if (data.issuerName.isNotEmpty) _issuerName = data.issuerName;
+          _paymentDate = data.creationDate;
+          _maturityDate = data.maturityDate;
+        });
+      },
+    );
   }
 
   Future<void> _save() async {
@@ -131,10 +160,15 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
       
       String number = widget.existing?.paymentNumber ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextPaymentSequence();
-        number = _direction == 'encaissement'
-            ? generateDocNumber(DocPrefix.paymentIn, seq)
-            : generateDocNumber(DocPrefix.paymentOut, seq);
+        try {
+          final seq = await DatabaseHelper.instance.getNextPaymentSequence()
+              .timeout(const Duration(seconds: 4));
+          number = _direction == 'encaissement'
+              ? generateDocNumber(DocPrefix.paymentIn, seq)
+              : generateDocNumber(DocPrefix.paymentOut, seq);
+        } catch (_) {
+          number = OfflineDocumentService.generateDraftNumber();
+        }
       }
 
       String? contactName = _selectedContactName;
@@ -178,6 +212,9 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
         accountId: _selectedAccountId,
         accountName: accountName,
         reference: _reference.trim().isEmpty ? null : _reference.trim(),
+        bankName: _method == 'cheque' && _bankName.trim().isNotEmpty ? _bankName.trim() : null,
+        maturityDate: _maturityDate ?? _paymentDate,
+        issuerName: _method == 'traite' && _issuerName.trim().isNotEmpty ? _issuerName.trim() : null,
         paymentDate: _paymentDate,
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
         status: isChequeOrTraite ? 'en_attente' : _status,
@@ -195,10 +232,13 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
           type: _method,
           entityType: _direction == 'encaissement' ? 'client' : 'fournisseur',
           partyId: _selectedContactId!,
-          partyName: contactName ?? '',
+          partyName: _method == 'traite' && _issuerName.trim().isNotEmpty
+              ? _issuerName.trim()
+              : (contactName ?? ''),
+          bankName: _method == 'cheque' && _bankName.trim().isNotEmpty ? _bankName.trim() : null,
           amount: _amount,
           issueDate: _paymentDate,
-          maturityDate: _maturityDate,
+          maturityDate: _maturityDate ?? _paymentDate,
           status: 'en_attente',
           compteTresorerieId: _selectedAccountId,
           compteTresorerieName: accountName,
@@ -235,10 +275,9 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
         ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur lors de la sauvegarde: $e'),
-        backgroundColor: AppColors.error,
-      ));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -337,7 +376,13 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                                 onTap: () async {
                                   final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
                                   if (res != null && mounted) {
-                                    setState(() => _selectedContactId = res);
+                                    setState(() {
+                                      _selectedContactId = res;
+                                      final c = customers.cast<Customer?>().firstWhere((x) => x?.id == res, orElse: () => null);
+                                      if (c != null && _issuerName.isEmpty) {
+                                        _issuerName = c.companyName?.isNotEmpty == true ? c.companyName! : c.name;
+                                      }
+                                    });
                                   }
                                 },
                               ),
@@ -402,7 +447,13 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                                 onTap: () async {
                                   final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
                                   if (res != null && mounted) {
-                                    setState(() => _selectedContactId = res);
+                                    setState(() {
+                                      _selectedContactId = res;
+                                      final s = suppliers.cast<Supplier?>().firstWhere((x) => x?.id == res, orElse: () => null);
+                                      if (s != null && _issuerName.isEmpty) {
+                                        _issuerName = s.companyName?.isNotEmpty == true ? s.companyName! : (s.responsibleName?.isNotEmpty == true ? s.responsibleName! : s.name);
+                                      }
+                                    });
                                   }
                                 },
                               ),
@@ -536,24 +587,160 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     );
                   },
                 ),
-                SizedBox(height: 16),
-                AbsorbPointer(
-                  absorbing: widget.isReadOnly,
-                  child: SmartTextInput(
-                    label: 'Référence',
-                    hint: 'Saisir la référence',
-                    initialValue: _reference,
-                    onChanged: (v) => _reference = v,
+if (_method == 'traite') ...[
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: buildTraiteEditorButton(onTap: _openTraiteEditor),
                   ),
-                ),
-                if (_method == 'cheque' || _method == 'traite') ...[
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartTextInput(
+                      label: 'Émetteur / Propriétaire de la traite',
+                      hint: _contactType == 'customer' ? 'Client passager' : 'Fournisseur passager',
+                      initialValue: _issuerName,
+                      onChanged: (v) => _issuerName = v,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartTextInput(
+                      label: 'Numéro de traite',
+                      hint: 'Saisir le numéro de traite',
+                      initialValue: _reference,
+                      onChanged: (v) => _reference = v,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   AbsorbPointer(
                     absorbing: widget.isReadOnly,
                     child: SmartDatePicker(
-                      label: 'Date d\'Échéance *',
-                      value: _maturityDate,
-                      onChanged: (v) => setState(() => _maturityDate = v),
+                      label: 'Date de création de traite',
+                      value: _paymentDate,
+                      onChanged: (v) => setState(() => _paymentDate = v),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Échéance (facultatif)',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                            ),
+                            if (_maturityDate != null && !widget.isReadOnly)
+                              GestureDetector(
+                                onTap: () => setState(() => _maturityDate = null),
+                                child: Text('Effacer', style: TextStyle(fontSize: 12, color: AppColors.error)),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: widget.isReadOnly ? null : () async {
+                            final d = await showDatePicker(
+                              context: context,
+                              initialDate: _maturityDate ?? DateTime.now().add(const Duration(days: 30)),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (d != null) setState(() => _maturityDate = d);
+                          },
+                          child: Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _maturityDate != null
+                                      ? DateFormat('d MMMM yyyy', 'fr_FR').format(_maturityDate!)
+                                      : 'Sélectionner la date',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: _maturityDate != null ? AppColors.textPrimary : AppColors.textTertiary,
+                                  ),
+                                ),
+                                Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (_method == 'cheque') ...[
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartSearchableSelector(
+                      label: 'Banque émettrice',
+                      hint: 'Saisir la banque émettrice',
+                      selectedText: _bankName.isNotEmpty ? _bankName : null,
+                      onTap: () async {
+                        final res = await showSimpleOptionSelectDialog(
+                          context,
+                          'Sélectionner la banque émettrice',
+                          AppColors.tunisianBanks.map((b) => {'value': b, 'label': b}).toList(),
+                          selectedValue: _bankName,
+                        );
+                        if (res != null && mounted) {
+                          setState(() => _bankName = res);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartTextInput(
+                      label: 'Numéro de chèque',
+                      hint: 'Saisir le numéro de chèque',
+                      initialValue: _reference,
+                      onChanged: (v) => _reference = v,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartDatePicker(
+                      label: 'Date de paiement',
+                      value: _paymentDate,
+                      onChanged: (v) => setState(() => _paymentDate = v),
+                    ),
+                  ),
+                ] else ...[
+                  if (_method != 'especes') ...[
+                    const SizedBox(height: 16),
+                    AbsorbPointer(
+                      absorbing: widget.isReadOnly,
+                      child: SmartTextInput(
+                        label: 'Référence',
+                        hint: 'Saisir la référence',
+                        initialValue: _reference,
+                        onChanged: (v) => _reference = v,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  AbsorbPointer(
+                    absorbing: widget.isReadOnly,
+                    child: SmartDatePicker(
+                      label: 'Date de paiement',
+                      value: _paymentDate,
+                      onChanged: (v) => setState(() => _paymentDate = v),
                     ),
                   ),
                 ],

@@ -267,22 +267,20 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     final isOnline = ConnectivityService.instance.isOnline;
 
     String number = widget.existing?.number ?? '';
+    bool isDraft = false;
     if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'receiving_vouchers',
-          docTypeName: 'Bon de Réception',
-          prefix: DocPrefix.receivingVoucher,
-        );
-        if (seq == null) {
-          setState(() => _isSaving = false);
-          return;
-        }
-        number = generateDocNumber(DocPrefix.receivingVoucher, seq, docCollection: 'receiving_vouchers');
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
+      final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+        context: context,
+        docCollection: 'receiving_vouchers',
+        docTypeName: 'Bon de Réception',
+        defaultPrefix: DocPrefix.receivingVoucher,
+      );
+      if (docNumResult.cancelled) {
+        setState(() => _isSaving = false);
+        return;
       }
+      number = docNumResult.number;
+      isDraft = docNumResult.isDraft;
     }
 
     final suppState = context.read<SuppliersBloc>().state;
@@ -304,7 +302,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       supplierId: _selectedSupplierId!,
       supplierName: suppName,
       date: _date,
-      status: _status.name,
+      status: isDraft ? ReceivingVoucherStatus.draft.name : _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
       globalDiscountAmount: _globalDiscountAmount,
@@ -332,16 +330,16 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         tvaRate: item.tvaRate,
         discountPercent: item.discountPercent,
       )).toList(),
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+      isSynced: !isDraft && (widget.existing?.isSynced ?? true),
     );
 
-    if (!isOnline && !_isEditing) {
+    if (isDraft) {
       await OfflineDocumentService.instance.savePendingDocument('receiving_vouchers', order.toMap());
       bloc.add(LoadFirstReceivingVouchers());
       nav.pop();
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Bon de Réception ${order.number} enregistré hors-ligne (en attente de sync)'),
+          content: Text('Bon de Réception ${order.number} enregistré en Brouillon (en attente de sync)'),
           backgroundColor: AppColors.warning,
           duration: const Duration(seconds: 3),
         ),

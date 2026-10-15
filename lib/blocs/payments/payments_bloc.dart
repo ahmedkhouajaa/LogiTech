@@ -6,6 +6,8 @@ import '../../models/user_management_model.dart';
 import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
+import '../../services/connectivity_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ─────────────────────────────────────────────────────────────────
@@ -160,6 +162,9 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   Future<void> _onLoadFirst(LoadFirstPayments event, Emitter<PaymentsState> emit) async {
     emit(PaymentsLoading());
     try {
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('payments');
+      final pendingPayments = pendingMaps.map((m) => Payment.fromMap(m)).toList();
+
       FirestorePaginationService.instance.resetPaymentsPagination();
       final paymentsFuture = FirestorePaginationService.instance.getFirstPayments(
         pageSize: 100,
@@ -173,19 +178,34 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       final accountsFuture = DatabaseHelper.instance.getPaymentAccounts();
 
       final results = await Future.wait([paymentsFuture, countFuture, accountsFuture]);
-      final payments = results[0] as List<Payment>;
+      final remotePayments = results[0] as List<Payment>;
       final totalCount = results[1] as int;
       final accounts = results[2] as List<PaymentAccount>;
+
+      final payments = [...pendingPayments, ...remotePayments];
 
       emit(PaymentsLoaded(
         payments,
         accounts,
         totalCount: totalCount > payments.length ? totalCount : payments.length,
-        hasMore: payments.length >= 100,
+        hasMore: remotePayments.length >= 100,
         activeStatusFilter: event.statusFilter ?? 'Tous',
       ));
     } catch (e) {
-      emit(PaymentsError(ErrorHandler.parseError(e)));
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('payments');
+      if (pendingMaps.isNotEmpty) {
+        final pendingPayments = pendingMaps.map((m) => Payment.fromMap(m)).toList();
+        final accounts = await DatabaseHelper.instance.getPaymentAccounts();
+        emit(PaymentsLoaded(
+          pendingPayments,
+          accounts,
+          totalCount: pendingPayments.length,
+          hasMore: false,
+          activeStatusFilter: event.statusFilter ?? 'Tous',
+        ));
+      } else {
+        emit(PaymentsError(ErrorHandler.parseError(e)));
+      }
     }
   }
 
@@ -250,10 +270,17 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       return;
     }
     try {
+      final isOnline = ConnectivityService.instance.isOnline;
+      if (!isOnline) {
+        await OfflineDocumentService.instance.savePendingDocument('payments', event.payment.toMap());
+        add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
+        return;
+      }
       await FirestoreRepository.instance.savePayment(event.payment);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
-      emit(PaymentsError(ErrorHandler.parseError(e)));
+      await OfflineDocumentService.instance.savePendingDocument('payments', event.payment.toMap());
+      add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     }
   }
 

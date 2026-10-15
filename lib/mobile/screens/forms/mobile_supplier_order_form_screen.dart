@@ -41,7 +41,13 @@ import '../../../../services/trial_service.dart';
 class MobileSupplierOrderFormScreen extends StatefulWidget {
   final SupplierOrder? existing;
   final bool isReadOnly;
-  const MobileSupplierOrderFormScreen({super.key, this.existing, this.isReadOnly = false});
+  final Product? initialProduct;
+  const MobileSupplierOrderFormScreen({
+    super.key,
+    this.existing,
+    this.isReadOnly = false,
+    this.initialProduct,
+  });
 
   @override
   State<MobileSupplierOrderFormScreen> createState() => _MobileSupplierOrderFormScreenState();
@@ -187,6 +193,23 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
         showDescription: i.showDescription,
         showDiscount: i.showDiscount,
       )).toList();
+    } else if (widget.initialProduct != null) {
+      final p = widget.initialProduct!;
+      final reorderQty = (p.lowStockThreshold > 0 && p.stockQty < p.lowStockThreshold)
+          ? (p.lowStockThreshold * 2 - p.stockQty).clamp(1.0, 9999.0)
+          : 1.0;
+      _items = [
+        SupplierOrderItem(
+          id: const Uuid().v4(),
+          orderId: '',
+          productId: p.id,
+          productName: p.name,
+          description: p.name,
+          quantity: reorderQty,
+          unitPrice: p.purchasePrice > 0 ? p.purchasePrice : (p.sellingPrice > 0 ? p.sellingPrice : 0.0),
+          tvaRate: p.tvaRate,
+        ),
+      ];
     }
   }
 
@@ -236,22 +259,20 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
       final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'supplier_orders',
-            docTypeName: 'Commande Fournisseur',
-            prefix: DocPrefix.supplierOrder,
-          );
-          if (seq == null) {
-            setState(() => _isLoading = false);
-            return;
-          }
-          number = generateDocNumber(DocPrefix.supplierOrder, seq, docCollection: 'supplier_orders');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'supplier_orders',
+          docTypeName: 'Commande Fournisseur',
+          defaultPrefix: DocPrefix.supplierOrder,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
         }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final suppState = context.read<SuppliersBloc>().state;
@@ -285,7 +306,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
         projectId: _selectedProjectId,
         projectName: projName,
         date: _date,
-        status: _status.name,
+        status: isDraft ? 'draft' : _status.name,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
         globalDiscountAmount: _globalDiscountAmount,
@@ -313,16 +334,16 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
           showDescription: item.showDescription,
           showDiscount: item.showDiscount,
         )).toList(),
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft) {
         await OfflineDocumentService.instance.savePendingDocument('supplier_orders', order.toMap());
         bloc.add(LoadFirstSupplierOrders());
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Commande Fournisseur ${order.number} enregistrée hors-ligne (en attente de sync)'),
+            content: Text('Commande Fournisseur ${order.number} enregistrée en Brouillon (en attente de sync)'),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 3),
           ));

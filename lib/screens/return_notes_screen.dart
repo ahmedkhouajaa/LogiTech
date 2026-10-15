@@ -44,6 +44,7 @@ class ReturnNotesScreen extends StatefulWidget {
 
 class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   final Set<String> _selectedReturnNoteIds = {};
+  bool _isFirstLoad = true;
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -590,9 +591,16 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<ReturnNotesBloc, ReturnNotesState>(
+    return BlocConsumer<ReturnNotesBloc, ReturnNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ReturnNotesLoaded || state is ReturnNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is ReturnNotesLoading || state is ReturnNotesInitial) {
+        if (_isFirstLoad || state is ReturnNotesLoading || state is ReturnNotesInitial) {
           return _buildTableShimmer();
         }
         if (state is ReturnNotesError) {

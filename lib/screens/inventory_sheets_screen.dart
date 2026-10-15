@@ -18,6 +18,7 @@ import '../models/inventory_sheet_item.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_inventory_sheet_screen.dart';
+import '../widgets/scanner_button.dart';
 import '../models/document_wrapper.dart';
 import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
@@ -59,6 +60,7 @@ class InventorySheetsScreen extends StatefulWidget {
 }
 
 class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
+  bool _isFirstLoad = true;
   int _rowsPerPage = 20;
   int _currentPage = 0;
   
@@ -166,7 +168,14 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<InventorySheetsBloc, InventorySheetsState>(
+    return BlocConsumer<InventorySheetsBloc, InventorySheetsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is InventorySheetsLoaded || state is InventorySheetsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
         List<InventorySheet> entries = [];
         if (state is InventorySheetsLoaded) {
@@ -256,6 +265,12 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     ),
                   ),
                   const Spacer(),
+                  ScannerButton(
+                    compact: true,
+                    documentTitle: context.tr("Fiche d'inventaire"),
+                    documentType: 'inventory_sheet',
+                  ),
+                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: () => PrintBlankInventoryDialog.show(context),
                     icon: const Icon(Icons.print_outlined, size: 16),
@@ -439,7 +454,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     children: [
                       Builder(
                         builder: (context) {
-                          if (state is InventorySheetsLoading) {
+                          if (_isFirstLoad || state is InventorySheetsLoading) {
                             return const Padding(
                               padding: EdgeInsets.all(32.0),
                               child: Center(child: CircularProgressIndicator()),
@@ -698,6 +713,11 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                 ),
               ),
               const SizedBox(width: 10),
+              ScannerButton(
+                documentTitle: context.tr("Fiche d'inventaire"),
+                documentType: 'inventory_sheet',
+              ),
+              const SizedBox(width: 10),
               if (PermissionService.instance.canCreate(UserPermissionResources.stockInventorySheets))
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context),
@@ -933,7 +953,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               child: Builder(
                 builder: (context) {
-                  if (state is InventorySheetsLoading || state is InventorySheetsInitial) {
+                  if (_isFirstLoad || state is InventorySheetsLoading || state is InventorySheetsInitial) {
                     return ShimmerTable(
                       headerColumns: [
                         Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),

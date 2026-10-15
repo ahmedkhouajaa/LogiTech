@@ -57,6 +57,7 @@ class SupplierReturnsScreen extends StatefulWidget {
 }
 
 class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
+  bool _isFirstLoad = true;
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -612,9 +613,16 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<SupplierReturnsBloc, SupplierReturnsState>(
+    return BlocConsumer<SupplierReturnsBloc, SupplierReturnsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierReturnsLoaded || state is SupplierReturnsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is SupplierReturnsLoading || state is SupplierReturnsInitial) {
+        if (_isFirstLoad || state is SupplierReturnsLoading || state is SupplierReturnsInitial) {
           return _buildTableShimmer();
         }
         if (state is SupplierReturnsError) {

@@ -134,18 +134,28 @@ class _DocumentTemplatesBody extends StatelessWidget {
                       : null,
                 )
               : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 400,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      mainAxisExtent: 220,
-                    ),
-                    itemCount: templates.length,
-                    itemBuilder: (context, index) => _TemplateCard(
-                      template: templates[index],
-                    ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width < 600 ? 16 : 24,
+                  ),
+                  child: Builder(
+                    builder: (context) {
+                      final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.4);
+                      final cardExtent = (205.0 * textScale).clamp(200.0, 255.0);
+                      final maxCrossExtent = (380.0 * textScale).clamp(360.0, 480.0);
+
+                      return GridView.builder(
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: maxCrossExtent,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          mainAxisExtent: cardExtent,
+                        ),
+                        itemCount: templates.length,
+                        itemBuilder: (context, index) => _TemplateCard(
+                          template: templates[index],
+                        ),
+                      );
+                    },
                   ),
                 ),
         ),
@@ -374,192 +384,288 @@ class _TemplateCardState extends State<_TemplateCard> {
   @override
   Widget build(BuildContext context) {
     final t = widget.template;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Color(t.headerBgColor);
     final docLabel = DocumentTemplate.getDocumentTypeLabel(t.documentType);
     final docIcon = DocumentTemplate.getDocumentTypeIcon(t.documentType);
+
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final displayName = (t.name.trim().toLowerCase() == 'classique' && t.isDefault)
+        ? 'Modèle Standard'
+        : t.name;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? primaryColor : (t.isDefault ? primaryColor.withValues(alpha: 0.5) : AppColors.border),
-            width: _hovered || t.isDefault ? 1.5 : 1,
+            color: _hovered ? primaryColor : borderColor,
+            width: 1,
           ),
-          boxShadow: _hovered ? AppShadows.md : AppShadows.sm,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(_hovered ? (isDark ? 60 : 18) : (isDark ? 25 : 6)),
+              blurRadius: _hovered ? 12 : 3,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          onTap: () => _openEditor(context, t),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.3),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        t.isDefault ? Icons.star_rounded : docIcon,
-                        color: Color(t.headerTextColor),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Colored Document Accent Top Stripe
+              Container(
+                height: 3.5,
+                color: primaryColor,
+              ),
+
+              // Card Body
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 13, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Row: Icon + Title + Status Badge
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            t.name,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: primaryColor.withAlpha(isDark ? 40 : 18),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              t.isDefault ? Icons.auto_stories_rounded : docIcon,
+                              color: primaryColor,
+                              size: 17,
+                            ),
                           ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(
-                                t.isDefault ? Icons.all_inclusive_rounded : docIcon,
-                                size: 13,
-                                color: t.isDefault ? AppColors.success : primaryColor,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  t.isDefault
-                                      ? 'Par défaut (Tous autres documents)'
-                                      : 'Appliqué à : $docLabel',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  displayName,
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: t.isDefault ? AppColors.textSecondary : primaryColor,
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t.isDefault
+                                      ? 'Par défaut (tous documents)'
+                                      : 'Dédié : ${context.tr(docLabel)}',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: t.isDefault
+                                        ? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))
+                                        : primaryColor,
+                                    fontWeight: t.isDefault ? FontWeight.w500 : FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (t.isDefault)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withAlpha(isDark ? 35 : 18),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withAlpha(isDark ? 70 : 40),
+                                  width: 0.8,
+                                ),
                               ),
-                            ],
+                              child: const Text(
+                                'Par défaut',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withAlpha(isDark ? 35 : 18),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: primaryColor.withAlpha(isDark ? 70 : 40),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                'Dédié',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Description
+                      Text(
+                        t.styleDescription.isNotEmpty
+                            ? t.styleDescription
+                            : 'Mise en page standard avec en-tête structuré et récapitulatif net.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          height: 1.35,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+
+                      const Spacer(),
+
+                      // Clean Format & Palette Metadata (No redundant "Classic" chips)
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'En-tête teinté',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Format A4',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    if (t.isDefault)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star_rounded, size: 13, color: AppColors.success),
-                            const SizedBox(width: 3),
-                            Text(
-                              context.tr('Global'),
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                          border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_outline_rounded, size: 12, color: primaryColor),
-                            const SizedBox(width: 3),
-                            Text(
-                              context.tr('Dédié'),
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
-                            ),
-                          ],
-                        ),
+
+                      const SizedBox(height: 10),
+                      Divider(
+                        height: 1,
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (t.styleDescription.isNotEmpty)
-                  Text(
-                    t.styleDescription,
-                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 8),
+
+                      // Actions
+                      Row(
+                        children: [
+                          _actionBtn(
+                            Icons.copy_rounded,
+                            context.tr('Dupliquer'),
+                            () => _duplicateTemplate(context, t),
+                          ),
+                          const SizedBox(width: 6),
+                          _actionBtn(
+                            Icons.restart_alt_rounded,
+                            context.tr('Remettre à zéro (Réinitialiser)'),
+                            () => _confirmReset(context, t),
+                            color: const Color(0xFFF59E0B),
+                          ),
+                          if (!t.isDefault) ...[
+                            const SizedBox(width: 6),
+                            _actionBtn(
+                              Icons.delete_outline_rounded,
+                              context.tr('Supprimer'),
+                              () => _confirmDelete(context, t),
+                              color: const Color(0xFFEF4444),
+                            ),
+                          ],
+                          const Spacer(),
+                          InkWell(
+                            onTap: () => _openEditor(context, t),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withAlpha(isDark ? 35 : 18),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppColors.primary.withAlpha(isDark ? 70 : 40),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.tune_rounded, size: 13, color: AppColors.primary),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    'Personnaliser',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                const Spacer(),
-                // Template style preview chips
-                Row(
-                  children: [
-                    _chip(_tableStyleLabel(t.tableStyle), primaryColor),
-                    const SizedBox(width: 8),
-                    _chip(t.styleCode.toUpperCase(), AppColors.textTertiary),
-                  ],
                 ),
-                const SizedBox(height: 12),
-                // Actions
-                Row(
-                  children: [
-                    _actionBtn(Icons.edit_rounded, context.tr('Modifier (Config)'), () => _openEditor(context, t)),
-                    const SizedBox(width: 8),
-                    _actionBtn(Icons.copy_rounded, context.tr('Dupliquer'), () => _duplicateTemplate(context, t)),
-                    const SizedBox(width: 8),
-                    _actionBtn(
-                      Icons.restart_alt_rounded,
-                      context.tr('Remettre à zéro (Réinitialiser)'),
-                      () => _confirmReset(context, t),
-                      color: AppColors.warning,
-                    ),
-                    const Spacer(),
-                    if (!t.isDefault)
-                      _actionBtn(
-                        Icons.delete_outline_rounded,
-                        context.tr('Supprimer'),
-                        () => _confirmDelete(context, t),
-                        color: AppColors.error,
-                      ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _chip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
     );
   }
 
@@ -877,18 +983,5 @@ class _TemplateCardState extends State<_TemplateCard> {
         ],
       ),
     );
-  }
-
-
-  String _tableStyleLabel(String style) {
-    switch (style) {
-      case 'alterne':
-        return 'Lignes alternées';
-      case 'minimaliste':
-        return 'Minimaliste';
-      case 'classique':
-      default:
-        return 'Classique';
-    }
   }
 }

@@ -8,6 +8,7 @@ import '../services/permission_service.dart';
 import '../utils/constants.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/firestore_safe_helper.dart';
+import '../services/error_handler.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -397,24 +398,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       }
     } catch (e) {
       debugPrint('[PersonalInfoScreen] Error: $e');
-      String errText = e.toString().replaceFirst('Exception: ', '');
-      if (errText.toLowerCase().contains('internal error') || errText.toLowerCase().contains('invalid')) {
-        errText = 'Votre mot de passe actuel est incorrect. Veuillez vérifier votre saisie.';
-      }
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(child: Text(errText)),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

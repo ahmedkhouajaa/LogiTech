@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../utils/constants.dart';
 import '../../services/article_import_export_service.dart';
+import '../../services/error_handler.dart';
 
 class ArticleImportDialog extends StatefulWidget {
   final VoidCallback onImportSuccess;
@@ -972,9 +973,7 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
     } catch (e) {
       if (mounted) {
         setState(() => _isImporting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'importation : $e'), backgroundColor: AppColors.error),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

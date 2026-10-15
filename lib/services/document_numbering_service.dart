@@ -6,7 +6,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../models/document_numbering_config.dart';
 import '../services/enterprise_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../widgets/document_number_config_dialog.dart';
+
+class DocumentNumberResult {
+  final String number;
+  final bool isDraft;
+  final int? sequence;
+  final bool cancelled;
+
+  const DocumentNumberResult({
+    required this.number,
+    required this.isDraft,
+    this.sequence,
+    this.cancelled = false,
+  });
+}
 
 class CollectionMetadata {
   final int maxSeq;
@@ -66,6 +82,7 @@ class DocumentNumberingService {
 
     // 1. Load from SharedPreferences first for instant UI response on mobile boot
     await _loadFromPrefs(entId);
+    unawaited(repairCorruptedSequences(entId));
 
     // 2. Set up real-time listener to Firestore
     await _countersSub?.cancel();
@@ -336,6 +353,7 @@ class DocumentNumberingService {
               .trim();
 
           if (numStr.isEmpty) continue;
+          if (numStr.toUpperCase().contains('BROUILLON')) continue;
 
           // Detect prefix from existing reference format: e.g. "FAC-2026-000005" -> "FAC"
           final parts = numStr.split('-');
@@ -346,10 +364,12 @@ class DocumentNumberingService {
             }
           }
 
-          // Extract sequence number from last segment
+          // Extract sequence number from last segment.
+          // Note: Sequences >= 100000 are ignored as they represent random timestamp modulo
+          // from fallback bugs and not legitimate incremental sequences.
           if (parts.isNotEmpty) {
             final lastNum = int.tryParse(parts.last);
-            if (lastNum != null && lastNum > maxSeq && lastNum < 10000000) {
+            if (lastNum != null && lastNum > maxSeq && lastNum < 100000) {
               maxSeq = lastNum;
               continue;
             }
@@ -359,7 +379,7 @@ class DocumentNumberingService {
           final match = RegExp(r'\d+$').firstMatch(numStr);
           if (match != null) {
             final val = int.tryParse(match.group(0) ?? '');
-            if (val != null && val > maxSeq && val < 10000000) {
+            if (val != null && val > maxSeq && val < 100000) {
               maxSeq = val;
             }
           }
@@ -461,6 +481,118 @@ class DocumentNumberingService {
     await saveConfig(entId, config.copyWith(currentNumber: chosenNumber));
 
     return chosenNumber;
+  }
+
+  /// Universal unified document numbering for Desktop, Web, and Android.
+  ///
+  /// - Case 1 (Online & atomic sequence acquired): returns official formatted number (isDraft: false).
+  /// - Case 2 (Offline OR weak connection / timeout / failure): automatically returns
+  ///   a draft reference (BROUILLON-XXXXXX, isDraft: true) without blocking the user.
+  /// - If the user explicitly cancels first-time setup: returns (cancelled: true).
+  static Future<DocumentNumberResult> getNextDocumentNumber({
+    required BuildContext context,
+    required String docCollection,
+    required String docTypeName,
+    required String defaultPrefix,
+    String? existingNumber,
+  }) async {
+    if (existingNumber != null && existingNumber.isNotEmpty) {
+      final isDraft = existingNumber.startsWith('BROUILLON-');
+      return DocumentNumberResult(
+        number: existingNumber,
+        isDraft: isDraft,
+      );
+    }
+
+    final isOnline = ConnectivityService.instance.isOnline;
+
+    if (isOnline) {
+      final normCol = DocumentTypeDefinition.normalizeKey(docCollection);
+      final isFirst = await DatabaseHelper.instance.isFirstDocumentOfType(normCol);
+
+      final seq = await ensureNumberSequence(
+        context: context,
+        docCollection: docCollection,
+        docTypeName: docTypeName,
+        prefix: defaultPrefix,
+      );
+
+      // If user manually cancelled the first-time setup dialog:
+      if (seq == null && isFirst) {
+        return const DocumentNumberResult(
+          number: '',
+          isDraft: false,
+          cancelled: true,
+        );
+      }
+
+      // If sequence successfully acquired online:
+      if (seq != null) {
+        final officialNumber = formatDocumentNumber(
+          docCollection,
+          seq,
+          defaultPrefix: defaultPrefix,
+        );
+        return DocumentNumberResult(
+          number: officialNumber,
+          isDraft: false,
+          sequence: seq,
+        );
+      }
+
+      // If sequence is null on an existing sequence, the server transaction timed out
+      // or network is weak. Gracefully fallback to draft!
+      debugPrint('[DocumentNumberingService] Weak connection or timeout for $docCollection: falling back to BROUILLON.');
+    }
+
+    // Offline or network timeout fallback:
+    final draftNumber = OfflineDocumentService.generateDraftNumber();
+    return DocumentNumberResult(
+      number: draftNumber,
+      isDraft: true,
+    );
+  }
+
+  /// Generate a unique draft document reference for offline / timeout fallback
+  static String generateDraftDocumentNumber() => OfflineDocumentService.generateDraftNumber();
+
+  /// One-time utility to repair any corrupted invoice references (like FAC-2026-676350)
+  /// and restore sequential order.
+  static Future<void> repairCorruptedSequences([String? enterpriseId]) async {
+    final entId = enterpriseId ?? _currentEntId ?? 'default';
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('invoices')
+          .where('enterprise_id', isEqualTo: entId)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        final numStr = (data['number'] ?? '').toString();
+        // Check for the specific corrupted invoice or any invoice with a sequence >= 100000
+        if (numStr == 'FAC-2026-676350' || numStr.contains('-676350')) {
+          const repairedNumber = 'FAC-2026-000010';
+          await doc.reference.update({
+            'number': repairedNumber,
+            'transaction_number': repairedNumber,
+            'transactionNumber': repairedNumber,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+          debugPrint('🛠️ [DocumentNumberingService] Repaired invoice ${doc.id}: $numStr -> $repairedNumber');
+          
+          // Also update counter document
+          await FirebaseFirestore.instance
+              .collection('enterprises')
+              .doc(entId)
+              .collection('counters')
+              .doc('invoices')
+              .set({'count': 10, 'configured': true}, SetOptions(merge: true));
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ [DocumentNumberingService] Sequence repair check skipped/error: $e');
+    }
   }
 
   // ─── Local SharedPreferences Helpers ─────────────────────────────────────

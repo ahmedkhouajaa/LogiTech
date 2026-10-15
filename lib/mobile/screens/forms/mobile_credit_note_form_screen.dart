@@ -22,6 +22,8 @@ import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
+import '../../../../services/offline_document_service.dart';
+import '../../../../services/error_handler.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -198,18 +200,20 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       final bloc = context.read<CreditNotesBloc>();
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
           context: context,
           docCollection: 'credit_notes',
           docTypeName: 'Avoir Client',
-          prefix: 'AV',
+          defaultPrefix: 'AV',
         );
-        if (seq == null) {
+        if (docNumResult.cancelled) {
           setState(() => _isLoading = false);
           return;
         }
-        number = generateDocNumber('AV', seq, docCollection: 'credit_notes');
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -243,7 +247,8 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           'activeCustomTaxes': _activeCustomTaxes,
           'customTaxesTotal': _customTaxesTotal,
         },
-        status: _status,
+        status: isDraft ? CreditNoteStatus.draft : _status,
+        customStatus: isDraft ? 'brouillon' : null,
         totalHT: _totalHT,
         totalTva: _totalTva,
         totalTTC: _totalTTC,
@@ -257,6 +262,19 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
         )).toList(),
         isDeleted: widget.existing?.isDeleted ?? false,
       );
+
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('credit_notes', creditNote.toMap());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Avoir ${creditNote.number} enregistré en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateCreditNote(creditNote));
@@ -272,10 +290,9 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
         ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur lors de la sauvegarde: $e'),
-        backgroundColor: AppColors.error,
-      ));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

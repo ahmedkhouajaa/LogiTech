@@ -4,7 +4,6 @@ import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
-import '../services/connectivity_service.dart';
 import '../services/offline_document_service.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
@@ -64,6 +63,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
   List<CustomTaxRate> _availableCustomTaxes = [];
   StreamSubscription<List<CustomTaxRate>>? _customTaxesSub;
   Map<String, dynamic> _customFields = {};
+  bool _isSaving = false;
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -190,6 +190,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
+    if (_isSaving) return;
     if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
       return;
     }
@@ -228,110 +229,111 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       return;
     }
 
-    final bloc = context.read<ExitVouchersBloc>();
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSaving = true);
+    try {
+      final bloc = context.read<ExitVouchersBloc>();
+      final nav = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
 
-    final isOnline = ConnectivityService.instance.isOnline;
-
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'bons_sortie',
-          docTypeName: 'Bon de Sortie',
-          prefix: 'BS',
-        );
-        if (seq == null) {
-          return;
-        }
-        number = generateDocNumber('BS', seq, docCollection: 'bons_sortie');
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
-      }
-    }
-
-    final custState = context.read<CustomersBloc>().state;
-    String? custName;
-    if (custState is CustomersLoaded) {
-      final found = custState.customers.firstWhere(
-        (c) => c.id == _selectedCustomerId,
-        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+      final numResult = await DocumentNumberingService.getNextDocumentNumber(
+        context: context,
+        docCollection: 'bons_sortie',
+        docTypeName: 'Bon de Sortie',
+        defaultPrefix: 'BS',
+        existingNumber: widget.existing?.number,
       );
-      custName = found.companyName?.isNotEmpty == true
-          ? found.companyName
-          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
-    }
 
-    final withdrawalId = widget.existing?.id ?? _uuid.v4();
-    final statusStr = _status == DocumentStatus.draft ? 'created' : _status.name;
+      if (numResult.cancelled) {
+        return;
+      }
 
-    final withdrawal = StockWithdrawal(
-      id: withdrawalId,
-      number: number,
-      customerId: _selectedCustomerId!,
-      customerName: custName,
-      projectId: _selectedProjectId,
-      warehouseId: _selectedWarehouseId,
-      date: _date,
-      status: statusStr,
-      timbreFiscal: _timbreFiscal,
-      globalDiscountPercent: _globalDiscountPercent,
-      globalDiscountAmount: _globalDiscountAmount,
-      pricingMode: _pricingModeHT ? 'ht' : 'ttc',
-      vehicleRegistration: _vehicleRegistrationCtrl.text.trim().isEmpty ? null : _vehicleRegistrationCtrl.text.trim(),
-      driverName: _driverNameCtrl.text.trim().isEmpty ? null : _driverNameCtrl.text.trim(),
-      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-      conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-      customFields: {
-        ...?_customFields,
-        'withFodec': _withFodec,
-        'fodecAmount': _fodecAmount,
-        'fodecRate': 1.0,
-        'withTimbreFiscal': _withTimbreFiscal,
-        'activeCustomTaxes': _activeCustomTaxes,
-        'customTaxesTotal': _customTaxesTotal,
-      },
-      items: _items.map((item) => StockWithdrawalItem(
-        id: item.id,
-        withdrawalId: withdrawalId,
-        productId: item.productId,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        tvaRate: item.tvaRate,
-        discountPercent: item.discountPercent,
-      )).toList(),
-      isDeleted: widget.existing?.isDeleted ?? false,
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
-    );
+      final number = numResult.number;
+      final isDraft = numResult.isDraft;
 
-    if (!isOnline && !_isEditing) {
-      await OfflineDocumentService.instance.savePendingDocument('exit_vouchers', withdrawal.toMap());
-      await OfflineDocumentService.instance.savePendingDocument('bons_sortie', withdrawal.toMap());
-      bloc.add(LoadFirstExitVouchers());
+      final custState = context.read<CustomersBloc>().state;
+      String? custName;
+      if (custState is CustomersLoaded) {
+        final found = custState.customers.firstWhere(
+          (c) => c.id == _selectedCustomerId,
+          orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+        );
+        custName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+      }
+
+      final withdrawalId = widget.existing?.id ?? _uuid.v4();
+      final statusStr = isDraft ? 'draft' : (_status == DocumentStatus.draft ? 'created' : _status.name);
+
+      final withdrawal = StockWithdrawal(
+        id: withdrawalId,
+        number: number,
+        customerId: _selectedCustomerId!,
+        customerName: custName,
+        projectId: _selectedProjectId,
+        warehouseId: _selectedWarehouseId,
+        date: _date,
+        status: statusStr,
+        timbreFiscal: _timbreFiscal,
+        globalDiscountPercent: _globalDiscountPercent,
+        globalDiscountAmount: _globalDiscountAmount,
+        pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+        vehicleRegistration: _vehicleRegistrationCtrl.text.trim().isEmpty ? null : _vehicleRegistrationCtrl.text.trim(),
+        driverName: _driverNameCtrl.text.trim().isEmpty ? null : _driverNameCtrl.text.trim(),
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+        customFields: {
+          ..._customFields,
+          'withFodec': _withFodec,
+          'fodecAmount': _fodecAmount,
+          'fodecRate': 1.0,
+          'withTimbreFiscal': _withTimbreFiscal,
+          'activeCustomTaxes': _activeCustomTaxes,
+          'customTaxesTotal': _customTaxesTotal,
+        },
+        items: _items.map((item) => StockWithdrawalItem(
+          id: item.id,
+          withdrawalId: withdrawalId,
+          productId: item.productId,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+        )).toList(),
+        isDeleted: widget.existing?.isDeleted ?? false,
+        isSynced: isDraft ? false : (widget.existing?.isSynced ?? true),
+      );
+
+      if (isDraft && !_isEditing) {
+        await OfflineDocumentService.instance.savePendingDocument('exit_vouchers', withdrawal.toMap());
+        await OfflineDocumentService.instance.savePendingDocument('bons_sortie', withdrawal.toMap());
+        bloc.add(LoadFirstExitVouchers());
+        nav.pop();
+        messenger.showSnackBar(SnackBar(
+          content: Text('Bon de Sortie ${withdrawal.number} enregistré en Brouillon (en attente de sync)'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 4),
+        ));
+        return;
+      }
+
+      if (_isEditing) {
+        bloc.add(UpdateExitVoucher(withdrawal));
+      } else {
+        bloc.add(AddExitVoucher(withdrawal));
+      }
+
       nav.pop();
       messenger.showSnackBar(SnackBar(
-        content: Text('Bon de Sortie ${withdrawal.number} enregistré hors-ligne (en attente de sync)'),
-        backgroundColor: AppColors.warning,
+        content: Text(_isEditing
+            ? 'Bon de Sortie ${withdrawal.number} mis a jour'
+            : 'Bon de Sortie ${withdrawal.number} cree avec succes'),
+        backgroundColor: AppColors.success,
       ));
-      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    if (_isEditing) {
-      bloc.add(UpdateExitVoucher(withdrawal));
-    } else {
-      bloc.add(AddExitVoucher(withdrawal));
-    }
-
-    nav.pop();
-    messenger.showSnackBar(SnackBar(
-      content: Text(_isEditing
-          ? 'Bon de Sortie ${withdrawal.number} mis a jour'
-          : 'Bon de Sortie ${withdrawal.number} cree avec succes'),
-      backgroundColor: AppColors.success,
-    ));
   }
 
   @override
@@ -411,18 +413,28 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
-              onPressed: _save,
-              icon: Icon(Icons.check_rounded, size: 16),
-              label: Text(context.tr('Valider'),
-                  style:
-                      TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check_rounded, size: 16),
+              label: Text(
+                _isSaving ? context.tr('Enregistrement...') : context.tr('Valider'),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md)),
-                padding: EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
           ),

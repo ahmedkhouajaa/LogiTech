@@ -23,6 +23,7 @@ class MobileStockMovementsScreen extends StatefulWidget {
 }
 
 class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen> {
+  bool _isFirstLoad = true;
   String _searchQuery = '';
   
   // Filter state
@@ -43,9 +44,16 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: BlocBuilder<StockBloc, StockState>(
+      body: BlocConsumer<StockBloc, StockState>(
+        listener: (context, state) {
+          if (_isFirstLoad && (state is StockLoaded || state is StockError)) {
+            setState(() {
+              _isFirstLoad = false;
+            });
+          }
+        },
         builder: (context, state) {
-          if (state is StockLoading || state is StockInitial) {
+          if (_isFirstLoad || state is StockLoading || state is StockInitial) {
             return AppShimmer(
               child: SingleChildScrollView(
                 physics: const NeverScrollableScrollPhysics(),

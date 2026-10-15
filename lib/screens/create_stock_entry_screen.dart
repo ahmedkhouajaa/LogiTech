@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_entries/stock_entries_bloc.dart';
-import '../services/connectivity_service.dart';
 import '../services/offline_document_service.dart';
 import '../blocs/stock_entries/stock_entries_event.dart';
 import '../blocs/stock_entries/stock_entries_state.dart';
@@ -15,6 +14,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 
 import '../models/stock_movement.dart' show Warehouse;
 import 'create_article_screen.dart';
@@ -41,6 +41,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   final _notesController = TextEditingController();
   List<Warehouse> _warehouses = [];
   bool _hasAttemptedSubmit = false;
+  bool _isSaving = false;
 
   List<StockEntryItem> _items = [];
   final Map<String, double> _stockQuantities = {}; // to hold current stock of selected products
@@ -88,6 +89,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
       return;
     }
@@ -127,67 +129,86 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       seenProducts.add(item.productId);
     }
 
-    final isOnline = ConnectivityService.instance.isOnline;
+    setState(() => _isSaving = true);
 
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      if (isOnline) {
-        final seq = await DatabaseHelper.instance.getNextStockEntrySequence();
-        number = generateDocNumber(DocPrefix.stockEntry, seq);
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
+    try {
+      String number = widget.existing?.number ?? '';
+      bool isDraft = false;
+      if (number.isEmpty) {
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'stock_entries',
+          docTypeName: "Bon d'Entrée",
+          defaultPrefix: DocPrefix.stockEntry,
+        );
+        if (docNumResult.cancelled) return;
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
-    }
 
-    final entry = StockEntry(
-      id: widget.existing?.id,
-      number: number,
-      warehouseId: _warehouseId!,
-      date: _date,
-      reason: _reasonController.text,
-      notes: _notesController.text,
-      status: 'validated',
-      items: validItems,
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
-    );
+      final entry = StockEntry(
+        id: widget.existing?.id,
+        number: number,
+        warehouseId: _warehouseId!,
+        date: _date,
+        reason: _reasonController.text,
+        notes: _notesController.text,
+        status: isDraft ? 'draft' : 'validated',
+        items: validItems,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
+      );
 
-    if (!isOnline && widget.existing == null) {
-      await OfflineDocumentService.instance.savePendingDocument('stock_entries', entry.toMap());
-      context.read<StockEntriesBloc>().add(LoadFirstStockEntries());
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('stock_entries', entry.toMap());
+        context.read<StockEntriesBloc>().add(LoadFirstStockEntries());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bon d\'Entrée ${entry.number} enregistré en Brouillon (en attente de sync)'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      final entryBloc = context.read<StockEntriesBloc>();
+      final productsBloc = context.read<ProductsBloc>();
+
+      late StreamSubscription subscription;
+      subscription = entryBloc.stream.listen((state) {
+        if (state is StockEntriesLoaded || state is StockEntriesError) {
+          productsBloc.add(LoadProducts());
+          subscription.cancel();
+        }
+      });
+
+      if (widget.existing == null) {
+        entryBloc.add(AddStockEntry(entry));
+      } else {
+        entryBloc.add(UpdateStockEntry(entry));
+      }
+      
       if (mounted) {
+        context.read<StockBloc>().add(LoadStock());
+        context.read<ProductsBloc>().add(LoadProducts());
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Bon d\'Entrée ${entry.number} enregistré hors-ligne (en attente de sync)'),
-            backgroundColor: AppColors.warning,
+            content: Text(widget.existing != null 
+                ? 'Bon d\'Entrée ${entry.number} mis à jour avec succès'
+                : 'Bon d\'Entrée ${entry.number} créé avec succès'),
+            backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-      return;
-    }
-
-    final entryBloc = context.read<StockEntriesBloc>();
-    final productsBloc = context.read<ProductsBloc>();
-
-    late StreamSubscription subscription;
-    subscription = entryBloc.stream.listen((state) {
-      if (state is StockEntriesLoaded || state is StockEntriesError) {
-        productsBloc.add(LoadProducts());
-        subscription.cancel();
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
-    });
-
-    if (widget.existing == null) {
-      entryBloc.add(AddStockEntry(entry));
-    } else {
-      entryBloc.add(UpdateStockEntry(entry));
-    }
-    
-    if (mounted) {
-      context.read<StockBloc>().add(LoadStock());
-      context.read<ProductsBloc>().add(LoadProducts());
-      Navigator.pop(context);
     }
   }
 
@@ -344,7 +365,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
           SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: _save,
+              onPressed: _isSaving ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -352,7 +373,9 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 elevation: 0,
               ),
-              child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: _isSaving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],

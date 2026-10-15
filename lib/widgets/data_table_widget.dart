@@ -53,14 +53,43 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     if (widget.rows.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.inbox_outlined, size: 48, color: AppColors.textTertiary),
-              const SizedBox(height: 12),
-              Text(context.tr(widget.emptyMessage), style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(Icons.inbox_outlined, size: 32, color: AppColors.primary),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  context.tr(widget.emptyMessage),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  context.tr("Aucun résultat ne correspond aux critères. Modifiez vos filtres de recherche ou ajoutez un nouvel élément."),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -79,12 +108,17 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.4);
+        final headingHeight = (40.0 * textScale).clamp(40.0, 56.0);
+        final rowMinHeight = (42.0 * textScale).clamp(42.0, 60.0);
+        final rowMaxHeight = (54.0 * textScale).clamp(54.0, 80.0);
+
         Widget table = DataTable(
           sortColumnIndex: _sortColumnIndex,
           sortAscending: _sortAscending,
-          headingRowHeight: 38,
-          dataRowMinHeight: 42,
-          dataRowMaxHeight: 46,
+          headingRowHeight: headingHeight,
+          dataRowMinHeight: rowMinHeight,
+          dataRowMaxHeight: rowMaxHeight,
           headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.surfaceAlt),
           headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
           dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),

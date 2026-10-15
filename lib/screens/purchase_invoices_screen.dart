@@ -19,6 +19,8 @@ import '../models/supplier.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/scanner_button.dart';
+import '../services/ai_document_scanner_service.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/purchase_invoice_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
@@ -37,6 +39,7 @@ import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -53,6 +56,7 @@ class PurchaseInvoicesScreen extends StatefulWidget {
 
 class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   final Set<String> _selectedPurchaseInvoiceIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedClientId;
@@ -111,18 +115,38 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     });
   }
 
+  void _navigateToCreateWithAi(AiScanResult result) {
+    if (result.extractedData == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+            BlocProvider.value(value: context.read<SuppliersBloc>()),
+            BlocProvider.value(value: context.read<ProductsBloc>()),
+            BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
+          ],
+          child: CreatePurchaseInvoiceScreen(initialAiData: result.extractedData),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header with title and button
+        // Header with title and button
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 650;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -132,15 +156,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   const SizedBox(height: 2),
                   Text(context.tr('Gérer vos factures d\'achat'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              Row(
-                children: [
-                  if (_selectedPurchaseInvoiceIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices))
-                    AppButton(
+              );
+
+              final newInvoiceBtn = PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices)
+                  ? AppButton(
                       label: context.tr('Nouvelle facture'),
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
@@ -158,10 +177,56 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                           ),
                         ),
                       ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedPurchaseInvoiceIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        ScannerButton(
+                          documentTitle: context.tr('Factures d\'achat'),
+                          documentType: 'purchase_invoice',
+                          onScanDataExtracted: _navigateToCreateWithAi,
+                        ),
+                        const SizedBox(width: 10),
+                        newInvoiceBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  titleWidget,
+                  Row(
+                    children: [
+                      if (_selectedPurchaseInvoiceIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      ScannerButton(
+                        documentTitle: context.tr('Factures d\'achat'),
+                        documentType: 'purchase_invoice',
+                        onScanDataExtracted: _navigateToCreateWithAi,
+                      ),
+                      const SizedBox(width: 10),
+                      newInvoiceBtn,
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -591,9 +656,16 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   Widget _buildPurchaseInvoiceTable() {
-    return BlocBuilder<PurchaseInvoicesBloc, PurchaseInvoicesState>(
+    return BlocConsumer<PurchaseInvoicesBloc, PurchaseInvoicesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is PurchaseInvoicesLoaded || state is PurchaseInvoicesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is PurchaseInvoicesLoading || state is PurchaseInvoicesInitial) return _buildTableShimmer();
+        if (_isFirstLoad || state is PurchaseInvoicesLoading || state is PurchaseInvoicesInitial) return _buildTableShimmer();
         if (state is PurchaseInvoicesError) return AppErrorWidget(message: state.message);
         if (state is PurchaseInvoicesLoaded) {
           List<PurchaseInvoice> filteredInvoices = state.filteredPurchaseInvoices;
@@ -1000,14 +1072,15 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final seq = await DocumentNumberingService.ensureNumberSequence(
+              final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
                 context: context,
                 docCollection: 'supplier_credit_notes',
                 docTypeName: 'Avoir fournisseur',
-                prefix: DocPrefix.supplierCreditNote,
+                defaultPrefix: DocPrefix.supplierCreditNote,
               );
-              if (seq == null) return;
-              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
+              if (docNumResult.cancelled) return;
+              final cnNumber = docNumResult.number;
+              final isDraft = docNumResult.isDraft;
               
               final creditNote = SupplierCreditNote(
                 id: cnId,
@@ -1028,7 +1101,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 updatedAt: now,
               );
 
-              context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+              if (isDraft) {
+                await OfflineDocumentService.instance.savePendingDocument('supplier_credit_notes', creditNote.toMap());
+              } else {
+                context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+              }
 
               final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
               context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
@@ -1039,8 +1116,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${context.tr('Avoir fournisseur')} $cnNumber ${context.tr('créé et stock réajusté avec succès')}'),
-                    backgroundColor: AppColors.success,
+                    content: Text(isDraft
+                        ? '${context.tr('Avoir fournisseur')} $cnNumber enregistré en Brouillon (en attente de sync)'
+                        : '${context.tr('Avoir fournisseur')} $cnNumber ${context.tr('créé et stock réajusté avec succès')}'),
+                    backgroundColor: isDraft ? AppColors.warning : AppColors.success,
                   ),
                 );
               }

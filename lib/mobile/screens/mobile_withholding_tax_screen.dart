@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/mobile_module_config.dart';
-import '../../utils/constants.dart';
 import '../../widgets/sidebar_menu.dart';
 import 'mobile_retenue_source_ventes_list.dart';
 
@@ -34,6 +33,7 @@ class _MobileWithholdingTaxScreenState extends State<MobileWithholdingTaxScreen>
   @override
   Widget build(BuildContext context) {
     return MobileRetenueSourceVentesList(
+      key: ValueKey(widget.isSales),
       config: _config,
       isSales: widget.isSales,
     );

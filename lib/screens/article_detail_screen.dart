@@ -249,6 +249,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                       final width = constraints.maxWidth;
                       int crossAxisCount = width > 850 ? 5 : (width > 550 ? 3 : 2);
                       double itemWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
+                      const double cardHeight = 110.0;
 
                       return Wrap(
                         spacing: 12,
@@ -256,50 +257,60 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                         children: [
                           SizedBox(
                             width: itemWidth,
+                            height: cardHeight,
                             child: DetailKpiCard(
                               label: 'Prix Achat (HT)',
                               value: formatCurrency(currentProduct.purchasePrice),
                               icon: Icons.shopping_bag_outlined,
                               color: AppColors.textSecondary,
+                              height: cardHeight,
                             ),
                           ),
                           SizedBox(
                             width: itemWidth,
+                            height: cardHeight,
                             child: DetailKpiCard(
                               label: 'Prix Vente (HT)',
                               value: formatCurrency(currentProduct.sellingPrice),
                               icon: Icons.sell_outlined,
                               color: AppColors.primary,
+                              height: cardHeight,
                             ),
                           ),
                           SizedBox(
                             width: itemWidth,
+                            height: cardHeight,
                             child: DetailKpiCard(
                               label: 'TVA',
                               value: '${currentProduct.tvaRate.toStringAsFixed(currentProduct.tvaRate.truncateToDouble() == currentProduct.tvaRate ? 0 : 2)}%',
                               subtitle: formatCurrency(tvaAmount),
                               icon: Icons.percent_rounded,
                               color: AppColors.info,
+                              height: cardHeight,
                             ),
                           ),
                           SizedBox(
                             width: itemWidth,
+                            height: cardHeight,
                             child: DetailKpiCard(
                               label: 'Prix Vente (TTC)',
                               value: formatCurrency(sellTtc),
                               icon: Icons.payments_outlined,
                               color: AppColors.success,
                               isHighlight: true,
+                              height: cardHeight,
                             ),
                           ),
                           SizedBox(
                             width: itemWidth,
+                            height: cardHeight,
                             child: DetailKpiCard(
                               label: 'Marge Commerciale',
                               value: formatCurrency(marginAmount),
                               subtitle: '${marginPercent.toStringAsFixed(1)}%',
                               icon: Icons.trending_up_rounded,
                               color: marginAmount >= 0 ? AppColors.success : AppColors.error,
+                              height: cardHeight,
                             ),
                           ),
                         ],

@@ -25,6 +25,8 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
@@ -476,8 +478,15 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
 
   Future<void> _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      defaultPrefix: DocPrefix.invoice,
+    );
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     final invoiceItems = note.items.map((i) => InvoiceItem(
       id: const Uuid().v4(),
@@ -504,7 +513,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       projectName: note.projectName,
       date: now,
       dueDate: now.add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: note.totalHTAfterDiscount,
       totalTva: note.totalTVA,
       totalTTC: note.totalTTC,
@@ -515,9 +524,14 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       notes: note.notes,
       conditionsGenerales: note.conditionsGenerales,
       items: invoiceItems,
+      isSynced: !isDraft,
     );
 
-    context.read<InvoicesBloc>().add(AddInvoice(newInvoice));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', newInvoice.toMap());
+    } else {
+      context.read<InvoicesBloc>().add(AddInvoice(newInvoice));
+    }
 
     final updatedNote = note.copyWith(
       isConvertedToInvoice: true,
@@ -526,10 +540,12 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     );
     context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Facture $invoiceNumber creee avec succes'),
-      backgroundColor: AppColors.success,
-    ));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft ? 'Facture enregistrée en Brouillon (en attente de sync)' : 'Facture $invoiceNumber créée avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   void _showReturnConversionDialog(BuildContext context, DeliveryNote note) {
@@ -574,10 +590,16 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
 
   void _convertDeliveryToReturn(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final year = now.year;
     
-    final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
-    final returnNumber = 'RET-$year-${seq.toString().padLeft(5, '0')}';
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'return_notes',
+      docTypeName: 'Bon de Retour',
+      defaultPrefix: 'BR',
+    );
+    if (docNumResult.cancelled) return;
+    final returnNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     final returnItems = note.items.map((i) => ReturnNoteItem(
       id: const Uuid().v4(),
@@ -598,7 +620,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       customerCompany: note.customerCompany,
       deliveryNoteId: note.id,
       dateEmission: now,
-      status: ReturnNoteStatus.validated.name,
+      status: isDraft ? 'draft' : ReturnNoteStatus.validated.name,
       subtotalHT: -note.subTotalHT,
       totalTTC: -note.totalTTC,
       notes: note.notes,
@@ -609,8 +631,12 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     final finalItems = returnItems.map((i) => i.copyWith(returnNoteId: newReturn.id)).toList();
     final returnWithItems = newReturn.copyWith(items: finalItems);
 
-    if (!context.mounted) return;
-    context.read<ReturnNotesBloc>().add(AddReturnNote(returnWithItems));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('return_notes', returnWithItems.toMap());
+    } else {
+      if (!context.mounted) return;
+      context.read<ReturnNotesBloc>().add(AddReturnNote(returnWithItems));
+    }
 
     final updatedNote = note.copyWith(
       isConvertedToReturn: true,
@@ -619,10 +645,12 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     );
     context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Bon de retour $returnNumber cree avec succes'),
-      backgroundColor: AppColors.success,
-    ));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft ? 'Bon de retour enregistré en Brouillon (en attente de sync)' : 'Bon de retour $returnNumber créé avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   Future<void> _openConvertedReturn(BuildContext context, String? returnId) async {

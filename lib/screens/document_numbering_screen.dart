@@ -314,75 +314,93 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header Row: Title, Sync Badge, and "Enregistrer (X)" Button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 12,
-                      runSpacing: 6,
-                      children: [
-                        Text(
-                          context.tr('Numérotation des Documents'),
-                          style: TextStyle(
-                            fontSize: isMobile ? 18 : 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+              LayoutBuilder(
+                builder: (context, headerConstraints) {
+                  final isNarrowHeader = headerConstraints.maxWidth < 640;
+                  final titleBadge = Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 6,
+                    children: [
+                      Text(
+                        context.tr('Numérotation des Documents'),
+                        style: TextStyle(
+                          fontSize: isMobile ? 18 : 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.cloud_done_rounded, size: 14, color: AppColors.success),
-                              const SizedBox(width: 5),
-                              Text(
-                                context.tr('Synchronisé en temps réel'),
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.success,
-                                ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cloud_done_rounded, size: 14, color: AppColors.success),
+                            const SizedBox(width: 5),
+                            Text(
+                              context.tr('Synchronisé en temps réel'),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+
+                  final saveButton = ElevatedButton.icon(
+                    onPressed: (unsavedCount > 0 && !_isSaving) ? _saveAll : null,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.save_rounded, size: 18),
+                    label: Text(
+                      '${context.tr('Enregistrer')} ($unsavedCount)',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: unsavedCount > 0 ? AppColors.primary : AppColors.textTertiary,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                  );
+
+                  if (isNarrowHeader) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        titleBadge,
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: saveButton,
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    height: 40,
-                    child: ElevatedButton.icon(
-                      onPressed: (unsavedCount > 0 && !_isSaving) ? _saveAll : null,
-                      icon: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.save_rounded, size: 18),
-                      label: Text(
-                        '${context.tr('Enregistrer')} ($unsavedCount)',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: unsavedCount > 0 ? AppColors.primary : AppColors.textTertiary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: titleBadge),
+                      const SizedBox(width: 8),
+                      saveButton,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
@@ -461,14 +479,18 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          context.tr(def.dropdownLabel),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
+                        Expanded(
+                          child: Text(
+                            context.tr(def.dropdownLabel),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
@@ -531,14 +553,18 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  context.tr(def.label),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                Expanded(
+                  child: Text(
+                    context.tr(def.label),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   context.tr(def.category),
                   style: TextStyle(
@@ -661,10 +687,12 @@ class _DocumentNumberingScreenState extends State<DocumentNumberingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
+          runSpacing: 2,
           children: [
             _buildFieldLabel('Numéro Actuel'),
-            const SizedBox(width: 6),
             Text(
               '( ${context.tr('Le prochain numéro')}: $nextNumber )',
               style: TextStyle(

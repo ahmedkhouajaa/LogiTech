@@ -25,6 +25,9 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
   bool _emailFocused = false;
   bool _passwordFocused = false;
   bool _confirmPasswordFocused = false;
+  bool _partnerCodeFocused = false;
+  bool _hasPartnerCode = false;
+  final _partnerCodeCtrl = TextEditingController();
   bool _isGoogleLoading = false;
   bool _isEmailLoading = false;
 
@@ -81,6 +84,7 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+    _partnerCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -121,6 +125,9 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
               _emailCtrl.text.trim(),
               _passwordCtrl.text,
               _nameCtrl.text.trim(),
+              partnerCode: _hasPartnerCode && _partnerCodeCtrl.text.trim().isNotEmpty
+                  ? _partnerCodeCtrl.text.trim().toUpperCase()
+                  : null,
             ),
           );
     }
@@ -398,7 +405,7 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
               validator: (v) => v == null || v.trim().isEmpty ? 'Nom requis' : null,
               style: const TextStyle(fontSize: 13, color: _textPrimary, fontWeight: FontWeight.w500),
               decoration: _inputDecoration(
-                hint: 'ex: Jean Dupont',
+                hint: 'ex: Ahmed Khouaja',
                 isFocused: _nameFocused,
                 prefixIcon: Icons.person_outline_rounded,
               ),
@@ -496,6 +503,75 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
                   constraints: const BoxConstraints(),
                 ),
               ),
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 14),
+
+          // 5. Code Promo (Optionnel)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _hasPartnerCode ? _primaryColor.withValues(alpha: 0.03) : const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _hasPartnerCode ? _primaryColor.withValues(alpha: 0.3) : _dividerColor,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "J'ai un code promo",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: _hasPartnerCode ? FontWeight.w600 : FontWeight.w500,
+                        color: _hasPartnerCode ? _primaryColor : _textPrimary,
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: _hasPartnerCode,
+                      activeTrackColor: _primaryColor,
+                      activeThumbColor: Colors.white,
+                      onChanged: (val) {
+                        setState(() {
+                          _hasPartnerCode = val;
+                          if (!val) {
+                            _partnerCodeCtrl.clear();
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                if (_hasPartnerCode) ...[
+                  const SizedBox(height: 6),
+                  _buildFieldHeader('Code promo'),
+                  const SizedBox(height: 4),
+                  Focus(
+                    onFocusChange: (f) => setState(() => _partnerCodeFocused = f),
+                    child: TextFormField(
+                      controller: _partnerCodeCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _handleSignUp(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: _textPrimary,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                      ),
+                      decoration: _inputDecoration(
+                        hint: 'Entrez votre code promo',
+                        isFocused: _partnerCodeFocused,
+                        prefixIcon: Icons.local_offer_outlined,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           SizedBox(height: isMobile ? 12 : 16),

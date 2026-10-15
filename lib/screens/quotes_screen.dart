@@ -22,13 +22,13 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../l10n/app_localizations.dart';
-import '../widgets/dashboard_card.dart';
 import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../services/auth_service.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -56,6 +56,7 @@ class QuotesScreen extends StatefulWidget {
 class _QuotesScreenState extends State<QuotesScreen> {
   // Selection state for bulk actions
   final Set<String> _selectedQuoteIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedClientId;
@@ -116,10 +117,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
         // Header
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -128,21 +129,16 @@ class _QuotesScreenState extends State<QuotesScreen> {
                         context.tr('Devis Client'),
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                     ],
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(context.tr('Gérer vos devis'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              Row(
-                children: [
-                  if (_selectedQuoteIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.salesQuotes))
-                    AppButton(
+              );
+
+              final newQuoteBtn = PermissionService.instance.canCreate(UserPermissionResources.salesQuotes)
+                  ? AppButton(
                       label: 'Nouveau devis',
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
@@ -161,10 +157,44 @@ class _QuotesScreenState extends State<QuotesScreen> {
                           ),
                         ),
                       ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedQuoteIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        newQuoteBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  titleWidget,
+                  Row(
+                    children: [
+                      if (_selectedQuoteIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      newQuoteBtn,
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
         SizedBox(height: 10),
@@ -191,260 +221,274 @@ class _QuotesScreenState extends State<QuotesScreen> {
   }
 
   Widget _buildFilterBar(QuotesState state) {
-    int totalItems = 0;
-    if (state is QuotesLoaded) {
-      List<Quote> filteredOrders = state.quotes;
-      if (_selectedClientId != null && _selectedClientId != 'all') {
-        filteredOrders = filteredOrders.where((q) => q.customerId == _selectedClientId).toList();
-      }
-      if (_dateFrom != null) {
-        filteredOrders = filteredOrders.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
-      }
-      if (_dateTo != null) {
-        filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
-      }
-      if (_statusFilter != null) {
-        filteredOrders = filteredOrders.where((q) => q.effectiveStatus == _statusFilter || q.status.name == _statusFilter).toList();
-      }
-      totalItems = filteredOrders.length;
-    }
 
     final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
         (_statusFilter != null ? 1 : 0);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Client
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(context.tr('Client'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: BlocBuilder<CustomersBloc, CustomersState>(
-                    builder: (context, state) {
-                      List<Customer> customers = [];
-                      if (state is CustomersLoaded) {
-                        customers = state.customers;
-                      }
-                      String selectedCustomerName = context.tr('Tous les clients');
-                      if (_selectedClientId != null && _selectedClientId != 'all') {
-                        final found = customers.firstWhere(
-                          (c) => c.id == _selectedClientId,
-                          orElse: () => Customer(id: '', code: '', name: context.tr('Inconnu'), country: ''),
-                        );
-                        selectedCustomerName = found.companyName?.isNotEmpty == true
-                            ? found.companyName!
-                            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
-                      }
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final inputHeight = (34.0 * textScale).clamp(32.0, 44.0);
 
-                      return InkWell(
-                        onTap: () async {
-                          final selected = await _showCustomerSearchDialog(context, customers, _selectedClientId);
-                          if (selected != null) {
-                            setState(() {
-                              _selectedClientId = selected.id == 'all' ? null : selected.id;
-                            });
-                            _applyFilters();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _selectedClientId == null || _selectedClientId == 'all'
-                                      ? context.tr('Tous les clients')
-                                      : selectedCustomerName,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _selectedClientId != null && _selectedClientId != 'all'
-                                        ? AppColors.textPrimary
-                                        : AppColors.textSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                            ],
-                          ),
-                        ),
-                      );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 750;
+
+        final clientField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.tr('Client'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: inputHeight,
+              child: BlocBuilder<CustomersBloc, CustomersState>(
+                builder: (context, state) {
+                  List<Customer> customers = [];
+                  if (state is CustomersLoaded) {
+                    customers = state.customers;
+                  }
+                  String selectedCustomerName = context.tr('Tous les clients');
+                  if (_selectedClientId != null && _selectedClientId != 'all') {
+                    final found = customers.firstWhere(
+                      (c) => c.id == _selectedClientId,
+                      orElse: () => Customer(id: '', code: '', name: context.tr('Inconnu'), country: ''),
+                    );
+                    selectedCustomerName = found.companyName?.isNotEmpty == true
+                        ? found.companyName!
+                        : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+                  }
+
+                  return InkWell(
+                    onTap: () async {
+                      final selected = await _showCustomerSearchDialog(context, customers, _selectedClientId);
+                      if (selected != null) {
+                        setState(() {
+                          _selectedClientId = selected.id == 'all' ? null : selected.id;
+                        });
+                        _applyFilters();
+                      }
                     },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Date From
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _dateFrom ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                      locale: Localizations.localeOf(context),
-                    );
-                    if (date != null) {
-                      setState(() => _dateFrom = date);
-                      _applyFilters();
-                    }
-                  },
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
-                            style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
-                            overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      height: inputHeight,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedClientId == null || _selectedClientId == 'all'
+                                  ? context.tr('Tous les clients')
+                                  : selectedCustomerName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _selectedClientId != null && _selectedClientId != 'all'
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Date To
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                InkWell(
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _dateTo ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                      locale: Localizations.localeOf(context),
-                    );
-                    if (date != null) {
-                      setState(() => _dateTo = date);
-                      _applyFilters();
-                    }
-                  },
-                  child: Container(
-                    height: 32,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
-                            style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Status
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                DocumentStatusFilterDropdown(
-                  documentType: 'quote',
-                  currentStatusFilter: _statusFilter,
-                  onStatusSelected: (val) {
-                    setState(() => _statusFilter = val);
-                    _applyFilters();
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (activeFilterCount > 0) ...[
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 1),
-              child: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedClientId = null;
-                    _dateFrom = null;
-                    _dateTo = null;
-                    _statusFilter = null;
-                    _currentPage = 0;
-                  });
-                  _applyFilters();
+                  );
                 },
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: context.tr('Réinitialiser les filtres'),
-                style: IconButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  minimumSize: const Size(32, 32),
-                  padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        );
+
+        final dateFromField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.tr('Date de début'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _dateFrom ?? DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                  locale: Localizations.localeOf(context),
+                );
+                if (date != null) {
+                  setState(() => _dateFrom = date);
+                  _applyFilters();
+                }
+              },
+              child: Container(
+                height: inputHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _dateFrom != null ? formatDateLong(_dateFrom!) : context.tr('Sélectionner date'),
+                        style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
-        ],
-      ),
+        );
+
+        final dateToField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.tr('Date de fin'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _dateTo ?? DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                  locale: Localizations.localeOf(context),
+                );
+                if (date != null) {
+                  setState(() => _dateTo = date);
+                  _applyFilters();
+                }
+              },
+              child: Container(
+                height: inputHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _dateTo != null ? formatDateLong(_dateTo!) : context.tr('Sélectionner date'),
+                        style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+
+        final statusField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.tr('Statut'), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            DocumentStatusFilterDropdown(
+              documentType: 'quote',
+              currentStatusFilter: _statusFilter,
+              onStatusSelected: (val) {
+                setState(() => _statusFilter = val);
+                _applyFilters();
+              },
+            ),
+          ],
+        );
+
+        final resetBtn = activeFilterCount > 0
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedClientId = null;
+                      _dateFrom = null;
+                      _dateTo = null;
+                      _statusFilter = null;
+                      _currentPage = 0;
+                    });
+                    _applyFilters();
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  tooltip: context.tr('Réinitialiser les filtres'),
+                  style: IconButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    minimumSize: Size(inputHeight, inputHeight),
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              )
+            : const SizedBox.shrink();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: isNarrow
+              ? Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(child: clientField),
+                        const SizedBox(width: 10),
+                        Expanded(child: statusField),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(child: dateFromField),
+                        const SizedBox(width: 10),
+                        Expanded(child: dateToField),
+                        if (activeFilterCount > 0) ...[
+                          const SizedBox(width: 8),
+                          resetBtn,
+                        ],
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(flex: 3, child: clientField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: dateFromField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: dateToField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: statusField),
+                    if (activeFilterCount > 0) ...[
+                      const SizedBox(width: 8),
+                      resetBtn,
+                    ],
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -640,14 +684,21 @@ class _QuotesScreenState extends State<QuotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<QuotesBloc, QuotesState>(
+    return BlocConsumer<QuotesBloc, QuotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is QuotesLoaded || state is QuotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is QuotesLoading || state is QuotesInitial) {
+        if (_isFirstLoad || state is QuotesLoading || state is QuotesInitial) {
           return _buildTableShimmer();
         }
         if (state is QuotesError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(message: state.message);
+        }
         if (state is QuotesLoaded) {
           List<Quote> filteredOrders = state.quotes;
           
@@ -1217,14 +1268,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: DocPrefix.invoice,
+      defaultPrefix: DocPrefix.invoice,
     );
-    if (seq == null) return;
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     // Map Quote Items to Invoice Items
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
@@ -1249,24 +1301,25 @@ class _QuotesScreenState extends State<QuotesScreen> {
       devisId: quote.id,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: quote.totalHT,
       totalTva: quote.totalTva,
       totalTTC: quote.totalTTC,
       notes: quote.notes,
       items: invoiceItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    // Add Invoice via BLoC (or insert directly via DatabaseHelper, but BLoC is better)
-    // We can't guarantee InvoicesBloc is in this exact context tree if it's not provided globally.
-    // Assuming it's provided globally since it's injected via App.
-    try {
-      final invoicesBloc = context.read<InvoicesBloc>();
-      invoicesBloc.add(AddInvoice(invoice));
-    } catch (e) {
-      // Fallback if bloc isn't available
-      await DatabaseHelper.instance.insertInvoice(invoice);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
+    } else {
+      try {
+        final invoicesBloc = context.read<InvoicesBloc>();
+        invoicesBloc.add(AddInvoice(invoice));
+      } catch (e) {
+        await DatabaseHelper.instance.insertInvoice(invoice);
+      }
     }
 
     // Update Quote
@@ -1280,8 +1333,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Devis converti en facture avec succes'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft
+            ? 'Facture enregistrée en Brouillon (en attente de sync)'
+            : 'Devis converti en facture avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }
@@ -1373,14 +1428,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'customer_orders',
       docTypeName: 'Commande Client',
-      prefix: DocPrefix.customerOrder,
+      defaultPrefix: DocPrefix.customerOrder,
     );
-    if (seq == null) return;
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq, docCollection: 'customer_orders');
+    if (docNumResult.cancelled) return;
+    final orderNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     // Map Quote Items to CustomerOrder Items
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
@@ -1402,17 +1458,22 @@ class _QuotesScreenState extends State<QuotesScreen> {
       customerName: quote.customerName,
       quoteId: quote.id,
       date: DateTime.now(),
-      status: 'created',
+      status: isDraft ? 'draft' : 'created',
       notes: quote.notes,
       items: orderItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final ordersBloc = context.read<CustomerOrdersBloc>();
-      ordersBloc.add(AddCustomerOrder(order));
-    } catch (e) {
-      await DatabaseHelper.instance.insertCustomerOrder(order);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('customer_orders', order.toMap());
+    } else {
+      try {
+        final ordersBloc = context.read<CustomerOrdersBloc>();
+        ordersBloc.add(AddCustomerOrder(order));
+      } catch (e) {
+        await DatabaseHelper.instance.insertCustomerOrder(order);
+      }
     }
 
     // Update Quote
@@ -1425,8 +1486,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Devis converti en commande client avec succes'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft
+            ? 'Commande enregistrée en Brouillon (en attente de sync)'
+            : 'Devis converti en commande client avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }
@@ -1510,14 +1573,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'delivery_notes',
       docTypeName: 'Bon de Livraison',
-      prefix: DocPrefix.deliveryNote,
+      defaultPrefix: DocPrefix.deliveryNote,
     );
-    if (seq == null) return;
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
+    if (docNumResult.cancelled) return;
+    final deliveryNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
     
     // Map Quote Items to DeliveryNote Items
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(
@@ -1539,17 +1603,22 @@ class _QuotesScreenState extends State<QuotesScreen> {
       customerName: quote.customerName,
       devisId: quote.id,
       date: DateTime.now(),
-      status: 'delivered',
+      status: isDraft ? 'draft' : 'delivered',
       notes: quote.notes,
       items: deliveryItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final deliveryBloc = context.read<DeliveryNotesBloc>();
-      deliveryBloc.add(AddDeliveryNote(deliveryNote));
-    } catch (e) {
-      await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('delivery_notes', deliveryNote.toMap());
+    } else {
+      try {
+        final deliveryBloc = context.read<DeliveryNotesBloc>();
+        deliveryBloc.add(AddDeliveryNote(deliveryNote));
+      } catch (e) {
+        await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+      }
     }
 
     // Update Quote
@@ -1563,8 +1632,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Devis converti en bon de livraison avec succes'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft
+            ? 'Bon de livraison enregistré en Brouillon (en attente de sync)'
+            : 'Devis converti en bon de livraison avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }

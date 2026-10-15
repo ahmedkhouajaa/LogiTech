@@ -14,7 +14,6 @@ import '../widgets/searchable_dropdown_field.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 
 class TreasuryTransactionsScreen extends StatefulWidget {
@@ -25,6 +24,7 @@ class TreasuryTransactionsScreen extends StatefulWidget {
 }
 
 class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen> {
+  bool _isFirstLoad = true;
   String _selectedAccountId = 'all';
   String _selectedCategoryId = 'all';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
@@ -153,16 +153,6 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
             builder: (context, state) {
-              List<TreasuryTransaction> transactions = [];
-              if (state is TreasuryTransactionsLoaded) {
-                transactions = state.transactions;
-              }
-              final filtered = transactions.where((t) {
-                if (_selectedAccountId != 'all' && t.accountId != _selectedAccountId) return false;
-                if (_selectedCategoryId != 'all' && t.category != _selectedCategoryId) return false;
-                return true;
-              }).toList();
-
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
@@ -354,9 +344,16 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
 
         // Table
         Expanded(
-          child: BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+          child: BlocConsumer<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+            listener: (context, state) {
+              if (_isFirstLoad && (state is TreasuryTransactionsLoaded || state is TreasuryTransactionsError)) {
+                setState(() {
+                  _isFirstLoad = false;
+                });
+              }
+            },
             builder: (context, state) {
-              if (state is TreasuryTransactionsLoading || state is TreasuryTransactionsInitial) {
+              if (_isFirstLoad || state is TreasuryTransactionsLoading || state is TreasuryTransactionsInitial) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(

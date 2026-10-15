@@ -34,6 +34,7 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
+  bool _isFirstLoad = true;
   @override
   void initState() {
     super.initState();
@@ -120,15 +121,22 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
   @override
   Widget build(BuildContext context) {
     final wState = context.watch<WarehousesBloc>().state;
-    return BlocBuilder<StockTransfersBloc, StockTransfersState>(
+    return BlocConsumer<StockTransfersBloc, StockTransfersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is StockTransfersLoaded || state is StockTransfersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is StockTransfersLoading || state is StockTransfersInitial;
+        bool isLoading = _isFirstLoad || state is StockTransfersLoading || state is StockTransfersInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
         List<Widget> cards = [];
 
-        if (state is StockTransfersLoaded) {
+        if (!_isFirstLoad && state is StockTransfersLoaded) {
           final items = state.transfers;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

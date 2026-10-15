@@ -40,6 +40,7 @@ class CreditNotesScreen extends StatefulWidget {
 
 class _CreditNotesScreenState extends State<CreditNotesScreen> {
   final Set<String> _selectedCreditNoteIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedClientId;
@@ -97,10 +98,10 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
         // Header
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -110,22 +111,51 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                   const SizedBox(height: 2),
                   Text(context.tr('Gérer vos avoirs'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              Row(
-                children: [
-                  if (_selectedCreditNoteIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes))
-                    AppButton(
+              );
+
+              final newBtn = PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes)
+                  ? AppButton(
                       label: context.tr('Nouvel Avoir'),
                       icon: Icons.add_rounded,
                       onPressed: () => _navigate(context),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedCreditNoteIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        newBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  titleWidget,
+                  Row(
+                    children: [
+                      if (_selectedCreditNoteIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      newBtn,
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -599,14 +629,21 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<CreditNotesBloc, CreditNotesState>(
+    return BlocConsumer<CreditNotesBloc, CreditNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is CreditNotesLoaded || state is CreditNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is CreditNotesLoading || state is CreditNotesInitial) {
+        if (_isFirstLoad || state is CreditNotesLoading || state is CreditNotesInitial) {
           return _buildTableShimmer();
         }
         if (state is CreditNotesError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(message: state.message);
+        }
         if (state is CreditNotesLoaded) {
           List<CreditNote> filteredNotes = state.creditNotes;
           
@@ -710,6 +747,9 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
 
                                     Color statusColor;
                                     switch (statusEnum) {
+                                      case CreditNoteStatus.draft:
+                                        statusColor = AppColors.textSecondary;
+                                        break;
                                       case CreditNoteStatus.unused:
                                         statusColor = AppColors.primary;
                                         break;

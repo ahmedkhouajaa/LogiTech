@@ -215,22 +215,20 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
       final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'quotes',
-            docTypeName: 'Devis',
-            prefix: DocPrefix.quote,
-          );
-          if (seq == null) {
-            setState(() => _isLoading = false);
-            return;
-          }
-          number = generateDocNumber(DocPrefix.quote, seq, docCollection: 'quotes');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'quotes',
+          docTypeName: 'Devis',
+          defaultPrefix: DocPrefix.quote,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
         }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -255,7 +253,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         warehouseId: _selectedWarehouseId,
         date: _date,
         validityDate: _validityDate,
-        status: _status,
+        status: isDraft ? DocumentStatus.draft : _status,
         totalHT: _totalHT,
         totalTva: _totalTva,
         totalTTC: _totalTTC,
@@ -285,16 +283,16 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         isConverted: widget.existing?.isConverted ?? false,
         convertedTo: widget.existing?.convertedTo,
         convertedToId: widget.existing?.convertedToId,
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft) {
         await OfflineDocumentService.instance.savePendingDocument('quotes', quote.toMap());
         bloc.add(const LoadFirstDevis());
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('${context.tr('Devis')} ${quote.number} ${context.tr('enregistré hors-ligne (en attente de sync)')}'),
+            content: Text('${context.tr('Devis')} ${quote.number} ${context.tr('enregistré en Brouillon (en attente de sync)')}'),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 3),
           ));

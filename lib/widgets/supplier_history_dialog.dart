@@ -14,6 +14,8 @@ import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../services/offline_document_service.dart';
 import '../screens/history_pdf_preview_screen.dart';
+import '../services/error_handler.dart';
+import '../widgets/app_error_widget.dart';
 
 class SupplierHistoryDialog extends StatefulWidget {
   final Supplier supplier;
@@ -237,7 +239,7 @@ class _SupplierHistoryDialogState extends State<SupplierHistoryDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = ErrorHandler.parseError(e);
           _isLoading = false;
         });
       }
@@ -860,20 +862,9 @@ class _SupplierHistoryDialogState extends State<SupplierHistoryDialog> {
                       ),
                     )
                   : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline, size: 36, color: AppColors.error),
-                              const SizedBox(height: 8),
-                              Text('Erreur: $_errorMessage', style: TextStyle(color: AppColors.error)),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: _loadSupplierData,
-                                child: const Text('Réessayer'),
-                              ),
-                            ],
-                          ),
+                      ? AppErrorWidget(
+                          message: _errorMessage!,
+                          onRetry: _loadSupplierData,
                         )
                       : SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),

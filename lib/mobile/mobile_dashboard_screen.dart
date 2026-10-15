@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
+import '../widgets/dashboard_date_filter_dialog.dart';
+import '../widgets/sidebar_menu.dart';
+import '../services/app_navigation_service.dart';
+import '../services/dashboard_privacy_service.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/invoice.dart';
@@ -23,14 +28,19 @@ class MobileDashboardScreen extends StatelessWidget {
             );
           }
         if (state is DashboardLoaded) {
-          return _buildDashboard(context, state);
+          return ValueListenableBuilder<bool>(
+            valueListenable: DashboardPrivacyService.instance.isHidden,
+            builder: (context, isHidden, _) {
+              return _buildDashboard(context, state, isHidden);
+            },
+          );
         }
         return SizedBox();
       },
     );
   }
 
-  Widget _buildDashboard(BuildContext context, DashboardLoaded state) {
+  Widget _buildDashboard(BuildContext context, DashboardLoaded state, bool isHidden) {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () async {
@@ -38,26 +48,220 @@ class MobileDashboardScreen extends StatelessWidget {
         await Future.delayed(const Duration(seconds: 1));
       },
       child: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          // Welcome card
-          // _buildWelcomeCard(),
-          // SizedBox(height: 16),
+          // Date Filter Toolbar
+          _buildFilterToolbar(context, state, isHidden),
+          const SizedBox(height: 12),
           // KPI grid (2 per row)
-          _buildKpiGrid(state),
-          SizedBox(height: 20),
+          _buildKpiGrid(state, isHidden),
+          const SizedBox(height: 20),
           // Quick Actions
           _buildQuickActions(context),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           // Recent invoices
-          _buildRecentInvoices(state.recentInvoices),
-          SizedBox(height: 20),
-          // Low stock alerts
-          // if (state.lowStockProducts.isNotEmpty)
-          //   _buildLowStockAlerts(state),
+          _buildRecentInvoices(state.recentInvoices, isHidden),
+          const SizedBox(height: 20),
         ],
       ),
     );
+  }
+
+  Widget _buildFilterToolbar(BuildContext context, DashboardLoaded state, bool isHidden) {
+    final dateRangeStr = _formatDateRangeDisplay(state.dateRange);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              context.tr('Aperçu général'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            _buildVoirRapportsButton(context),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDateRangeButton(context, dateRangeStr, state.dateRange),
+            ),
+            const SizedBox(width: 8),
+            _buildIconButton(
+              icon: Icons.tune_rounded,
+              tooltip: context.tr('Filtres rapides'),
+              onTap: () => _openDateRangePicker(context, state.dateRange),
+            ),
+            const SizedBox(width: 8),
+            _buildIconButton(
+              icon: isHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              tooltip: isHidden ? context.tr('Afficher les chiffres') : context.tr('Masquer les chiffres'),
+              isActive: isHidden,
+              onTap: () => DashboardPrivacyService.instance.toggle(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVoirRapportsButton(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        AppNavigationService.instance.navigateToModule(context, AppModule.reports);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.tr('Voir Rapports'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.call_made_rounded,
+              size: 13,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    bool isActive = false,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF2563EB).withValues(alpha: 0.1) : AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? const Color(0xFF2563EB).withValues(alpha: 0.4) : AppColors.border,
+            ),
+            boxShadow: AppShadows.sm,
+          ),
+          child: Icon(
+            icon,
+            size: 17,
+            color: isActive ? const Color(0xFF2563EB) : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateRangeButton(BuildContext context, String label, DateTimeRange? currentRange) {
+    return InkWell(
+      onTap: () => _openDateRangePicker(context, currentRange),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2563EB),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDateRangePicker(BuildContext context, DateTimeRange? currentRange) async {
+    final picked = await DashboardDateFilterDialog.show(
+      context,
+      initialRange: currentRange,
+    );
+
+    if (!context.mounted) return;
+
+    context.read<DashboardBloc>().add(
+      DashboardRefreshRequested(
+        dateRange: picked,
+        clearDateRange: picked == null,
+      ),
+    );
+  }
+
+  String _formatDateRangeDisplay(DateTimeRange? range) {
+    if (range == null) return 'Toutes les dates';
+    const months = [
+      'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+      'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'
+    ];
+    final sDay = range.start.day.toString().padLeft(2, '0');
+    final sMonth = months[range.start.month - 1];
+    final sYear = range.start.year;
+
+    final eDay = range.end.day.toString().padLeft(2, '0');
+    final eMonth = months[range.end.month - 1];
+    final eYear = range.end.year;
+
+    if (DateUtils.isSameDay(range.start, range.end)) {
+      return '$sDay $sMonth, $sYear';
+    }
+
+    return '$sDay $sMonth, $sYear - $eDay $eMonth, $eYear';
   }
 
   Widget _buildWelcomeCard() {
@@ -111,7 +315,7 @@ class MobileDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKpiGrid(DashboardLoaded state) {
+  Widget _buildKpiGrid(DashboardLoaded state, bool isHidden) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -123,25 +327,25 @@ class MobileDashboardScreen extends StatelessWidget {
         _kpiCard(
           icon: Icons.receipt_rounded,
           label: 'Chiffre d\'Affaires',
-          value: formatCurrency(state.totalInvoiced),
+          value: isHidden ? '•••••• TND' : formatCurrency(state.totalInvoiced),
           gradient: AppGradients.primary,
         ),
         _kpiCard(
           icon: Icons.payments_rounded,
           label: 'Total Payé',
-          value: formatCurrency(state.totalPaid),
+          value: isHidden ? '•••••• TND' : formatCurrency(state.totalPaid),
           gradient: AppGradients.success,
         ),
         _kpiCard(
           icon: Icons.local_shipping_rounded,
           label: 'Bons de Livraison',
-          value: formatCurrency(state.totalDeliveryNotes),
+          value: isHidden ? '••••' : state.totalDeliveryNotes.toInt().toString(),
           gradient: AppGradients.info,
         ),
         _kpiCard(
           icon: Icons.account_balance_rounded,
           label: 'TVA Collectée',
-          value: formatCurrency(state.totalTvaCollected),
+          value: isHidden ? '•••••• TND' : formatCurrency(state.totalTvaCollected),
           gradient: AppGradients.warning,
         ),
       ],
@@ -258,7 +462,7 @@ class MobileDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentInvoices(List<Invoice> invoices) {
+  Widget _buildRecentInvoices(List<Invoice> invoices, bool isHidden) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -289,14 +493,14 @@ class MobileDashboardScreen extends StatelessWidget {
               ),
             )
           else
-            ...invoices.take(5).map((inv) => _invoiceRow(inv)),
+            ...invoices.take(5).map((inv) => _invoiceRow(inv, isHidden)),
           SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _invoiceRow(Invoice inv) {
+  Widget _invoiceRow(Invoice inv, bool isHidden) {
     final statusColor = _getStatusColor(inv.status);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -334,7 +538,7 @@ class MobileDashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                formatCurrency(inv.totalTTC),
+                isHidden ? '•••••• TND' : formatCurrency(inv.totalTTC),
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
               ),
               SizedBox(height: 2),

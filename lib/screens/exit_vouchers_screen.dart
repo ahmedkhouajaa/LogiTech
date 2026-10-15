@@ -27,7 +27,6 @@ import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../services/custom_status_service.dart';
 import '../widgets/dialogs/change_status_dialog.dart';
@@ -62,6 +61,7 @@ class ExitVouchersScreen extends StatefulWidget {
 
 class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   final Set<String> _selectedExitVoucherIds = {};
+  bool _isFirstLoad = true;
 
   String? _selectedClientId;
   DateTime? _dateFrom;
@@ -281,14 +281,21 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             
             // Cards List
             Expanded(
-              child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+              child: BlocConsumer<ExitVouchersBloc, ExitVouchersState>(
+                listener: (context, state) {
+                  if (_isFirstLoad && (state is ExitVouchersLoaded || state is ExitVouchersError)) {
+                    setState(() {
+                      _isFirstLoad = false;
+                    });
+                  }
+                },
                 builder: (context, state) {
-                  if (state is ExitVouchersLoading) {
-                    return Center(child: CircularProgressIndicator());
+                  if (_isFirstLoad || state is ExitVouchersLoading || state is ExitVouchersInitial) {
+                    return const Center(child: CircularProgressIndicator());
                   }
                   if (state is ExitVouchersError) {
-            return AppErrorWidget(message: state.message);
-          }
+                    return AppErrorWidget(message: state.message);
+                  }
                   if (state is ExitVouchersLoaded) {
                     final entries = state.withdrawals;
                     if (entries.isEmpty) {
@@ -556,23 +563,6 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   }
 
   Widget _buildFilterBar(ExitVouchersState state) {
-    int totalItems = 0;
-    if (state is ExitVouchersLoaded) {
-      List<StockWithdrawal> filteredVouchers = state.withdrawals;
-      if (_selectedClientId != null && _selectedClientId != 'all') {
-        filteredVouchers = filteredVouchers.where((q) => q.customerId == _selectedClientId).toList();
-      }
-      if (_dateFrom != null) {
-        filteredVouchers = filteredVouchers.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
-      }
-      if (_dateTo != null) {
-        filteredVouchers = filteredVouchers.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
-      }
-      if (_statusFilter != null) {
-        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter).toList();
-      }
-      totalItems = state.totalCount > 0 ? state.totalCount : filteredVouchers.length;
-    }
     final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
@@ -726,9 +716,6 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
     );
   }
 
-  Widget _buildFilterSection({required String label, required Widget child}) {
-    return _filterSection(label: label, child: child);
-  }
 
   Widget _filterSection({required String label, required Widget child}) {
     return Column(
@@ -811,15 +798,20 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+    return BlocConsumer<ExitVouchersBloc, ExitVouchersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ExitVouchersLoaded || state is ExitVouchersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is ExitVouchersLoading || state is ExitVouchersInitial) {
+        if (_isFirstLoad || state is ExitVouchersLoading || state is ExitVouchersInitial) {
           return _buildTableShimmer();
         }
         if (state is ExitVouchersError) {
-          return Center(
-              child: Text(state.message,
-                  style: TextStyle(color: AppColors.error)));
+          return AppErrorWidget(message: state.message);
         }
         if (state is ExitVouchersLoaded) {
           final notes = state.withdrawals;

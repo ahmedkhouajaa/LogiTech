@@ -23,6 +23,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../widgets/document_tax_settings_dialog.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
@@ -253,15 +254,17 @@ class _CreateSupplierReturnScreenState
     final messenger = ScaffoldMessenger.of(context);
 
     String number = widget.existing?.number ?? '';
+    bool isDraft = false;
     if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
+      final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
         context: context,
         docCollection: 'supplier_returns',
         docTypeName: 'Retour Fournisseur',
-        prefix: DocPrefix.supplierReturn,
+        defaultPrefix: DocPrefix.supplierReturn,
       );
-      if (seq == null) return;
-      number = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
+      if (docNumResult.cancelled) return;
+      number = docNumResult.number;
+      isDraft = docNumResult.isDraft;
     }
 
     final suppState = context.read<SuppliersBloc>().state;
@@ -283,7 +286,7 @@ class _CreateSupplierReturnScreenState
       supplierId: _selectedsupplierId!,
       supplierName: suppName,
       date: _date,
-      status: _status.name,
+      status: isDraft ? SupplierReturnStatus.draft.name : _status.name,
       reason: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       customFields: {
         ..._customFields,
@@ -308,6 +311,21 @@ class _CreateSupplierReturnScreenState
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
+
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('supplier_returns', note.toMap());
+      if (mounted) {
+        nav.pop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Bon de retour ${note.number} enregistré en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     if (_isEditing) {
       bloc.add(UpdateSupplierReturn(note));

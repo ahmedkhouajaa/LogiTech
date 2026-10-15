@@ -38,6 +38,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -130,9 +131,16 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<InvoicesBloc, InvoicesState>(
+    return BlocConsumer<InvoicesBloc, InvoicesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is InvoicesLoaded || state is InvoicesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is InvoicesLoading || state is InvoicesInitial;
+        bool isLoading = _isFirstLoad || state is InvoicesLoading || state is InvoicesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -144,7 +152,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           customersList = customersState.customers;
         }
 
-        if (state is InvoicesLoaded) {
+        if (!_isFirstLoad && state is InvoicesLoaded) {
           final items = state.invoices;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

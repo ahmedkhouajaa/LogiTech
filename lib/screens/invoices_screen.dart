@@ -34,6 +34,7 @@ import 'document_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -53,6 +54,7 @@ class InvoicesScreen extends StatefulWidget {
 class _InvoicesScreenState extends State<InvoicesScreen> {
   // Selection state for bulk actions
   final Set<String> _selectedInvoiceIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedClientId;
@@ -293,45 +295,74 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         // Header with title and button
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 600;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     context.tr('Factures Client'),
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(context.tr('Gérer vos factures'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              const Spacer(),
-              if (_selectedInvoiceIds.isNotEmpty) ...[
-                _buildBulkActionsDropdown(),
-                const SizedBox(width: 10),
-              ],
-              if (PermissionService.instance.canCreate(UserPermissionResources.salesInvoices))
-                AppButton(
-                  label: context.tr('Nouvelle facture'),
-                  icon: Icons.add_rounded,
-                  onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MultiBlocProvider(
-                      providers: [
-                        BlocProvider.value(value: context.read<InvoicesBloc>()),
-                        BlocProvider.value(value: context.read<CustomersBloc>()),
-                        BlocProvider.value(value: context.read<ProductsBloc>()),
-                        BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+              );
+
+              final newInvoiceBtn = PermissionService.instance.canCreate(UserPermissionResources.salesInvoices)
+                  ? AppButton(
+                      label: context.tr('Nouvelle facture'),
+                      icon: Icons.add_rounded,
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MultiBlocProvider(
+                            providers: [
+                              BlocProvider.value(value: context.read<InvoicesBloc>()),
+                              BlocProvider.value(value: context.read<CustomersBloc>()),
+                              BlocProvider.value(value: context.read<ProductsBloc>()),
+                              BlocProvider.value(value: context.read<ProjectsBloc>()),
+                              BlocProvider.value(value: context.read<WarehousesBloc>()),
+                            ],
+                            child: const CreateInvoiceScreen(),
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedInvoiceIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        newInvoiceBtn,
                       ],
-                      child: const CreateInvoiceScreen(),
                     ),
-                  ),
-                ),
-              ),
-            ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  titleWidget,
+                  const Spacer(),
+                  if (_selectedInvoiceIds.isNotEmpty) ...[
+                    _buildBulkActionsDropdown(),
+                    const SizedBox(width: 10),
+                  ],
+                  newInvoiceBtn,
+                ],
+              );
+            },
           ),
         ),
         SizedBox(height: 10),
@@ -362,156 +393,188 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
         (_statusFilter != null ? 1 : 0);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Client filter
-          Expanded(
-            flex: 3,
-            child: _buildFilterField(
-              label: 'Client',
-              child: BlocBuilder<CustomersBloc, CustomersState>(
-                builder: (context, state) {
-                  final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  String selectedCustomerName = context.tr('Tous les clients');
-                  if (_selectedClientId != null && _selectedClientId != 'all') {
-                    final found = customers.firstWhere(
-                      (c) => c.id == _selectedClientId,
-                      orElse: () => Customer(id: '', code: '', name: 'Inconnu', country: ''),
-                    );
-                    selectedCustomerName = found.companyName?.isNotEmpty == true
-                        ? found.companyName!
-                        : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
-                  }
 
-                  return InkWell(
-                    onTap: () async {
-                      final selected = await _showCustomerSearchDialog(context, customers, _selectedClientId);
-                      if (selected != null) {
-                        setState(() {
-                          _selectedClientId = selected.id == 'all' ? null : selected.id;
-                        });
-                        _applyFilters();
-                      }
-                    },
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final inputHeight = (34.0 * textScale).clamp(32.0, 44.0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 750;
+
+        final clientField = _buildFilterField(
+          label: 'Client',
+          child: BlocBuilder<CustomersBloc, CustomersState>(
+            builder: (context, state) {
+              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+              String selectedCustomerName = context.tr('Tous les clients');
+              if (_selectedClientId != null && _selectedClientId != 'all') {
+                final found = customers.firstWhere(
+                  (c) => c.id == _selectedClientId,
+                  orElse: () => Customer(id: '', code: '', name: 'Inconnu', country: ''),
+                );
+                selectedCustomerName = found.companyName?.isNotEmpty == true
+                    ? found.companyName!
+                    : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+              }
+
+              return InkWell(
+                onTap: () async {
+                  final selected = await _showCustomerSearchDialog(context, customers, _selectedClientId);
+                  if (selected != null) {
+                    setState(() {
+                      _selectedClientId = selected.id == 'all' ? null : selected.id;
+                    });
+                    _applyFilters();
+                  }
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  height: inputHeight,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _selectedClientId == null || _selectedClientId == 'all'
-                                  ? context.tr('Tous les clients')
-                                  : selectedCustomerName,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _selectedClientId != null && _selectedClientId != 'all'
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedClientId == null || _selectedClientId == 'all'
+                              ? context.tr('Tous les clients')
+                              : selectedCustomerName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _selectedClientId != null && _selectedClientId != 'all'
+                                ? AppColors.textPrimary
+                                : AppColors.textSecondary,
                           ),
-                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Date de debut
-          Expanded(
-            flex: 2,
-            child: _buildFilterField(
-              label: 'Date de début',
-              child: _buildDateFilterField(
-                value: _dateFrom,
-                hint: 'Sélectionner date',
-                onChanged: (d) {
-                  setState(() => _dateFrom = d);
-                  _applyFilters();
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Date de fin
-          Expanded(
-            flex: 2,
-            child: _buildFilterField(
-              label: 'Date de fin',
-              child: _buildDateFilterField(
-                value: _dateTo,
-                hint: 'Sélectionner date',
-                onChanged: (d) {
-                  setState(() => _dateTo = d);
-                  _applyFilters();
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Status filter
-          Expanded(
-            flex: 2,
-            child: _buildFilterField(
-              label: 'Statut',
-              child: DocumentStatusFilterDropdown(
-                documentType: 'invoice',
-                currentStatusFilter: _statusFilter,
-                onStatusSelected: (v) {
-                  setState(() => _statusFilter = v);
-                  _applyFilters();
-                },
-              ),
-            ),
-          ),
-          if (activeFilterCount > 0) ...[
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 1),
-              child: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedClientId = null;
-                    _dateFrom = null;
-                    _dateTo = null;
-                    _statusFilter = null;
-                    _currentPage = 0;
-                  });
-                  context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
-                },
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                tooltip: context.tr('Réinitialiser les filtres'),
-                style: IconButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  minimumSize: const Size(32, 32),
-                  padding: EdgeInsets.zero,
+                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
+              );
+            },
+          ),
+        );
+
+        final dateFromField = _buildFilterField(
+          label: 'Date de début',
+          child: _buildDateFilterField(
+            value: _dateFrom,
+            hint: 'Sélectionner date',
+            onChanged: (d) {
+              setState(() => _dateFrom = d);
+              _applyFilters();
+            },
+          ),
+        );
+
+        final dateToField = _buildFilterField(
+          label: 'Date de fin',
+          child: _buildDateFilterField(
+            value: _dateTo,
+            hint: 'Sélectionner date',
+            onChanged: (d) {
+              setState(() => _dateTo = d);
+              _applyFilters();
+            },
+          ),
+        );
+
+        final statusField = _buildFilterField(
+          label: 'Statut',
+          child: DocumentStatusFilterDropdown(
+            documentType: 'invoice',
+            currentStatusFilter: _statusFilter,
+            onStatusSelected: (v) {
+              setState(() => _statusFilter = v);
+              _applyFilters();
+            },
+          ),
+        );
+
+        final resetBtn = activeFilterCount > 0
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedClientId = null;
+                      _dateFrom = null;
+                      _dateTo = null;
+                      _statusFilter = null;
+                      _currentPage = 0;
+                    });
+                    context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  tooltip: context.tr('Réinitialiser les filtres'),
+                  style: IconButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    minimumSize: Size(inputHeight, inputHeight),
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              )
+            : const SizedBox.shrink();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: isNarrow
+              ? Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(child: clientField),
+                        const SizedBox(width: 10),
+                        Expanded(child: statusField),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(child: dateFromField),
+                        const SizedBox(width: 10),
+                        Expanded(child: dateToField),
+                        if (activeFilterCount > 0) ...[
+                          const SizedBox(width: 8),
+                          resetBtn,
+                        ],
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(flex: 3, child: clientField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: dateFromField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: dateToField),
+                    const SizedBox(width: 10),
+                    Expanded(flex: 2, child: statusField),
+                    if (activeFilterCount > 0) ...[
+                      const SizedBox(width: 8),
+                      resetBtn,
+                    ],
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -699,6 +762,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     required String hint,
     required ValueChanged<DateTime?> onChanged,
   }) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final inputHeight = (34.0 * textScale).clamp(32.0, 44.0);
+
     return InkWell(
       onTap: () async {
         final picked = await showDatePicker(
@@ -711,7 +777,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         if (picked != null) onChanged(picked);
       },
       child: Container(
-        height: 32,
+        height: inputHeight,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
@@ -760,9 +826,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Widget _buildInvoiceTable() {
-    return BlocBuilder<InvoicesBloc, InvoicesState>(
+    return BlocConsumer<InvoicesBloc, InvoicesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is InvoicesLoaded || state is InvoicesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is InvoicesLoading || state is InvoicesInitial) return _buildTableShimmer();
+        if (_isFirstLoad || state is InvoicesLoading || state is InvoicesInitial) return _buildTableShimmer();
         if (state is InvoicesError) return AppErrorWidget(message: state.message);
         if (state is InvoicesLoaded) {
           final invoices = state.filteredInvoices;
@@ -1157,14 +1230,15 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final seq = await DocumentNumberingService.ensureNumberSequence(
+              final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
                 context: context,
                 docCollection: 'credit_notes',
                 docTypeName: 'Avoir',
-                prefix: DocPrefix.creditNote,
+                defaultPrefix: DocPrefix.creditNote,
               );
-              if (seq == null) return;
-              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq, docCollection: 'credit_notes');
+              if (docNumResult.cancelled) return;
+              final cnNumber = docNumResult.number;
+              final isDraft = docNumResult.isDraft;
               
               final creditNote = CreditNote(
                 id: cnId,
@@ -1173,7 +1247,6 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 customerId: inv.customerId,
                 customerName: inv.customerName,
                 date: now,
-                status: CreditNoteStatus.unused,
                 totalHT: inv.totalHT > 0 ? -inv.totalHT : inv.totalHT,
                 totalTva: inv.totalTva > 0 ? -inv.totalTva : inv.totalTva,
                 totalTTC: inv.totalTTC > 0 ? -inv.totalTTC : inv.totalTTC,
@@ -1187,9 +1260,15 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 )).toList(),
                 createdAt: now,
                 updatedAt: now,
+                status: isDraft ? CreditNoteStatus.draft : CreditNoteStatus.unused,
+                customStatus: isDraft ? 'brouillon' : null,
               );
 
-              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              if (isDraft) {
+                await OfflineDocumentService.instance.savePendingDocument('credit_notes', creditNote.toMap());
+              } else {
+                context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              }
               
               final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
               context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
@@ -1200,8 +1279,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Avoir $cnNumber créé et stock réajusté avec succès'),
-                    backgroundColor: AppColors.success,
+                    content: Text(isDraft
+                        ? 'Avoir $cnNumber enregistré en Brouillon (en attente de sync)'
+                        : 'Avoir $cnNumber créé et stock réajusté avec succès'),
+                    backgroundColor: isDraft ? AppColors.warning : AppColors.success,
                   ),
                 );
               }

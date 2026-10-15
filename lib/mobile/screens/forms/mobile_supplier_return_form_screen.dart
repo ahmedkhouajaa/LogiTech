@@ -23,6 +23,7 @@ import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
+import '../../../../services/offline_document_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -226,18 +227,20 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
       final bloc = context.read<SupplierReturnsBloc>();
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
           context: context,
           docCollection: 'supplier_returns',
           docTypeName: 'Retour Fournisseur',
-          prefix: DocPrefix.supplierReturn,
+          defaultPrefix: DocPrefix.supplierReturn,
         );
-        if (seq == null) {
+        if (docNumResult.cancelled) {
           setState(() => _isLoading = false);
           return;
         }
-        number = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       String? suppName;
@@ -259,7 +262,7 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
         supplierId: _selectedSupplierId!,
         supplierName: suppName ?? _selectedSupplierName,
         date: _date,
-        status: _status,
+        status: isDraft ? 'draft' : _status,
         reason: _notes.isNotEmpty ? _notes : null,
         customFields: {
           ..._customFields,
@@ -284,6 +287,19 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
         createdAt: widget.existing?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
+
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('supplier_returns', note.toMap());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Bon de retour ${note.number} enregistré en Brouillon (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateSupplierReturn(note));

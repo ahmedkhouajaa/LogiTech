@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
-import '../services/connectivity_service.dart';
 import '../services/offline_document_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
@@ -13,7 +12,7 @@ import '../models/product.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
-import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 
 import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
@@ -41,6 +40,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   final _notesController = TextEditingController();
   List<Warehouse> _warehouses = [];
   bool _hasAttemptedSubmit = false;
+  bool _isSaving = false;
 
   List<StockWithdrawalItem> _items = [];
   final Map<String, double> _stockQuantities = {}; // to hold current stock of selected products
@@ -83,6 +83,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
       return;
     }
@@ -122,91 +123,110 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       seenProducts.add(item.productId);
     }
 
-    final isOnline = ConnectivityService.instance.isOnline;
+    setState(() => _isSaving = true);
 
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      if (isOnline) {
-        final seq = widget.isExitVoucher 
-            ? await DatabaseHelper.instance.getNextExitVoucherSequence()
-            : await DatabaseHelper.instance.getNextStockWithdrawalSequence();
-        number = generateDocNumber(widget.isExitVoucher ? DocPrefix.exitVoucher : DocPrefix.stockWithdrawal, seq);
-      } else {
-        number = OfflineDocumentService.generateDraftNumber();
+    try {
+      final collectionName = widget.isExitVoucher ? 'exit_vouchers' : 'stock_withdrawals';
+      final docTypeName = widget.isExitVoucher ? 'Bon de Sortie' : 'Bon de Prélèvement';
+      final defaultPrefix = widget.isExitVoucher ? DocPrefix.exitVoucher : DocPrefix.stockWithdrawal;
+
+      String number = widget.existing?.number ?? '';
+      bool isDraft = false;
+      if (number.isEmpty) {
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: collectionName,
+          docTypeName: docTypeName,
+          defaultPrefix: defaultPrefix,
+        );
+        if (docNumResult.cancelled) return;
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
-    }
 
-    final entry = StockWithdrawal(
-      id: widget.existing?.id,
-      number: number,
-      customerId: '',
-      warehouseId: _warehouseId!,
-      date: _date,
-      conditionsGenerales: _reasonController.text,
-      notes: _notesController.text,
-      status: 'created',
-      items: validItems,
-      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
-    );
+      final entry = StockWithdrawal(
+        id: widget.existing?.id,
+        number: number,
+        customerId: '',
+        warehouseId: _warehouseId!,
+        date: _date,
+        conditionsGenerales: _reasonController.text,
+        notes: _notesController.text,
+        status: isDraft ? 'draft' : 'created',
+        items: validItems,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
+      );
 
-    final collectionName = widget.isExitVoucher ? 'exit_vouchers' : 'stock_withdrawals';
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument(collectionName, entry.toMap());
+        if (widget.isExitVoucher) {
+          context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
+        } else {
+          context.read<StockWithdrawalsBloc>().add(LoadFirstStockWithdrawals());
+        }
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${entry.number} enregistré en Brouillon (en attente de sync)'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
 
-    if (!isOnline && widget.existing == null) {
-      await OfflineDocumentService.instance.savePendingDocument(collectionName, entry.toMap());
+      final productsBloc = context.read<ProductsBloc>();
+
+      late StreamSubscription subscription;
+      
       if (widget.isExitVoucher) {
-        context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
+        final exitVouchersBloc = context.read<ExitVouchersBloc>();
+        subscription = exitVouchersBloc.stream.listen((state) {
+          if (state is ExitVouchersLoaded || state is ExitVouchersError) {
+            productsBloc.add(LoadProducts());
+            subscription.cancel();
+          }
+        });
+        if (widget.existing == null) {
+          exitVouchersBloc.add(AddExitVoucher(entry));
+        } else {
+          exitVouchersBloc.add(UpdateExitVoucher(entry));
+        }
       } else {
-        context.read<StockWithdrawalsBloc>().add(LoadFirstStockWithdrawals());
+        final withdrawalBloc = context.read<StockWithdrawalsBloc>();
+        subscription = withdrawalBloc.stream.listen((state) {
+          if (state is StockWithdrawalsLoaded || state is StockWithdrawalsError) {
+            productsBloc.add(LoadProducts());
+            subscription.cancel();
+          }
+        });
+        if (widget.existing == null) {
+          withdrawalBloc.add(AddStockWithdrawal(entry));
+        } else {
+          withdrawalBloc.add(UpdateStockWithdrawal(entry));
+        }
       }
+      
       if (mounted) {
+        context.read<StockBloc>().add(LoadStock());
+        context.read<ProductsBloc>().add(LoadProducts());
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${entry.number} enregistré hors-ligne (en attente de sync)'),
-            backgroundColor: AppColors.warning,
+            content: Text(widget.existing != null 
+                ? '${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${entry.number} mis à jour avec succès'
+                : '${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${entry.number} créé avec succès'),
+            backgroundColor: AppColors.success,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-      return;
-    }
-
-    final productsBloc = context.read<ProductsBloc>();
-
-    late StreamSubscription subscription;
-    
-    if (widget.isExitVoucher) {
-      final exitVouchersBloc = context.read<ExitVouchersBloc>();
-      subscription = exitVouchersBloc.stream.listen((state) {
-        if (state is ExitVouchersLoaded || state is ExitVouchersError) {
-          productsBloc.add(LoadProducts());
-          subscription.cancel();
-        }
-      });
-      if (widget.existing == null) {
-        exitVouchersBloc.add(AddExitVoucher(entry));
-      } else {
-        exitVouchersBloc.add(UpdateExitVoucher(entry));
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
-    } else {
-      final withdrawalBloc = context.read<StockWithdrawalsBloc>();
-      subscription = withdrawalBloc.stream.listen((state) {
-        if (state is StockWithdrawalsLoaded || state is StockWithdrawalsError) {
-          productsBloc.add(LoadProducts());
-          subscription.cancel();
-        }
-      });
-      if (widget.existing == null) {
-        withdrawalBloc.add(AddStockWithdrawal(entry));
-      } else {
-        withdrawalBloc.add(UpdateStockWithdrawal(entry));
-      }
-    }
-    
-    if (mounted) {
-      context.read<StockBloc>().add(LoadStock());
-      context.read<ProductsBloc>().add(LoadProducts());
-      Navigator.pop(context);
     }
   }
 
@@ -363,7 +383,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: _save,
+              onPressed: _isSaving ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -371,7 +391,9 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 elevation: 0,
               ),
-              child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: _isSaving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],

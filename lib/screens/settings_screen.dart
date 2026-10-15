@@ -9,6 +9,7 @@ import 'document_numbering_screen.dart';
 import 'personal_info_screen.dart';
 import 'import_export_screen.dart';
 import 'support_tickets_screen.dart';
+import 'affiliate_dashboard_screen.dart';
 import 'trash_screen.dart';
 import 'user_tracking_screen.dart';
 
@@ -253,6 +254,20 @@ class SettingsScreen extends StatelessWidget {
                   }
                 },
               ),
+              if (PermissionService.instance.canAccessModule(AppModule.affiliate))
+                _buildSettingItem(
+                  Icons.handshake_rounded,
+                  context.tr('Programme Partenaire & Affiliation'),
+                  context.tr('Partagez votre code promo et gagnez du cash ou des remises d\'abonnement'),
+                  onTap: () {
+                    final shell = context.findAncestorStateOfType<AppShellScreenState>();
+                    if (shell != null) {
+                      shell.setActiveModule(AppModule.affiliate);
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AffiliateDashboardScreen()));
+                    }
+                  },
+                ),
             ],
           ),
 

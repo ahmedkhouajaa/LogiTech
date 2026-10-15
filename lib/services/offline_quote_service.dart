@@ -90,6 +90,10 @@ class OfflineQuoteService {
       try {
         // 1. Get atomic sequential number from Firestore counter
         final seq = await DatabaseHelper.instance.getNextQuoteSequence();
+        if (seq == null) {
+          debugPrint('⚠️ [OFFLINE QUOTE] Could not obtain sequence, aborting sync batch');
+          break;
+        }
         final officialNumber = generateDocNumber('DV', seq);
 
         // 2. Prepare updated synced quote with official number & valid status

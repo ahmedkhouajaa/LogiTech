@@ -48,6 +48,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
   bool _allowNegativeStock = false;
   bool _lowStockAlert = false;
   bool _highStockAlert = false;
+  bool _hasUsualDiscount = false;
+  late TextEditingController _stockQtyCtrl;
+  late TextEditingController _lowStockThresholdCtrl;
+  late TextEditingController _highStockThresholdCtrl;
   
   late TabController _tabController;
 
@@ -126,6 +130,19 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     _allowNegativeStock = p?.allowNegativeStock ?? false;
     _lowStockAlert = p?.lowStockAlert ?? false;
     _highStockAlert = p?.highStockAlert ?? false;
+    final stockVal = p?.stockQty ?? 0.0;
+    _stockQtyCtrl = TextEditingController(
+      text: stockVal.truncateToDouble() == stockVal ? stockVal.toInt().toString() : stockVal.toString(),
+    );
+    final lowVal = p?.lowStockThreshold ?? 5.0;
+    _lowStockThresholdCtrl = TextEditingController(
+      text: lowVal.truncateToDouble() == lowVal ? lowVal.toInt().toString() : lowVal.toString(),
+    );
+    final highVal = p?.highStockThreshold ?? 50.0;
+    _highStockThresholdCtrl = TextEditingController(
+      text: highVal.truncateToDouble() == highVal ? highVal.toInt().toString() : highVal.toString(),
+    );
+    _hasUsualDiscount = (p?.usualDiscount ?? 0) > 0;
   }
 
   @override
@@ -134,6 +151,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     _nameCtrl.dispose(); _refCtrl.dispose(); _descCtrl.dispose();
     _purchCtrl.dispose(); _sellCtrl.dispose(); _discountCtrl.dispose();
     _barcodeCtrl.dispose(); _privateNotesCtrl.dispose();
+    _stockQtyCtrl.dispose();
+    _lowStockThresholdCtrl.dispose();
+    _highStockThresholdCtrl.dispose();
     super.dispose();
   }
 
@@ -1935,70 +1955,353 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               ),
             ],
           ),
-          SizedBox(height: 24),
-          Text('Alerte rupture de stock', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          SizedBox(height: 4),
-          Text('Definissez des seuils d\'alerte pour etre notifie quand le stock est faible dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(height: 12),
+          const SizedBox(height: 16),
+          // ── STOCK PHYSIQUE ACTUEL ──
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.cardBlueBorder, width: 1.0),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
-                SizedBox(width: 8),
-                Text('Entrepot par defaut', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                Spacer(),
-                Switch(
-                  value: _lowStockAlert,
-                  onChanged: (v) => setState(() => _lowStockAlert = v),
-                  activeThumbColor: AppColors.primary,
+                Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.tr('Stock actuel en pièces / unités :'),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        context.tr('Quantité physique réelle actuellement disponible en stock'),
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                Text('Alerte activee', style: TextStyle(fontSize: 13, color: _lowStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 130,
+                  child: TextFormField(
+                    controller: _stockQtyCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      suffixText: _unit,
+                      suffixStyle: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-          SizedBox(height: 24),
-          Text('Alertes de Stock Maximum (surstockage)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          SizedBox(height: 4),
-          Text('Definissez des seuils max pour etre alerte quand le stock depasse le maximum dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(height: 12),
+          const SizedBox(height: 24),
+          // ── ALERTE RUPTURE DE STOCK ──
+          Text(context.tr('Alerte rupture de stock'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(
+            context.tr('Définissez un seuil d\'alerte pour être notifié automatiquement dès que le stock devient critique.'),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
+              color: _lowStockAlert ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surface,
+              border: Border.all(
+                color: _lowStockAlert ? AppColors.primary : AppColors.cardBlueBorder,
+                width: _lowStockAlert ? 1.5 : 1.0,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
-                SizedBox(width: 8),
-                Text('Entrepot par defaut', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                Spacer(),
-                Switch(
-                  value: _highStockAlert,
-                  onChanged: (v) => setState(() => _highStockAlert = v),
-                  activeThumbColor: AppColors.primary,
+                Row(
+                  children: [
+                    Icon(
+                      _lowStockAlert ? Icons.notification_important_rounded : Icons.warehouse_outlined,
+                      size: 20,
+                      color: _lowStockAlert ? AppColors.primary : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.tr('Alerte de Stock Minimum'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            _lowStockAlert
+                                ? context.tr('Notification activée pour cet article')
+                                : context.tr('Désactivée'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _lowStockAlert ? AppColors.primary : AppColors.textSecondary,
+                              fontWeight: _lowStockAlert ? FontWeight.w500 : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _lowStockAlert,
+                      onChanged: (v) => setState(() => _lowStockAlert = v),
+                      activeThumbColor: AppColors.primary,
+                    ),
+                  ],
                 ),
-                Text('Alerte max activee', style: TextStyle(fontSize: 13, color: _highStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
+                if (_lowStockAlert) ...[
+                  const Divider(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr('Seuil minimum d\'alerte :'),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              context.tr('Déclencher une alerte dès que le stock <= ce seuil'),
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 130,
+                        child: TextFormField(
+                          controller: _lowStockThresholdCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            suffixText: _unit,
+                            suffixStyle: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-          SizedBox(height: 24),
+
+          const SizedBox(height: 24),
+          // ── ALERTE SURSTOCKAGE ──
+          Text(context.tr('Alertes de Stock Maximum (surstockage)'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(
+            context.tr('Définissez un seuil max pour être alerté en cas d\'accumulation excessive de stock.'),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _highStockAlert ? AppColors.warning.withValues(alpha: 0.03) : AppColors.surface,
+              border: Border.all(
+                color: _highStockAlert ? AppColors.warning : AppColors.cardBlueBorder,
+                width: _highStockAlert ? 1.5 : 1.0,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      _highStockAlert ? Icons.inventory_rounded : Icons.warehouse_outlined,
+                      size: 20,
+                      color: _highStockAlert ? AppColors.warning : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.tr('Alerte de Surstockage'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            _highStockAlert
+                                ? context.tr('Notification activée si le stock dépasse le seuil')
+                                : context.tr('Désactivée'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _highStockAlert ? AppColors.warning : AppColors.textSecondary,
+                              fontWeight: _highStockAlert ? FontWeight.w500 : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _highStockAlert,
+                      onChanged: (v) => setState(() => _highStockAlert = v),
+                      activeThumbColor: AppColors.warning,
+                    ),
+                  ],
+                ),
+                if (_highStockAlert) ...[
+                  const Divider(height: 20),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.tr('Seuil maximum de stockage :'),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              context.tr('Déclencher une alerte si stock >= ce seuil'),
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 130,
+                        child: TextFormField(
+                          controller: _highStockThresholdCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            suffixText: _unit,
+                            suffixStyle: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.warning, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          // ── REMISE HABITUELLE ──
+          Container(
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.cardBlueBorder, width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Text('% Remise Habituelle', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const Spacer(),
-                Switch(value: false, onChanged: (v) {}),
+                Row(
+                  children: [
+                    Icon(Icons.discount_outlined, size: 20, color: AppColors.textSecondary),
+                    const SizedBox(width: 10),
+                    Text(
+                      context.tr('% Remise Habituelle'),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: _hasUsualDiscount,
+                      onChanged: (v) => setState(() => _hasUsualDiscount = v),
+                      activeThumbColor: AppColors.primary,
+                    ),
+                  ],
+                ),
+                if (_hasUsualDiscount) ...[
+                  const Divider(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.tr('Pourcentage de remise par défaut sur cet article :'),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 110,
+                        child: TextFormField(
+                          controller: _discountCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            suffixText: '%',
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -2345,10 +2648,13 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         purchasePrice: (_destination == 'Vente') ? 0 : (double.tryParse(_purchCtrl.text) ?? 0),
         sellingPrice: (_destination == 'Achat') ? 0 : (double.tryParse(_sellCtrl.text) ?? 0),
         tvaRate: _tvaRate,
+        usualDiscount: _hasUsualDiscount ? (double.tryParse(_discountCtrl.text) ?? 0.0) : 0.0,
         allowNegativeStock: _productType == 'service' ? false : _allowNegativeStock,
         lowStockAlert: _productType == 'service' ? false : _lowStockAlert,
+        lowStockThreshold: _productType == 'service' ? 0.0 : (double.tryParse(_lowStockThresholdCtrl.text) ?? 5.0),
         highStockAlert: _productType == 'service' ? false : _highStockAlert,
-        stockQty: _productType == 'service' ? 0.0 : (widget.existing?.stockQty ?? 0.0),
+        highStockThreshold: _productType == 'service' ? 0.0 : (double.tryParse(_highStockThresholdCtrl.text) ?? 0.0),
+        stockQty: _productType == 'service' ? 0.0 : (double.tryParse(_stockQtyCtrl.text.replaceAll(',', '.')) ?? (widget.existing?.stockQty ?? 0.0)),
         minStockQty: _productType == 'service' ? 0.0 : (widget.existing?.minStockQty ?? 0.0),
         barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
         privateNotes: _privateNotesCtrl.text.trim().isEmpty ? null : _privateNotesCtrl.text.trim(),
@@ -2369,6 +2675,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     } catch (e) {
       if (mounted) {
         ErrorHandler.showErrorSnackBar(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
       }
     }
   }

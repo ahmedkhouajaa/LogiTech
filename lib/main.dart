@@ -53,6 +53,18 @@ import 'blocs/inventory_sheets/inventory_sheets_event.dart';
 import 'blocs/enterprise/enterprise_bloc.dart';
 import 'blocs/user_management/user_management_bloc.dart';
 import 'blocs/theme/theme_cubit.dart';
+import 'blocs/employees/employees_bloc.dart';
+import 'blocs/employees/employees_event.dart';
+import 'blocs/leaves/leaves_bloc.dart';
+import 'blocs/leaves/leaves_event.dart';
+import 'blocs/payroll/payroll_bloc.dart';
+import 'blocs/payroll/payroll_event.dart';
+import 'blocs/contracts/contracts_bloc.dart';
+import 'blocs/contracts/contracts_event.dart';
+import 'blocs/loans/loans_bloc.dart';
+import 'blocs/loans/loans_event.dart';
+import 'blocs/attendance/attendance_bloc.dart';
+import 'blocs/attendance/attendance_event.dart';
 import 'services/auth_service.dart';
 import 'services/enterprise_service.dart';
 import 'services/document_numbering_service.dart';
@@ -84,6 +96,12 @@ import 'mobile/mobile_login_screen.dart';
 import 'mobile/mobile_shell_screen.dart';
 import 'services/migration_service.dart';
 import 'services/security/security_manager.dart';
+import 'services/attendance_tolerance_service.dart';
+import 'services/overtime_rate_service.dart';
+import 'services/public_holiday_service.dart';
+import 'services/cnss_declaration_service.dart';
+import 'services/crm_service.dart';
+import 'services/production_service.dart';
 
 import 'dart:async';
 
@@ -163,6 +181,15 @@ void main() async {
     print(stack);
   }
 
+  try {
+    await AttendanceToleranceService.instance.init();
+    await OvertimeRateService.instance.init();
+    await PublicHolidayService.instance.init();
+    await CnssDeclarationService.instance.init();
+    CrmService.instance.init();
+    ProductionService.instance.init();
+  } catch (_) {}
+
   String initialLang = 'fr';
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -192,7 +219,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => DashboardBloc()),
         BlocProvider(create: (_) => CustomersBloc()),
         BlocProvider(create: (_) => SuppliersBloc()),
-        BlocProvider(create: (_) => ProductsBloc()),
+        BlocProvider(create: (_) => ProductsBloc()..add(LoadProducts())),
         BlocProvider(create: (_) => InvoicesBloc()),
         BlocProvider(create: (_) => CustomerOrdersBloc()),
         BlocProvider(create: (_) => DeliveryNotesBloc()),
@@ -223,6 +250,12 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => ReportsBloc()..add(ReportsRefreshRequested(dateRange: 'Cette Année'))),
         BlocProvider(create: (_) => RetenueSourceVenteBloc()),
         BlocProvider(create: (_) => UserManagementBloc()),
+        BlocProvider(create: (_) => EmployeesBloc()..add(const LoadEmployees())),
+        BlocProvider(create: (_) => LeavesBloc()..add(const LoadLeaves())),
+        BlocProvider(create: (_) => AttendanceBloc()..add(const LoadAttendances())),
+        BlocProvider(create: (_) => PayrollBloc()..add(const LoadPayslips())),
+        BlocProvider(create: (_) => ContractsBloc()..add(const LoadContracts())),
+        BlocProvider(create: (_) => LoansBloc()..add(const LoadLoans())),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
@@ -251,6 +284,18 @@ class BusinessManagerApp extends StatelessWidget {
                   Locale('en'),
                   Locale('ar'),
                 ],
+                builder: (context, child) {
+                  final mediaQuery = MediaQuery.of(context);
+                  return MediaQuery(
+                    data: mediaQuery.copyWith(
+                      textScaler: mediaQuery.textScaler.clamp(
+                        minScaleFactor: 0.85,
+                        maxScaleFactor: 1.30,
+                      ),
+                    ),
+                    child: child ?? const SizedBox.shrink(),
+                  );
+                },
                 home: const DesktopExitListener(child: _AppGate()),
             onGenerateRoute: (settings) {
               if (settings.name != null) {
@@ -777,6 +822,8 @@ class _EnterpriseGate extends StatefulWidget {
 }
 
 class _EnterpriseGateState extends State<_EnterpriseGate> {
+  String? _lastLoadedEnterpriseId;
+
   @override
   void initState() {
     super.initState();
@@ -791,6 +838,12 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
     return BlocConsumer<EnterpriseBloc, EnterpriseState>(
       listener: (context, state) {
         if (state is EnterpriseLoaded && state.currentEnterpriseId != null && state.currentEnterpriseId!.isNotEmpty) {
+          // Prevent massive 30-BLoC reload storm if the enterprise ID is unchanged
+          if (_lastLoadedEnterpriseId == state.currentEnterpriseId) {
+            return;
+          }
+          _lastLoadedEnterpriseId = state.currentEnterpriseId;
+
           unawaited(PermissionService.instance.loadPermissions(enterpriseId: state.currentEnterpriseId));
           // Re-fetch enterprise-scoped data across ALL BLoCs
           context.read<DashboardBloc>().add(DashboardRefreshRequested());
@@ -1004,7 +1057,6 @@ class _ResponsiveShellGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (PlatformUtils.isAndroid) return const MobileShellScreen();
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 850 && !PlatformUtils.isDesktop) {

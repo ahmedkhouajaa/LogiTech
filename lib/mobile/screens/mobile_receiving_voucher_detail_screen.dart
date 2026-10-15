@@ -30,6 +30,8 @@ import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/offline_action_helper.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
@@ -392,9 +394,17 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     );
   }
 
-  void _convertToInvoice(BuildContext context, ReceivingVoucher voucher) {
+  Future<void> _convertToInvoice(BuildContext context, ReceivingVoucher voucher) async {
     final newInvoiceId = const Uuid().v4();
-    final invoiceNumber = 'FA-${voucher.number.replaceAll("BR-", "")}';
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'purchase_invoices',
+      docTypeName: 'Facture d\'Achat',
+      defaultPrefix: DocPrefix.purchaseInvoice,
+    );
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     List<PurchaseInvoiceItem> newItems = [];
 
@@ -423,7 +433,7 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       orderId: voucher.orderId,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: voucher.computedTotalHT,
       totalTva: voucher.computedTotalTvaAfterDiscount,
       totalTTC: voucher.computedTotalTTC,
@@ -435,12 +445,17 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       amountPaid: 0,
       items: newItems,
       notes: voucher.notes,
+      isSynced: !isDraft,
     );
 
-    try {
-      context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
-    } catch (e) {
-      DatabaseHelper.instance.insertPurchaseInvoice(newInvoice);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', newInvoice.toMap());
+    } else {
+      try {
+        context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+      } catch (e) {
+        DatabaseHelper.instance.insertPurchaseInvoice(newInvoice);
+      }
     }
 
     final updatedVoucher = voucher.copyWith(
@@ -450,15 +465,27 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     );
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bon de réception transformé en facture d'achat avec succès")),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isDraft ? "Facture d'achat enregistrée en Brouillon (en attente de sync)" : "Bon de réception transformé en facture d'achat avec succès"),
+          backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+        ),
+      );
+    }
   }
 
   Future<void> _convertToReturn(BuildContext context, ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
-    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq, docCollection: 'supplier_returns');
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'supplier_returns',
+      docTypeName: 'Retour Fournisseur',
+      defaultPrefix: DocPrefix.supplierReturn,
+    );
+    if (docNumResult.cancelled) return;
+    final returnNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     List<SupplierReturnItem> newItems = [];
 
@@ -485,19 +512,22 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       supplierName: voucher.supplierName,
       receivingVoucherId: voucher.id,
       date: DateTime.now(),
-      status: 'validated',
+      status: isDraft ? 'draft' : 'validated',
       isDeleted: false,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       items: newItems,
     );
 
-    if (!mounted) return;
-
-    try {
-      context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
-    } catch (e) {
-      DatabaseHelper.instance.insertSupplierReturn(newReturn);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('supplier_returns', newReturn.toMap());
+    } else {
+      if (!mounted) return;
+      try {
+        context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
+      } catch (e) {
+        DatabaseHelper.instance.insertSupplierReturn(newReturn);
+      }
     }
 
     final updatedVoucher = voucher.copyWith(
@@ -507,9 +537,14 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     );
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bon de réception transformé en bon de retour avec succès")),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isDraft ? "Bon de retour enregistré en Brouillon (en attente de sync)" : "Bon de réception transformé en bon de retour avec succès"),
+          backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+        ),
+      );
+    }
   }
 
   void _showAddPaymentDialog(BuildContext context, ReceivingVoucher voucher) {

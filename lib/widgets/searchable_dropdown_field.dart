@@ -745,56 +745,104 @@ Future<String?> showProductSelectDialog(
   bool excludeServices = false,
 }) async {
   final isAchat = isPurchase == true || destinationFilter == 'Achat';
-  Map<String, double> computedStockMap = warehouseStockMap ?? {};
-  if (warehouseStockMap == null) {
+  final Map<String, double> computedStockMap = warehouseStockMap != null ? Map.from(warehouseStockMap) : {};
+
+  // Check ProductsBloc state before opening dialog
+  final currentBlocState = context.read<ProductsBloc>().state;
+  if (currentBlocState is! ProductsLoaded || currentBlocState.hasMore) {
     try {
-      final stockState = context.read<StockBloc>().state;
-      if (stockState is StockLoaded) {
-        bool isWarehouseDefault = false;
-        if (warehouseId != null && warehouseId.isNotEmpty) {
-          try {
-            isWarehouseDefault = stockState.warehouses.firstWhere((w) => w.id == warehouseId).isDefault;
-          } catch (_) {}
-        }
-        for (var p in products) {
-          if (excludeServices && p.isService) continue;
-          double stock = 0.0;
-          if (warehouseId == null || warehouseId.isEmpty) {
-            stock = p.stockQty;
-          } else {
-            for (var m in stockState.movements) {
-              if (m.productId == p.id) {
-                final isWarehouseMatch = m.warehouseId == warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
-                if (isWarehouseMatch) {
-                  if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
-                    stock += m.quantity;
-                  } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
-                    stock -= m.quantity;
-                  }
-                }
-              }
-            }
-          }
-          computedStockMap[p.id] = stock;
-        }
-      }
+      context.read<ProductsBloc>().add(LoadProducts());
     } catch (_) {}
   }
 
+  // Pre-fetch stock movements for dynamic warehouse stock calculation
+  StockState? stockState;
   try {
-    context.read<ProductsBloc>().add(LoadProducts());
+    stockState = context.read<StockBloc>().state;
   } catch (_) {}
+
+  bool isWarehouseDefault = false;
+  if (stockState is StockLoaded && warehouseId != null && warehouseId.isNotEmpty) {
+    try {
+      isWarehouseDefault = stockState.warehouses.firstWhere((w) => w.id == warehouseId).isDefault;
+    } catch (_) {}
+  }
+
+  double getDisplayStock(Product p) {
+    if (warehouseStockMap != null && warehouseStockMap.containsKey(p.id)) {
+      return warehouseStockMap[p.id]!;
+    }
+    if (computedStockMap.containsKey(p.id)) {
+      return computedStockMap[p.id]!;
+    }
+    if (warehouseId == null || warehouseId.isEmpty) {
+      computedStockMap[p.id] = p.stockQty;
+      return p.stockQty;
+    }
+    if (stockState is StockLoaded) {
+      double stock = 0.0;
+      for (var m in stockState.movements) {
+        if (m.productId == p.id) {
+          final isWarehouseMatch = m.warehouseId == warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+          if (isWarehouseMatch) {
+            if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+              stock += m.quantity;
+            } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+              stock -= m.quantity;
+            }
+          }
+        }
+      }
+      computedStockMap[p.id] = stock;
+      return stock;
+    }
+    computedStockMap[p.id] = p.stockQty;
+    return p.stockQty;
+  }
 
   return showDialog<String?>(
     context: context,
-    builder: (context) {
+    builder: (dialogCtx) {
       String search = '';
       return StatefulBuilder(
-        builder: (context, setDialogState) {
+        builder: (dialogContext, setDialogState) {
           return BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final isLoaded = state is ProductsLoaded;
-              final rawProducts = isLoaded ? state.products : products;
+              final isFullyLoaded = isLoaded && !state.hasMore;
+
+              // If state is not fully loaded, trigger LoadProducts
+              if (!isFullyLoaded && state is! ProductsLoading) {
+                try {
+                  context.read<ProductsBloc>().add(LoadProducts());
+                } catch (_) {}
+              }
+
+              // Determine raw list of products
+              final rawProducts = isFullyLoaded
+                  ? state.products
+                  : (state is ProductsLoaded && state.products.length > products.length
+                      ? state.products
+                      : (products.isNotEmpty ? products : (isLoaded ? state.products : <Product>[])));
+
+              if (!isFullyLoaded && rawProducts.isEmpty) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  backgroundColor: AppColors.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: AppColors.primary),
+                        const SizedBox(height: 16),
+                        Text(context.tr("Chargement des articles..."), style: TextStyle(color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               var currentProducts = destinationFilter == null || destinationFilter.isEmpty
                   ? rawProducts
                   : rawProducts.where((p) {
@@ -807,192 +855,204 @@ Future<String?> showProductSelectDialog(
                 currentProducts = currentProducts.where((p) => !p.isService).toList();
               }
 
-              if (!isLoaded) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-                  backgroundColor: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(color: AppColors.primary),
-                        SizedBox(height: 16),
-                        Text(context.tr("Chargement des articles..."), style: TextStyle(color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
               final query = search.trim().toLowerCase();
               final filtered = currentProducts.where((p) {
-            if (query.isEmpty) return true;
-            final nameMatch = p.name.toLowerCase().contains(query);
-            final codeMatch = p.code.toLowerCase().contains(query);
-            final refMatch = p.reference?.toLowerCase().contains(query) ?? false;
-            final barcodeMatch = p.barcode?.toLowerCase().contains(query) ?? false;
-            return nameMatch || codeMatch || refMatch || barcodeMatch;
-          }).toList();
+                if (query.isEmpty) return true;
+                final nameMatch = p.name.toLowerCase().contains(query);
+                final codeMatch = p.code.toLowerCase().contains(query);
+                final refMatch = p.reference?.toLowerCase().contains(query) ?? false;
+                final barcodeMatch = p.barcode?.toLowerCase().contains(query) ?? false;
+                return nameMatch || codeMatch || refMatch || barcodeMatch;
+              }).toList();
 
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-            backgroundColor: AppColors.surface,
-            child: Container(
-              width: 500,
-              constraints: const BoxConstraints(maxHeight: 560),
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              final screenWidth = MediaQuery.of(context).size.width;
+              final screenHeight = MediaQuery.of(context).size.height;
+              final dialogWidth = screenWidth > 550 ? 500.0 : (screenWidth * 0.95);
+              final dialogMaxHeight = screenHeight * 0.85 > 560 ? 560.0 : (screenHeight * 0.85);
+
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                backgroundColor: AppColors.surface,
+                child: Container(
+                  width: dialogWidth,
+                  constraints: BoxConstraints(maxHeight: dialogMaxHeight),
+                  padding: EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        context.tr('Sélectionner un article'),
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                context.tr('Sélectionner un article'),
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              ),
+                              if (currentProducts.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    query.isEmpty ? '${currentProducts.length}' : '${filtered.length} / ${currentProducts.length}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                            onPressed: () => Navigator.of(dialogCtx).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 38,
+                        child: TextField(
+                          autofocus: true,
+                          onChanged: (val) => setDialogState(() => search = val),
+                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: context.tr('Rechercher par nom, code, référence...'),
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                            prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.primary),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: filtered.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Center(
+                                  child: Text(
+                                    context.tr('Aucun article trouvé'),
+                                    style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final product = filtered[index];
+                                  final isSelected = product.id == selectedProductId;
+                                  final displayStock = getDisplayStock(product);
+
+                                  final stockBg = AppColors.textTertiary.withValues(alpha: 0.12);
+                                  final stockFg = AppColors.textSecondary;
+
+                                  return ListTile(
+                                    dense: true,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    selected: isSelected,
+                                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                    title: Text(
+                                      product.name,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 2.0),
+                                      child: Row(
+                                        children: [
+                                          if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
+                                            Flexible(
+                                              child: Text(
+                                                [
+                                                  if (product.code.isNotEmpty) 'Code: ${product.code}',
+                                                  if (product.reference?.isNotEmpty ?? false) 'Réf: ${product.reference}',
+                                                ].join(' • '),
+                                                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
+                                            const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: stockBg,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Stock: ${displayStock.toStringAsFixed(displayStock.truncateToDouble() == displayStock ? 0 : 1)} ${product.unit}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: stockFg,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '${(isAchat ? product.purchasePrice : product.sellingPrice).toStringAsFixed(3)} DT',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                        if (isSelected) ...[
+                                          const SizedBox(width: 8),
+                                          Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+                                        ],
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      if (!products.any((p) => p.id == product.id)) {
+                                        try {
+                                          products.add(product);
+                                        } catch (_) {}
+                                      }
+                                      Navigator.of(dialogCtx).pop(product.id);
+                                    },
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  SizedBox(
-                    height: 38,
-                    child: TextField(
-                      autofocus: true,
-                      onChanged: (val) => setDialogState(() => search = val),
-                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: context.tr('Rechercher par nom, code, référence...'),
-                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                        prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Divider(height: 1, color: AppColors.border),
-                  SizedBox(height: 4),
-                  Flexible(
-                    child: filtered.isEmpty
-                        ? Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: Center(
-                              child: Text(
-                                context.tr('Aucun article trouvé'),
-                                style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final product = filtered[index];
-                              final isSelected = product.id == selectedProductId;
-                              final displayStock = computedStockMap.containsKey(product.id)
-                                  ? computedStockMap[product.id]!
-                                  : product.stockQty;
-
-                              final stockBg = AppColors.textTertiary.withValues(alpha: 0.12);
-                              final stockFg = AppColors.textSecondary;
-
-                              return ListTile(
-                                dense: true,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                selected: isSelected,
-                                selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                                title: Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                                  ),
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 2.0),
-                                  child: Row(
-                                    children: [
-                                      if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
-                                        Flexible(
-                                          child: Text(
-                                            [
-                                              if (product.code.isNotEmpty) 'Code: ${product.code}',
-                                              if (product.reference?.isNotEmpty ?? false) 'Réf: ${product.reference}',
-                                            ].join(' • '),
-                                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
-                                        const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: stockBg,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Stock: ${displayStock.toStringAsFixed(displayStock.truncateToDouble() == displayStock ? 0 : 1)} ${product.unit}',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: stockFg,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${(isAchat ? product.purchasePrice : product.sellingPrice).toStringAsFixed(3)} DT',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    if (isSelected) ...[
-                                      SizedBox(width: 8),
-                                      Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
-                                    ],
-                                  ],
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).pop(product.id);
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          );
+                ),
+              );
             },
           );
         },

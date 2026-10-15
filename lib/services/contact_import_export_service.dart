@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -230,14 +231,197 @@ class ContactImportExportService {
     },
   ];
 
+  // ─── 0. FETCH ALL CONTACTS ───────────────────────────────────────
+
+  /// Fetches ALL customers for the active enterprise / user from Firestore
+  Future<List<Customer>> fetchAllCustomers() async {
+    final entId = _currentEnterpriseId;
+    final uid = _currentUid;
+    try {
+      Query query = _firestore.collection('clients');
+      if (entId != null && entId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: entId);
+      } else if (uid != null && uid.isNotEmpty) {
+        query = query.where('userId', isEqualTo: uid);
+      }
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get().timeout(kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 15));
+      } catch (_) {
+        try {
+          snapshot = await query.get(const GetOptions(source: Source.cache));
+        } catch (_) {
+          snapshot = await query.get();
+        }
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        final results = <Customer>[];
+        for (final doc in snapshot.docs) {
+          final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+          data['id'] = doc.id;
+          final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+          if (isDel) continue;
+          data['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
+          data['updated_at'] = data['updated_at'] ?? DateTime.now().toIso8601String();
+          if (!data.containsKey('code') && data.containsKey('clientCode')) {
+            data['code'] = data['clientCode'];
+          }
+          if (!data.containsKey('customer_type') && data.containsKey('type')) {
+            data['customer_type'] = data['type'];
+          }
+          try {
+            results.add(Customer.fromMap(data));
+          } catch (e) {
+            debugPrint("Error parsing customer ${doc.id}: $e");
+          }
+        }
+        if (results.isNotEmpty) {
+          final unique = <Customer>[];
+          bool seenDefault = false;
+          for (final c in results) {
+            final isDef = c.isDefault || c.name.trim().toLowerCase() == 'client passager';
+            if (isDef) {
+              if (!seenDefault) {
+                unique.add(c);
+                seenDefault = true;
+              }
+            } else {
+              unique.add(c);
+            }
+          }
+          unique.sort((a, b) => a.code.toLowerCase().compareTo(b.code.toLowerCase()));
+          return unique;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching all customers: $e");
+    }
+    return [];
+  }
+
+  /// Fetches ALL suppliers for the active enterprise / user from Firestore
+  Future<List<Supplier>> fetchAllSuppliers() async {
+    final entId = _currentEnterpriseId;
+    final uid = _currentUid;
+    try {
+      Query query = _firestore.collection('fournisseurs');
+      if (entId != null && entId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: entId);
+      } else if (uid != null && uid.isNotEmpty) {
+        query = query.where('userId', isEqualTo: uid);
+      }
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get().timeout(kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 15));
+      } catch (_) {
+        try {
+          snapshot = await query.get(const GetOptions(source: Source.cache));
+        } catch (_) {
+          snapshot = await query.get();
+        }
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        final results = <Supplier>[];
+        for (final doc in snapshot.docs) {
+          final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+          data['id'] = doc.id;
+          final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+          if (isDel) continue;
+          data['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
+          data['updated_at'] = data['updated_at'] ?? DateTime.now().toIso8601String();
+          if (!data.containsKey('code') && data.containsKey('supplierCode')) {
+            data['code'] = data['supplierCode'];
+          }
+          if (!data.containsKey('supplier_type') && data.containsKey('type')) {
+            data['supplier_type'] = data['type'];
+          }
+          try {
+            results.add(Supplier.fromMap(data));
+          } catch (e) {
+            debugPrint("Error parsing supplier ${doc.id}: $e");
+          }
+        }
+        if (results.isNotEmpty) {
+          final unique = <Supplier>[];
+          bool seenDefault = false;
+          for (final s in results) {
+            final isDef = s.isDefault || s.name.trim().toLowerCase() == 'fournisseur passager';
+            if (isDef) {
+              if (!seenDefault) {
+                unique.add(s);
+                seenDefault = true;
+              }
+            } else {
+              unique.add(s);
+            }
+          }
+          unique.sort((a, b) => a.code.toLowerCase().compareTo(b.code.toLowerCase()));
+          return unique;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching all suppliers: $e");
+    }
+    return [];
+  }
+
   // ─── 1. EXPORT TO EXCEL / CSV / JSON ─────────────────────────────
 
   /// Exports clients or suppliers to an Excel (.xlsx) file with professional formatting
   Future<String?> exportContactsToExcel({
     required BuildContext context,
     required ContactType type,
-    required List<dynamic> contacts, // List<Customer> or List<Supplier>
+    List<dynamic>? contacts,
+    bool exportAll = true,
   }) async {
+    List<dynamic> listToExport = contacts ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                const SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les ${type.labelPlural.toLowerCase()}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      if (type == ContactType.customer) {
+        final all = await fetchAllCustomers();
+        if (all.isNotEmpty) listToExport = all;
+      } else {
+        final all = await fetchAllSuppliers();
+        if (all.isNotEmpty) listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Aucun ${type.label.toLowerCase()} à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
+    // Sort by code
+    listToExport.sort((a, b) {
+      final codeA = a is Customer ? a.code : (a as Supplier).code;
+      final codeB = b is Customer ? b.code : (b as Supplier).code;
+      return codeA.toLowerCase().compareTo(codeB.toLowerCase());
+    });
+
     final excel = Excel.createExcel();
     final sheetName = type.labelPlural;
     final sheet = excel[sheetName];
@@ -275,8 +459,8 @@ class ContactImportExportService {
     }
 
     // Data Rows
-    for (int i = 0; i < contacts.length; i++) {
-      final contact = contacts[i];
+    for (int i = 0; i < listToExport.length; i++) {
+      final contact = listToExport[i];
       final r = i + 1;
 
       String id = '';
@@ -367,19 +551,76 @@ class ContactImportExportService {
     final sanitizedType = type == ContactType.customer ? 'clients' : 'fournisseurs';
     final fileName = 'export_${sanitizedType}_$timestamp.xlsx';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: Uint8List.fromList(fileBytes),
       fileName: fileName,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} ${type.labelPlural.toLowerCase()} exportés avec succès (Excel).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   /// Exports contacts to CSV format
   Future<String?> exportContactsToCsv({
     required BuildContext context,
     required ContactType type,
-    required List<dynamic> contacts,
+    List<dynamic>? contacts,
+    bool exportAll = true,
   }) async {
+    List<dynamic> listToExport = contacts ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                const SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les ${type.labelPlural.toLowerCase()}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      if (type == ContactType.customer) {
+        final all = await fetchAllCustomers();
+        if (all.isNotEmpty) listToExport = all;
+      } else {
+        final all = await fetchAllSuppliers();
+        if (all.isNotEmpty) listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Aucun ${type.label.toLowerCase()} à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
+    // Sort by code
+    listToExport.sort((a, b) {
+      final codeA = a is Customer ? a.code : (a as Supplier).code;
+      final codeB = b is Customer ? b.code : (b as Supplier).code;
+      return codeA.toLowerCase().compareTo(codeB.toLowerCase());
+    });
+
     final buffer = StringBuffer();
     final headers = [
       '_id',
@@ -404,7 +645,7 @@ class ContactImportExportService {
 
     buffer.writeln(headers.join(';'));
 
-    for (final contact in contacts) {
+    for (final contact in listToExport) {
       final List<String> values = [];
       if (contact is Customer) {
         values.addAll([
@@ -456,21 +697,71 @@ class ContactImportExportService {
     final sanitizedType = type == ContactType.customer ? 'clients' : 'fournisseurs';
     final fileName = 'export_${sanitizedType}_$timestamp.csv';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: bytes,
       fileName: fileName,
       mimeType: 'text/csv',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} ${type.labelPlural.toLowerCase()} exportés avec succès (CSV).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   /// Exports contacts to JSON format
   Future<String?> exportContactsToJson({
     required BuildContext context,
     required ContactType type,
-    required List<dynamic> contacts,
+    List<dynamic>? contacts,
+    bool exportAll = true,
   }) async {
+    List<dynamic> listToExport = contacts ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                const SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les ${type.labelPlural.toLowerCase()}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      if (type == ContactType.customer) {
+        final all = await fetchAllCustomers();
+        if (all.isNotEmpty) listToExport = all;
+      } else {
+        final all = await fetchAllSuppliers();
+        if (all.isNotEmpty) listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Aucun ${type.label.toLowerCase()} à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
     final List<Map<String, dynamic>> list = [];
-    for (final c in contacts) {
+    for (final c in listToExport) {
       if (c is Customer) {
         list.add(c.toMap());
       } else if (c is Supplier) {
@@ -484,11 +775,23 @@ class ContactImportExportService {
     final sanitizedType = type == ContactType.customer ? 'clients' : 'fournisseurs';
     final fileName = 'export_${sanitizedType}_$timestamp.json';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: bytes,
       fileName: fileName,
       mimeType: 'application/json',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} ${type.labelPlural.toLowerCase()} exportés avec succès (JSON).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   // ─── 2. DOWNLOADABLE TEMPLATES (LIKE FINCO) ──────────────────────

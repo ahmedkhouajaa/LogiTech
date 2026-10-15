@@ -5,6 +5,8 @@ import '../blocs/stock_transfers/stock_transfers_bloc.dart';
 import '../models/stock_transfer.dart';
 import '../models/product.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
@@ -41,6 +43,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
 
   List<Warehouse> _warehouses = [];
   bool _hasAttemptedSubmit = false;
+  bool _isSaving = false;
 
   List<StockTransferItem> _items = [];
 
@@ -129,6 +132,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (widget.existing == null && !TrialService.instance.checkCanCreate(context)) {
       return;
     }
@@ -174,43 +178,84 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       return;
     }
 
-    String number = isEdit ? widget.existing!.number : '';
-    if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
-      number = generateDocNumber(DocPrefix.stockTransfer, seq);
-    }
-    final transferId = isEdit ? widget.existing!.id : const Uuid().v4();
+    setState(() => _isSaving = true);
 
-    final transfer = StockTransfer(
-      id: transferId,
-      number: number,
-      date: _selectedDate,
-      sourceWarehouseId: _sourceWarehouseId!,
-      destinationWarehouseId: _destWarehouseId!,
-      status: 'validated',
-      notes: _notesController.text.trim(),
-      reason: _reasonController.text.trim(),
-      items: _items.map((item) => StockTransferItem(
-        id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
-        transferId: transferId,
-        productId: item.productId,
-        productName: item.productName,
-        productSku: item.productSku,
-        quantityToTransfer: item.quantityToTransfer,
-      )).toList(),
-      createdAt: isEdit ? widget.existing!.createdAt : DateTime.now(),
-    );
+    try {
+      String number = isEdit ? widget.existing!.number : '';
+      bool isDraft = false;
+      if (number.isEmpty) {
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'stock_transfers',
+          docTypeName: 'Bon de Transfert',
+          defaultPrefix: DocPrefix.stockTransfer,
+        );
+        if (docNumResult.cancelled) return;
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
+      }
+      final transferId = isEdit ? widget.existing!.id : const Uuid().v4();
 
-    if (isEdit) {
-      context.read<StockTransfersBloc>().add(UpdateStockTransfer(transfer));
-    } else {
-      context.read<StockTransfersBloc>().add(AddStockTransfer(transfer));
-    }
-    
-    if (mounted) {
-      context.read<StockBloc>().add(LoadStock());
-      context.read<ProductsBloc>().add(LoadProducts());
-      Navigator.pop(context);
+      final transfer = StockTransfer(
+        id: transferId,
+        number: number,
+        date: _selectedDate,
+        sourceWarehouseId: _sourceWarehouseId!,
+        destinationWarehouseId: _destWarehouseId!,
+        status: isDraft ? 'draft' : 'validated',
+        notes: _notesController.text.trim(),
+        reason: _reasonController.text.trim(),
+        items: _items.map((item) => StockTransferItem(
+          id: item.id.isNotEmpty ? item.id : const Uuid().v4(),
+          transferId: transferId,
+          productId: item.productId,
+          productName: item.productName,
+          productSku: item.productSku,
+          quantityToTransfer: item.quantityToTransfer,
+        )).toList(),
+        createdAt: isEdit ? widget.existing!.createdAt : DateTime.now(),
+      );
+
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('stock_transfers', transfer.toMap());
+        context.read<StockTransfersBloc>().add(LoadFirstStockTransfers());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bon de Transfert ${transfer.number} enregistré en Brouillon (en attente de sync)'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (isEdit) {
+        context.read<StockTransfersBloc>().add(UpdateStockTransfer(transfer));
+      } else {
+        context.read<StockTransfersBloc>().add(AddStockTransfer(transfer));
+      }
+      
+      if (mounted) {
+        context.read<StockBloc>().add(LoadStock());
+        context.read<ProductsBloc>().add(LoadProducts());
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEdit 
+                ? 'Bon de Transfert ${transfer.number} mis à jour avec succès'
+                : 'Bon de Transfert ${transfer.number} créé avec succès'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -319,7 +364,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
           SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: _save,
+              onPressed: _isSaving ? null : _save,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -327,7 +372,9 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 elevation: 0,
               ),
-              child: Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: _isSaving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(context.tr('Valider'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
         ],

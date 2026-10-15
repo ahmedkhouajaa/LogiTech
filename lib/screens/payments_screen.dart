@@ -1,3 +1,5 @@
+import '../widgets/traite_editor_dialog.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +21,8 @@ import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../services/permission_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../models/user_management_model.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
@@ -33,6 +37,7 @@ class PaymentsScreen extends StatefulWidget {
 
 class _PaymentsScreenState extends State<PaymentsScreen> {
   final Set<String> _selectedPaymentIds = {};
+  bool _isFirstLoad = true;
   String _searchQuery = '';
   String _contactSearch = '';
   String _methodFilter = 'tous';
@@ -51,11 +56,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PaymentsBloc, PaymentsState>(
+    return BlocConsumer<PaymentsBloc, PaymentsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is PaymentsLoaded || state is PaymentsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
         List<Payment> payments = [];
 
-        if (state is PaymentsLoaded) {
+        if (!_isFirstLoad && state is PaymentsLoaded) {
           payments = state.payments;
         }
 
@@ -88,9 +100,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             // ─── Toolbar ───────────────────────────────────────
             Padding(
               padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-              child: Row(
-                children: [
-                  Column(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 650;
+                  final titleWidget = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -100,14 +113,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       const SizedBox(height: 2),
                       Text(context.tr('Gérer vos paiements'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
-                  ),
-                  const Spacer(),
-                  if (_selectedPaymentIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  // Actions button
-                  PopupMenuButton<String>(
+                  );
+
+                  final actionsDropdown = PopupMenuButton<String>(
                     offset: const Offset(0, 38),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     child: Container(
@@ -151,24 +159,62 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         SnackBar(content: Text('${val == 'export' ? context.tr('Export') : context.tr('Impression')} ${context.tr('bientôt disponible')}')),
                       );
                     },
-                  ),
-                  if (PermissionService.instance.canCreate(UserPermissionResources.payments)) ...[
-                    const SizedBox(width: 10),
-                    // New payment button
-                    ElevatedButton.icon(
-                      onPressed: () => _showCreateDialog(context),
-                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                      label: Text(context.tr('Nouveau paiement'),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                      ),
-                    ),
-                  ],
-                ],
+                  );
+
+                  final newBtn = PermissionService.instance.canCreate(UserPermissionResources.payments)
+                      ? ElevatedButton.icon(
+                          onPressed: () => _showCreateDialog(context),
+                          icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                          label: Text(context.tr('Nouveau paiement'),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleWidget,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (_selectedPaymentIds.isNotEmpty) ...[
+                              _buildBulkActionsDropdown(),
+                              const SizedBox(width: 10),
+                            ],
+                            actionsDropdown,
+                            if (PermissionService.instance.canCreate(UserPermissionResources.payments)) ...[
+                              const SizedBox(width: 10),
+                              newBtn,
+                            ],
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      titleWidget,
+                      const Spacer(),
+                      if (_selectedPaymentIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      actionsDropdown,
+                      if (PermissionService.instance.canCreate(UserPermissionResources.payments)) ...[
+                        const SizedBox(width: 10),
+                        newBtn,
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 10),
@@ -344,7 +390,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  child: state is PaymentsLoading || state is PaymentsInitial
+                  child: _isFirstLoad || state is PaymentsLoading || state is PaymentsInitial
                       ? ShimmerTable(
                           headerColumns: [
                             SizedBox(
@@ -1054,12 +1100,16 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
   String? _selectedContactType;
   String? _selectedContactName;
   bool _detailsExpanded = true;
+  bool _isSaving = false;
 
   final _amountCtrl = TextEditingController();
   final _referenceCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   final _contactSearchCtrl = TextEditingController();
+  final _issuerCtrl = TextEditingController();
+  final _bankCtrl = TextEditingController();
   late DateTime _paymentDate;
+  DateTime? _maturityDate;
 
   @override
   void initState() {
@@ -1078,10 +1128,34 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     _referenceCtrl.dispose();
     _notesCtrl.dispose();
     _contactSearchCtrl.dispose();
+    _issuerCtrl.dispose();
+    _bankCtrl.dispose();
     super.dispose();
   }
 
+  void _openTraiteEditor() {
+    TraiteEditorDialog.show(
+      context,
+      initialAmount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0,
+      initialNumber: _referenceCtrl.text,
+      initialIssuer: _issuerCtrl.text,
+      initialRecipient: 'Notre Société',
+      initialCreationDate: _paymentDate,
+      initialMaturityDate: _maturityDate,
+      onApply: (data) {
+        setState(() {
+          if (data.documentNumber.isNotEmpty) _referenceCtrl.text = data.documentNumber;
+          if (data.amount > 0) _amountCtrl.text = data.amount.toStringAsFixed(3).replaceAll('.', ',');
+          if (data.issuerName.isNotEmpty) _issuerCtrl.text = data.issuerName;
+          _paymentDate = data.creationDate;
+          _maturityDate = data.maturityDate;
+        });
+      },
+    );
+  }
+
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
     if (_selectedContactId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1102,58 +1176,98 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
       return;
     }
 
-    final db = context.read<PaymentsBloc>();
-    final now = DateTime.now();
-    // Generate a unique payment number
-    final seq = await DatabaseHelper.instance.getNextPaymentSequence();
-    final paymentNumber = _direction == 'encaissement'
-        ? generateDocNumber(DocPrefix.paymentIn, seq)
-        : generateDocNumber(DocPrefix.paymentOut, seq);
+    setState(() => _isSaving = true);
 
-    final payment = Payment(
-      id: const Uuid().v4(),
-      paymentNumber: paymentNumber,
-      direction: _direction,
-      contactId: _selectedContactId!,
-      contactType: _selectedContactType!,
-      contactName: _selectedContactName,
-      amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0,
-      method: _method,
-      accountId: _selectedAccountId,
-      reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
-      paymentDate: _paymentDate,
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      status: _status,
-      createdAt: now,
-      updatedAt: now,
-    );
+    try {
+      final db = context.read<PaymentsBloc>();
+      final now = DateTime.now();
 
-    db.add(AddPayment(payment));
-    
-    // Create TreasuryTransaction if an account is selected
-    if (_selectedAccountId != null) {
-      final tx = TreasuryTransaction(
+      final isOnline = ConnectivityService.instance.isOnline;
+      String paymentNumber;
+      bool isDraft = false;
+
+      if (isOnline) {
+        try {
+          final seq = await DatabaseHelper.instance.getNextPaymentSequence()
+              .timeout(const Duration(seconds: 4));
+          paymentNumber = _direction == 'encaissement'
+              ? generateDocNumber(DocPrefix.paymentIn, seq)
+              : generateDocNumber(DocPrefix.paymentOut, seq);
+        } catch (_) {
+          paymentNumber = OfflineDocumentService.generateDraftNumber();
+          isDraft = true;
+        }
+      } else {
+        paymentNumber = OfflineDocumentService.generateDraftNumber();
+        isDraft = true;
+      }
+
+      final payment = Payment(
         id: const Uuid().v4(),
-        transactionNumber: 'TR-TEMP', // Will be regenerated by bloc
-        accountId: _selectedAccountId!,
-        dateTransaction: _paymentDate,
-        type: _direction == 'encaissement' ? 'income' : 'expense',
-        amount: payment.amount,
-        description: 'Paiement ${payment.paymentNumber}${payment.contactName != null ? ' - ${payment.contactName}' : ''}',
-        paymentId: payment.id,
+        paymentNumber: paymentNumber,
+        direction: _direction,
+        contactId: _selectedContactId!,
+        contactType: _selectedContactType!,
+        contactName: _selectedContactName,
+        amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0,
+        method: _method,
+        accountId: _selectedAccountId,
+        reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
+        bankName: _method == 'cheque' && _bankCtrl.text.isNotEmpty ? _bankCtrl.text.trim() : null,
+        maturityDate: _maturityDate,
+        issuerName: _method == 'traite' && _issuerCtrl.text.isNotEmpty ? _issuerCtrl.text.trim() : null,
+        paymentDate: _paymentDate,
+        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+        status: isDraft ? 'pending' : _status,
+        createdAt: now,
+        updatedAt: now,
       );
-      if (!mounted) return;
-      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(tx));
-    }
 
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${context.tr('Paiement')} $paymentNumber ${context.tr('créé avec succès')}'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+      if (isDraft) {
+        await OfflineDocumentService.instance.savePendingDocument('payments', payment.toMap());
+        db.add(LoadFirstPayments());
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${context.tr('Paiement')} $paymentNumber ${context.tr('enregistré en Brouillon (en attente de sync)')}'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+
+      db.add(AddPayment(payment));
+      
+      // Create TreasuryTransaction if an account is selected
+      if (_selectedAccountId != null) {
+        final tx = TreasuryTransaction(
+          id: const Uuid().v4(),
+          transactionNumber: 'TR-TEMP', // Will be regenerated by bloc
+          accountId: _selectedAccountId!,
+          dateTransaction: _paymentDate,
+          type: _direction == 'encaissement' ? 'income' : 'expense',
+          amount: payment.amount,
+          description: 'Paiement ${payment.paymentNumber}${payment.contactName != null ? ' - ${payment.contactName}' : ''}',
+          paymentId: payment.id,
+        );
+        if (mounted) {
+          context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(tx));
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.tr('Paiement')} $paymentNumber ${context.tr('créé avec succès')}'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -1277,19 +1391,27 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           ),
           SizedBox(width: 10),
           ElevatedButton.icon(
-            onPressed: _save,
-            icon: Icon(Icons.save_rounded,
-                size: 16, color: Colors.white),
-            label: Text(context.tr('Enregistrer'),
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+            label: Text(
+              _isSaving ? context.tr('Enregistrement...') : context.tr('Enregistrer'),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               elevation: 0,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
-              padding:
-                  EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
           ),
         ],
@@ -1419,6 +1541,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                           ? found.companyName!
                           : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
                       _selectedContactType = 'supplier';
+                      _issuerCtrl.text = _selectedContactName ?? '';
                     });
                   }
                 },
@@ -1448,6 +1571,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       _selectedContactId = res;
                       _selectedContactName = found.companyName?.isNotEmpty == true ? found.companyName! : found.name;
                       _selectedContactType = 'customer';
+                      _issuerCtrl.text = _selectedContactName ?? '';
                     });
                   }
                 },
@@ -1526,6 +1650,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                     value: 'especes', child: Text(context.tr('Espèces'))),
                 DropdownMenuItem(
                     value: 'cheque', child: Text(context.tr('Chèque'))),
+                DropdownMenuItem(
+                    value: 'traite', child: Text(context.tr('Traite'))),
                 DropdownMenuItem(
                     value: 'virement', child: Text(context.tr('Virement'))),
                 DropdownMenuItem(value: 'carte', child: Text(context.tr('Carte'))),
@@ -1669,86 +1795,316 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  // Reference externe
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(context.tr('Référence externe (optionnel)'),
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary)),
-                      SizedBox(height: 6),
-                      TextFormField(
-                        controller: _referenceCtrl,
-                        style: TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText:
-                              context.tr('N° de chèque, référence de virement...'),
-                          hintStyle: TextStyle(
-                              color: AppColors.textTertiary, fontSize: 13),
-                          prefixIcon: Icon(Icons.tag_rounded,
-                              size: 18,
-                              color: AppColors.textTertiary),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  // Date
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(context.tr('Date de paiement'),
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary)),
-                      SizedBox(height: 6),
-                      InkWell(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _paymentDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            setState(() => _paymentDate = picked);
-                          }
-                        },
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.md),
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border),
+                  if (_method == 'traite') ...[
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Émetteur / Propriétaire de la traite'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        TextFormField(
+                          controller: _issuerCtrl,
+                          style: TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: _selectedContactType == 'supplier' ? 'Fournisseur passager' : 'Client passager',
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                           ),
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 14),
-                          child: Row(
-                            children: [
-                              Icon(
-                                  Icons.calendar_today_rounded,
-                                  size: 16,
-                                  color: AppColors.textTertiary),
-                              SizedBox(width: 10),
-                              Text(
-                                formatDate(_paymentDate),
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Numéro de traite'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        TextFormField(
+                          controller: _referenceCtrl,
+                          style: TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Saisir le numéro de traite',
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Date de création de traite'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _paymentDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) setState(() => _paymentDate = picked);
+                          },
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                                const SizedBox(width: 10),
+                                Text(
+                                  DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate),
+                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Échéance (facultatif)'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _maturityDate ?? DateTime.now().add(const Duration(days: 30)),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) setState(() => _maturityDate = picked);
+                          },
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _maturityDate != null
+                                        ? DateFormat('d MMMM yyyy', 'fr_FR').format(_maturityDate!)
+                                        : 'Sélectionner la date',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: _maturityDate != null ? AppColors.textPrimary : AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ),
+                                if (_maturityDate != null)
+                                  GestureDetector(
+                                    onTap: () => setState(() => _maturityDate = null),
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Icon(Icons.clear, size: 16, color: AppColors.textTertiary),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (_method == 'cheque') ...[
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Banque émettrice'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        Autocomplete<String>(
+                          initialValue: TextEditingValue(text: _bankCtrl.text),
+                          optionsBuilder: (TextEditingValue val) {
+                            if (val.text.isEmpty) return AppColors.tunisianBanks;
+                            return AppColors.tunisianBanks.where((b) => b.toLowerCase().contains(val.text.toLowerCase()));
+                          },
+                          onSelected: (String sel) => _bankCtrl.text = sel,
+                          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                            controller.addListener(() => _bankCtrl.text = controller.text);
+                            return TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              style: TextStyle(fontSize: 14),
+                              decoration: const InputDecoration(
+                                hintText: 'Saisir la banque émettrice',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                suffixIcon: Icon(Icons.unfold_more, size: 18),
                               ),
-                            ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Numéro de chèque'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        TextFormField(
+                          controller: _referenceCtrl,
+                          style: TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Saisir le numéro de chèque',
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                           ),
                         ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Date de paiement'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _paymentDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) setState(() => _paymentDate = picked);
+                          },
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                                const SizedBox(width: 10),
+                                Text(
+                                  DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate),
+                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    if (_method != 'especes') ...[
+                      SizedBox(height: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(context.tr('Référence externe (optionnel)'),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary)),
+                          SizedBox(height: 6),
+                          TextFormField(
+                            controller: _referenceCtrl,
+                            style: TextStyle(fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: context.tr('Référence de virement, carte...'),
+                              hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                              prefixIcon: Icon(Icons.tag_rounded, size: 18, color: AppColors.textTertiary),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
+                    SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(context.tr('Date de paiement'),
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _paymentDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _paymentDate = picked);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                                const SizedBox(width: 10),
+                                Text(
+                                  formatDate(_paymentDate),
+                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

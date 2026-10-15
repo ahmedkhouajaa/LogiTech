@@ -16,7 +16,9 @@ import '../utils/constants.dart';
 import '../database/database_helper.dart';
 import '../models/user_management_model.dart';
 import 'permission_service.dart';
+import 'hr_legal_entity_service.dart';
 import '../utils/firestore_safe_helper.dart';
+import '../support_admin/services/promo_code_service.dart';
 
 /// Singleton service that manages the current enterprise context.
 ///
@@ -865,6 +867,13 @@ class EnterpriseService {
     _enterpriseListController.add(_enterprises);
     _updateEnterpriseSubscriptions();
 
+    // 4. Synchronize shared company fields to HrLegalEntity ("Entité juridique")
+    try {
+      await HrLegalEntityService.instance.updateFromEnterprise(updatedWithTimestamp);
+    } catch (e) {
+      debugPrint('[EnterpriseService] HrLegalEntity sync warning: $e');
+    }
+
     debugPrint('[EnterpriseService] Successfully updated enterprise $eid in Firestore and local state.');
     return updatedWithTimestamp;
   }
@@ -882,6 +891,7 @@ class EnterpriseService {
     String? address,
     String? rib,
     String? logoUrl,
+    String? partnerCode,
   }) async {
     if (PermissionService.instance.isLoaded && !PermissionService.instance.isAdmin && enterprises.isNotEmpty) {
       throw 'Action non autorisée. Seuls les administrateurs peuvent créer une entreprise.';
@@ -898,7 +908,11 @@ class EnterpriseService {
       final id = const Uuid().v4();
       final now = DateTime.now();
 
-      debugPrint('[EnterpriseService] Creating enterprise "$name" (id: $id)...');
+      final cleanPartnerCode = (partnerCode != null && partnerCode.trim().isNotEmpty)
+          ? partnerCode.trim().toUpperCase()
+          : null;
+
+      debugPrint('[EnterpriseService] Creating enterprise "$name" (id: $id, partner: $cleanPartnerCode)...');
 
       final enterprise = Enterprise(
         id: id,
@@ -912,6 +926,7 @@ class EnterpriseService {
         address: address,
         rib: rib,
         logoUrl: logoUrl,
+        partnerCode: cleanPartnerCode,
         ownerId: uid,
         members: [EnterpriseMember(uid: uid, role: 'admin')],
         defaultsCreated: false,
@@ -934,19 +949,26 @@ class EnterpriseService {
       // Write enterprise doc to Firestore if online
       if (FirebaseAuth.instance.currentUser != null) {
         try {
+          final enterpriseData = {
+            ...enterprise.toMap(),
+            'owner_id': uid,
+            'userId': uid,
+            'members': [memberMap],
+            'defaults_created': false,
+            'defaultsCreated': false,
+          };
+          if (cleanPartnerCode != null) {
+            enterpriseData['partnerCode'] = cleanPartnerCode;
+            enterpriseData['hasPartner'] = true;
+            enterpriseData['partnerLinkedAt'] = FieldValue.serverTimestamp();
+          }
+
           await FirebaseFirestore.instance
               .collection('enterprises')
               .doc(id)
-              .set({
-                ...enterprise.toMap(),
-                'owner_id': uid,
-                'userId': uid,
-                'members': [memberMap],
-                'defaults_created': false,
-                'defaultsCreated': false,
-              });
+              .set(enterpriseData);
 
-          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          final Map<String, dynamic> userUpdates = {
             'email': FirebaseAuth.instance.currentUser?.email,
             'role': 'admin',
             'isOwner': true,
@@ -961,7 +983,31 @@ class EnterpriseService {
               }
             },
             'updated_at': now.toIso8601String(),
-          }, SetOptions(merge: true));
+          };
+
+          if (cleanPartnerCode != null) {
+            userUpdates['partnerCode'] = cleanPartnerCode;
+            userUpdates['hasPartner'] = true;
+            userUpdates['partnerLinkedAt'] = FieldValue.serverTimestamp();
+
+            // Record promo usage in background for SuperAdmin visibility
+            PromoCodeService.instance.recordPromoUsage(
+              code: cleanPartnerCode,
+              userId: uid,
+              userName: FirebaseAuth.instance.currentUser?.displayName ?? 'Client',
+              userEmail: FirebaseAuth.instance.currentUser?.email ?? '',
+              enterpriseId: id,
+              enterpriseName: name,
+            ).catchError((e) {
+              debugPrint('[EnterpriseService] recordPromoUsage error: $e');
+              return null;
+            });
+          }
+
+          await FirebaseFirestore.instance.collection('users').doc(uid).set(
+            userUpdates,
+            SetOptions(merge: true),
+          );
         } catch (e) {
           debugPrint('[EnterpriseService] createEnterprise Firestore warning: $e');
         }

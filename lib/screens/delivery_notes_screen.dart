@@ -26,6 +26,7 @@ import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -58,6 +59,7 @@ class DeliveryNotesScreen extends StatefulWidget {
 
 class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   final Set<String> _selectedDeliveryIds = {};
+  bool _isFirstLoad = true;
 
   String? _selectedClientId;
   DateTime? _dateFrom;
@@ -120,10 +122,10 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         // ── Header ──
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 650;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -145,28 +147,57 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
-              ),
-              Row(
-                children: [
-                  if (_selectedDeliveryIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes))
-                    ElevatedButton.icon(
+              );
+
+              final newBtn = PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes)
+                  ? ElevatedButton.icon(
                       onPressed: () => _navigate(context, null),
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text(context.tr('Créer un Bon de Livraison')),
+                      label: Text(isNarrow ? context.tr('Nouveau bon') : context.tr('Créer un Bon de Livraison')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedDeliveryIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        newBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  titleWidget,
+                  Row(
+                    children: [
+                      if (_selectedDeliveryIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      newBtn,
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
 
@@ -666,9 +697,16 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<DeliveryNotesBloc, DeliveryNotesState>(
+    return BlocConsumer<DeliveryNotesBloc, DeliveryNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is DeliveryNotesLoaded || state is DeliveryNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is DeliveryNotesLoading || state is DeliveryNotesInitial) {
+        if (_isFirstLoad || state is DeliveryNotesLoading || state is DeliveryNotesInitial) {
           return _buildTableShimmer();
         }
         if (state is DeliveryNotesError) {
@@ -1438,14 +1476,15 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
 
   Future<void> _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: DocPrefix.invoice,
+      defaultPrefix: DocPrefix.invoice,
     );
-    if (seq == null) return;
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     final invoiceItems = note.items.map((i) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1472,7 +1511,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       projectName: note.projectName,
       date: now,
       dueDate: now.add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: note.totalHTAfterDiscount,
       totalTva: note.totalTVA,
       totalTTC: note.totalTTC,
@@ -1483,9 +1522,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       notes: note.notes,
       conditionsGenerales: note.conditionsGenerales,
       items: invoiceItems,
+      isSynced: !isDraft,
     );
 
-    context.read<InvoicesBloc>().add(AddInvoice(newInvoice));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', newInvoice.toMap());
+    } else {
+      context.read<InvoicesBloc>().add(AddInvoice(newInvoice));
+    }
 
     final updatedNote = note.copyWith(
       isConvertedToInvoice: true,
@@ -1495,8 +1539,10 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Facture $invoiceNumber creee avec succes'),
-      backgroundColor: AppColors.success,
+      content: Text(isDraft
+          ? 'Facture $invoiceNumber enregistrée en Brouillon (en attente de sync)'
+          : 'Facture $invoiceNumber créée avec succès'),
+      backgroundColor: isDraft ? AppColors.warning : AppColors.success,
     ));
   }
 
@@ -1542,11 +1588,15 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
 
   void _convertDeliveryToReturn(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final year = now.year;
-    
-    // Get next return number sequence
-    final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
-    final returnNumber = 'RET-$year-${seq.toString().padLeft(5, '0')}';
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'return_notes',
+      docTypeName: 'Bon de Retour Client',
+      defaultPrefix: DocPrefix.returnNote,
+    );
+    if (docNumResult.cancelled) return;
+    final returnNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
 
     final returnItems = note.items.map((i) => ReturnNoteItem(
       id: const Uuid().v4(),
@@ -1567,7 +1617,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       customerCompany: note.customerCompany,
       deliveryNoteId: note.id,
       dateEmission: now,
-      status: ReturnNoteStatus.validated.name,
+      status: isDraft ? 'draft' : ReturnNoteStatus.validated.name,
       subtotalHT: -note.subTotalHT,
       totalTTC: -note.totalTTC,
       notes: note.notes,
@@ -1575,28 +1625,31 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       items: returnItems,
     );
 
-    for (var item in newReturn.items) {
-      // Re-assign return note ID properly
-      // Using copyWith is not possible if it doesn't exist, we can use a small hack or just re-map
-    }
-    
     final finalItems = returnItems.map((i) => i.copyWith(returnNoteId: newReturn.id)).toList();
     final returnWithItems = newReturn.copyWith(items: finalItems);
 
-    if (!context.mounted) return;
-    context.read<ReturnNotesBloc>().add(AddReturnNote(returnWithItems));
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('return_notes', returnWithItems.toMap());
+    } else {
+      if (!context.mounted) return;
+      context.read<ReturnNotesBloc>().add(AddReturnNote(returnWithItems));
+    }
 
     final updatedNote = note.copyWith(
       isConvertedToReturn: true,
       convertedToReturnId: returnWithItems.id,
       status: DeliveryNoteStatus.returned.name,
     );
-    context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
+    if (context.mounted) {
+      context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Bon de retour $returnNumber cree avec succes'),
-      backgroundColor: AppColors.success,
-    ));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isDraft
+            ? 'Bon de retour $returnNumber enregistré en Brouillon (en attente de sync)'
+            : 'Bon de retour $returnNumber créé avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
+      ));
+    }
   }
 
   Future<void> _openConvertedReturn(BuildContext context, String? returnId) async {

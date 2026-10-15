@@ -367,11 +367,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     : 1;
 
         final width = (constraints.maxWidth - ((crossAxisCount - 1) * 12)) / crossAxisCount;
+        const kpiHeight = 132.0;
 
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: kpis.map((kpi) => SizedBox(width: width, child: _buildKpiCard(kpi))).toList(),
+          children: kpis
+              .map((kpi) => SizedBox(
+                    width: width,
+                    height: kpiHeight,
+                    child: _buildKpiCard(kpi),
+                  ))
+              .toList(),
         );
       },
     );
@@ -379,7 +386,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildKpiCard(_SmartKpi kpi) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -394,17 +401,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: kpi.accentColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(kpi.icon, size: 18, color: kpi.accentColor),
+                child: Icon(kpi.icon, size: 17, color: kpi.accentColor),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -423,32 +431,32 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             kpi.value,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
               color: Color(0xFF0F172A),
               letterSpacing: -0.3,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
           Text(
             kpi.title,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: Color(0xFF475569),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
           Text(
             kpi.subtitle,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 10.5,
               color: Color(0xFF94A3B8),
             ),
             maxLines: 1,
@@ -589,13 +597,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth > 1050
+        final columns = constraints.maxWidth > 1150
             ? 3
-            : constraints.maxWidth > 700
+            : constraints.maxWidth > 720
                 ? 2
                 : 1;
 
         final itemWidth = (constraints.maxWidth - ((columns - 1) * 20)) / columns;
+        final cardHeight = constraints.maxWidth > 720 ? 415.0 : 400.0;
 
         return Wrap(
           spacing: 20,
@@ -603,6 +612,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: filteredCategories.map((cat) {
             return SizedBox(
               width: itemWidth,
+              height: cardHeight,
               child: _buildCategoryCard(cat),
             );
           }).toList(),
@@ -615,11 +625,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -628,9 +638,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          // Header (fixed height 58)
+          Container(
+            height: 58,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 // Blue Square Icon
@@ -639,7 +650,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   height: 36,
                   decoration: BoxDecoration(
                     color: const Color(0xFF2563EB),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Center(
                     child: Icon(
@@ -663,39 +681,86 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 if (category.isNew) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFDCFCE7),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
                       'Nouveau',
                       style: TextStyle(
                         color: Color(0xFF15803D),
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFDBEAFE)),
+                  ),
+                  child: Text(
+                    '${category.items.length}',
+                    style: const TextStyle(
+                      color: Color(0xFF2563EB),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
 
-          // Items List
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: category.items.length,
-            itemBuilder: (context, index) {
-              final item = category.items[index];
-              return _buildReportItemRow(item);
-            },
+          // Items List inside Expanded to ensure uniform card height
+          Expanded(
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: category.items.length,
+                itemBuilder: (context, index) {
+                  final item = category.items[index];
+                  return _buildReportItemRow(item);
+                },
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
+
+          // Bottom card footer anchoring every card at the same height
+          Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFF8FAFC), width: 1.5)),
+              color: Color(0xFFFAFAFC),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(11)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.analytics_outlined, size: 14, color: Colors.grey.shade400),
+                const SizedBox(width: 6),
+                Text(
+                  '${category.items.length} rapports disponibles',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.grey.shade400),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -714,7 +779,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         },
         hoverColor: const Color(0xFFF1F5F9),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9.5),
           child: Row(
             children: [
               const Text(
@@ -735,7 +800,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     color: Color(0xFF334155),
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 15,
+                color: Color(0xFFCBD5E1),
               ),
             ],
           ),

@@ -3,6 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/dashboard_date_filter_dialog.dart';
+import '../widgets/sidebar_menu.dart';
+import '../services/app_navigation_service.dart';
+import '../services/dashboard_privacy_service.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/invoice.dart';
@@ -28,50 +33,265 @@ class DashboardScreen extends StatelessWidget {
           );
         }
         if (state is DashboardLoaded) {
-          print('DashboardScreen: received DashboardLoaded!');
-          return _buildDashboard(context, state);
+          return ValueListenableBuilder<bool>(
+            valueListenable: DashboardPrivacyService.instance.isHidden,
+            builder: (context, isHidden, _) {
+              return _buildDashboard(context, state, isHidden);
+            },
+          );
         }
         return SizedBox();
       },
     );
   }
 
-  Widget _buildDashboard(BuildContext context, DashboardLoaded state) {
+  Widget _buildDashboard(BuildContext context, DashboardLoaded state, bool isHidden) {
     final isMobile = MediaQuery.of(context).size.width < 800;
     return SingleChildScrollView(
       padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Welcome header
-          // _buildWelcomeHeader(isMobile),
-          // SizedBox(height: AppSpacing.lg),
+          // Filter toolbar matching the user's reference (Voir Rapports, filters, date range)
+          _buildFilterToolbar(context, state, isMobile, isHidden),
+          const SizedBox(height: 14),
           // KPI cards
-          _buildKpiRow(state, isMobile),
-          SizedBox(height: AppSpacing.lg),
-          // Charts + upcoming
-          /*
-          if (isMobile) ...[
-            // _buildCashFlowChart(),
-            SizedBox(height: AppSpacing.lg),
-            _buildUpcomingChecks(state.upcomingChecks),
-          ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Expanded(flex: 3, child: _buildCashFlowChart()),
-                SizedBox(width: AppSpacing.lg),
-                Expanded(flex: 2, child: _buildUpcomingChecks(state.upcomingChecks)),
-              ],
-            ),
-          SizedBox(height: AppSpacing.lg),
-          */
-          
+          _buildKpiRow(state, isMobile, isHidden),
+          SizedBox(height: AppSpacing.md),
           // Bottom row (Recent invoices only)
-          _buildRecentInvoices(state.recentInvoices),
+          _buildRecentInvoices(state.recentInvoices, isHidden),
         ],
       ),
     );
+  }
+
+  Widget _buildFilterToolbar(BuildContext context, DashboardLoaded state, bool isMobile, bool isHidden) {
+    final dateRangeStr = _formatDateRangeDisplay(state.dateRange);
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                context.tr('Aperçu général'),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              _buildVoirRapportsButton(context),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDateRangeButton(context, dateRangeStr, state.dateRange),
+              ),
+              const SizedBox(width: 8),
+              _buildIconButton(
+                icon: Icons.tune_rounded,
+                tooltip: context.tr('Filtres rapides'),
+                onTap: () => _openDateRangePicker(context, state.dateRange),
+              ),
+              const SizedBox(width: 8),
+              _buildIconButton(
+                icon: isHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                tooltip: isHidden ? context.tr('Afficher les chiffres') : context.tr('Masquer les chiffres'),
+                isActive: isHidden,
+                onTap: () => DashboardPrivacyService.instance.toggle(),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Text(
+          context.tr('Aperçu général'),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const Spacer(),
+        // 1. Voir Rapports ↗
+        _buildVoirRapportsButton(context),
+        const SizedBox(width: 8),
+        // 2. [ 🎛️ ]
+        _buildIconButton(
+          icon: Icons.tune_rounded,
+          tooltip: context.tr('Filtres rapides'),
+          onTap: () => _openDateRangePicker(context, state.dateRange),
+        ),
+        const SizedBox(width: 8),
+        // 3. [ 👁️ ]
+        _buildIconButton(
+          icon: isHidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          tooltip: isHidden ? context.tr('Afficher les chiffres') : context.tr('Masquer les chiffres'),
+          isActive: isHidden,
+          onTap: () => DashboardPrivacyService.instance.toggle(),
+        ),
+        const SizedBox(width: 8),
+        // 4. [ 📅 Date Range ]
+        _buildDateRangeButton(context, dateRangeStr, state.dateRange),
+      ],
+    );
+  }
+
+  Widget _buildVoirRapportsButton(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        AppNavigationService.instance.navigateToModule(context, AppModule.reports);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              context.tr('Voir Rapports'),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.call_made_rounded,
+              size: 14,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    bool isActive = false,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF2563EB).withValues(alpha: 0.1) : AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? const Color(0xFF2563EB).withValues(alpha: 0.4) : AppColors.border,
+            ),
+            boxShadow: AppShadows.sm,
+          ),
+          child: Icon(
+            icon,
+            size: 17,
+            color: isActive ? const Color(0xFF2563EB) : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateRangeButton(BuildContext context, String label, DateTimeRange? currentRange) {
+    return InkWell(
+      onTap: () => _openDateRangePicker(context, currentRange),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2563EB),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDateRangePicker(BuildContext context, DateTimeRange? currentRange) async {
+    final picked = await DashboardDateFilterDialog.show(
+      context,
+      initialRange: currentRange,
+    );
+
+    if (!context.mounted) return;
+
+    context.read<DashboardBloc>().add(
+      DashboardRefreshRequested(
+        dateRange: picked,
+        clearDateRange: picked == null,
+      ),
+    );
+  }
+
+  String _formatDateRangeDisplay(DateTimeRange? range) {
+    if (range == null) return 'Toutes les dates';
+    const months = [
+      'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin',
+      'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'
+    ];
+    final sDay = range.start.day.toString().padLeft(2, '0');
+    final sMonth = months[range.start.month - 1];
+    final sYear = range.start.year;
+
+    final eDay = range.end.day.toString().padLeft(2, '0');
+    final eMonth = months[range.end.month - 1];
+    final eYear = range.end.year;
+
+    if (DateUtils.isSameDay(range.start, range.end)) {
+      return '$sDay $sMonth, $sYear';
+    }
+
+    return '$sDay $sMonth, $sYear - $eDay $eMonth, $eYear';
   }
 
   Widget _buildWelcomeHeader(bool isMobile) {
@@ -119,7 +339,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKpiRow(DashboardLoaded state, bool isMobile) {
+  Widget _buildKpiRow(DashboardLoaded state, bool isMobile, bool isHidden) {
     final totalInvoiced = state.totalInvoiced;
     final paid = state.invoiceStatusBreakdown['paid'] ?? 0;
     final partial = state.invoiceStatusBreakdown['partial'] ?? 0;
@@ -128,50 +348,91 @@ class DashboardScreen extends StatelessWidget {
     final cards = [
       DashboardCard(
         title: 'Montant Facture',
-        value: formatCurrencyCompact(totalInvoiced),
-        subtitle: 'Paye ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impaye ${unpaid.toStringAsFixed(0)}%',
+        value: isHidden ? '•••••• TND' : formatCurrencyCompact(totalInvoiced),
+        subtitle: isHidden
+            ? 'Paye ••% · En cours ••% · Impaye ••%'
+            : 'Paye ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impaye ${unpaid.toStringAsFixed(0)}%',
         icon: Icons.receipt_long_rounded,
         gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
+        compact: true,
       ),
       DashboardCard(
         title: 'Bons de Livraison',
-        value: state.totalDeliveryNotes.toInt().toString(),
+        value: isHidden ? '••••' : state.totalDeliveryNotes.toInt().toString(),
         subtitle: 'Bons actifs ce mois',
         icon: Icons.local_shipping_rounded,
         gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+        compact: true,
       ),
       DashboardCard(
         title: 'Paiements recus',
-        value: formatCurrencyCompact(state.totalPaid),
+        value: isHidden ? '•••••• TND' : formatCurrencyCompact(state.totalPaid),
         subtitle: 'Encaissements total',
         icon: Icons.payments_rounded,
         gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
+        compact: true,
       ),
       DashboardCard(
         title: 'TVA Collectee',
-        value: formatCurrencyCompact(state.totalTvaCollected),
-        subtitle: 'TVA deductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
+        value: isHidden ? '•••••• TND' : formatCurrencyCompact(state.totalTvaCollected),
+        subtitle: isHidden
+            ? 'TVA deductible: •••••• TND'
+            : 'TVA deductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
         icon: Icons.calculate_rounded,
         gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
+        compact: true,
       ),
     ];
 
-    if (isMobile) {
-      return Column(
-        children: cards.map((c) => Padding(padding: EdgeInsets.only(bottom: AppSpacing.md), child: c)).toList(),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 420) {
+          return Column(
+            children: cards
+                .map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: c,
+                    ))
+                .toList(),
+          );
+        }
+        if (constraints.maxWidth < 620) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: cards[0]),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: cards[1]),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(child: cards[2]),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: cards[3]),
+                ],
+              ),
+            ],
+          );
+        }
 
-    return Row(
-      children: [
-        Expanded(child: cards[0]),
-        SizedBox(width: AppSpacing.md),
-        Expanded(child: cards[1]),
-        SizedBox(width: AppSpacing.md),
-        Expanded(child: cards[2]),
-        SizedBox(width: AppSpacing.md),
-        Expanded(child: cards[3]),
-      ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[1]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[2]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[3]),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -309,7 +570,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentInvoices(List<Invoice> invoices) {
+  Widget _buildRecentInvoices(List<Invoice> invoices, bool isHidden) {
     return AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -342,14 +603,14 @@ class DashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-            ...invoices.map((inv) => _buildInvoiceRow(inv)),
+            ...invoices.map((inv) => _buildInvoiceRow(inv, isHidden)),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildInvoiceRow(Invoice inv) {
+  Widget _buildInvoiceRow(Invoice inv, bool isHidden) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
@@ -359,7 +620,16 @@ class DashboardScreen extends StatelessWidget {
           Expanded(flex: 3, child: Text(inv.customerName ?? '—', style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
           Expanded(flex: 2, child: Text(formatDate(inv.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary))),
           Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: StatusBadge(label: inv.status.label, color: inv.status.color))),
-          Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text(formatCurrencyDT(inv.totalTTC + inv.timbreFiscal), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                isHidden ? '•••••• TND' : formatCurrencyDT(inv.totalTTC + inv.timbreFiscal),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ],
       ),
     );

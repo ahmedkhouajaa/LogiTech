@@ -22,6 +22,8 @@ import '../../services/sync_service.dart';
 import '../../services/custom_status_service.dart';
 import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
+import '../../widgets/scanner_button.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileReceivingVouchersScreen extends StatefulWidget {
   const MobileReceivingVouchersScreen({super.key});
@@ -39,6 +41,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -131,9 +134,16 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(
+    return BlocConsumer<ReceivingVouchersBloc, ReceivingVouchersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ReceivingVouchersLoaded || state is ReceivingVouchersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is ReceivingVouchersLoading || state is ReceivingVouchersInitial;
+        bool isLoading = _isFirstLoad || state is ReceivingVouchersLoading || state is ReceivingVouchersInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -145,7 +155,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
           suppliersList = suppliersState.suppliers;
         }
 
-        if (state is ReceivingVouchersLoaded) {
+        if (!_isFirstLoad && state is ReceivingVouchersLoaded) {
           final items = state.vouchers;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
@@ -261,6 +271,11 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
             context.read<SuppliersBloc>().add(LoadSuppliers());
           },
           onSearchChanged: _onSearchChanged,
+          searchTrailing: ScannerButton(
+            compact: true,
+            documentTitle: context.tr('Bons de réception'),
+            documentType: 'receiving_voucher',
+          ),
           filterOptions: const [],
           selectedFilter: _selectedStatus ?? 'Tous',
           onFilterChanged: (val) {

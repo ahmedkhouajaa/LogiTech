@@ -78,6 +78,32 @@ class DocumentTemplate {
       }
     }
 
+    // Ensure logo default size is 30.0 x 22.5 if missing or old default (<= 20.0)
+    if (cfg['logo'] is Map) {
+      final logoCfg = Map<String, dynamic>.from(cfg['logo'] as Map);
+      final lw = (logoCfg['width'] as num?)?.toDouble();
+      if (lw != null && lw <= 20.0) {
+        logoCfg['width'] = 30.0;
+        logoCfg['height'] = 22.5;
+        cfg['logo'] = logoCfg;
+
+        if (cfg['companyName'] is Map) {
+          final cn = Map<String, dynamic>.from(cfg['companyName'] as Map);
+          if ((cn['positionX'] as num?)?.toDouble() == 40.0) {
+            cn['positionX'] = 48.0;
+            cfg['companyName'] = cn;
+          }
+        }
+        if (cfg['companyDetails'] is Map) {
+          final cd = Map<String, dynamic>.from(cfg['companyDetails'] as Map);
+          if ((cd['positionX'] as num?)?.toDouble() == 40.0) {
+            cd['positionX'] = 48.0;
+            cfg['companyDetails'] = cd;
+          }
+        }
+      }
+    }
+
     DateTime parseDate(dynamic val) {
       if (val == null) return DateTime.now();
       if (val is DateTime) return val;
@@ -372,9 +398,9 @@ class DocumentTemplate {
         'footer': defaultFooter(),
 
         // Header and Client Elements positioning
-        'logo': {'positionX': 15.0, 'positionY': 15.0, 'width': 20.0, 'height': 15.0},
-        'companyName': {'positionX': 40.0, 'positionY': 15.0},
-        'companyDetails': {'positionX': 40.0, 'positionY': 22.0},
+        'logo': {'positionX': 15.0, 'positionY': 15.0, 'width': 30.0, 'height': 22.5},
+        'companyName': {'positionX': 48.0, 'positionY': 15.0},
+        'companyDetails': {'positionX': 48.0, 'positionY': 22.0},
         'documentTitle': {'positionX': 140.0, 'positionY': 15.0},
         'clientDetails': {'positionX': 15.0, 'positionY': 45.0, 'width': 180.0, 'height': 30.0},
         'customFieldsBox': {'positionX': 15.0, 'positionY': 150.0, 'width': 180.0, 'fontSize': 8.5},
@@ -704,12 +730,43 @@ class DocumentTemplate {
       config['statusBadge'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get tableConfig =>
       config['table'] as Map<String, dynamic>? ?? {};
-  Map<String, dynamic> get logoConfig =>
-      config['logo'] as Map<String, dynamic>? ?? {};
-  Map<String, dynamic> get companyNameConfig =>
-      config['companyName'] as Map<String, dynamic>? ?? {};
-  Map<String, dynamic> get companyDetailsConfig =>
-      config['companyDetails'] as Map<String, dynamic>? ?? {};
+  Map<String, dynamic> get logoConfig {
+    final raw = config['logo'] as Map<String, dynamic>?;
+    if (raw == null) {
+      return {'positionX': 15.0, 'positionY': 15.0, 'width': 30.0, 'height': 22.5};
+    }
+    final copy = Map<String, dynamic>.from(raw);
+    final w = (copy['width'] as num?)?.toDouble();
+    if (w == null || w <= 20.0) {
+      copy['width'] = 30.0;
+      copy['height'] = 22.5;
+    }
+    return copy;
+  }
+  Map<String, dynamic> get companyNameConfig {
+    final raw = config['companyName'] as Map<String, dynamic>?;
+    if (raw == null) {
+      return {'positionX': 48.0, 'positionY': 15.0};
+    }
+    final copy = Map<String, dynamic>.from(raw);
+    final x = (copy['positionX'] as num?)?.toDouble();
+    if (x == null || x == 40.0) {
+      copy['positionX'] = 48.0;
+    }
+    return copy;
+  }
+  Map<String, dynamic> get companyDetailsConfig {
+    final raw = config['companyDetails'] as Map<String, dynamic>?;
+    if (raw == null) {
+      return {'positionX': 48.0, 'positionY': 22.0};
+    }
+    final copy = Map<String, dynamic>.from(raw);
+    final x = (copy['positionX'] as num?)?.toDouble();
+    if (x == null || x == 40.0) {
+      copy['positionX'] = 48.0;
+    }
+    return copy;
+  }
   Map<String, dynamic> get documentTitleConfig =>
       config['documentTitle'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get clientDetailsConfig =>

@@ -10,6 +10,18 @@ import '../services/permission_service.dart';
 import '../l10n/app_localizations.dart';
 
 import 'dashboard_screen.dart';
+import 'crm_dashboard_screen.dart';
+import 'crm_pipeline_screen.dart';
+import 'crm_opportunities_screen.dart';
+import 'crm_leads_screen.dart';
+import 'crm_automations_screen.dart';
+import 'crm_reports_screen.dart';
+import 'crm_emails_screen.dart';
+import 'hr_employees_screen.dart';
+import 'hr_leaves_screen.dart';
+import 'hr_attendance_screen.dart';
+import 'hr_payroll_screen.dart';
+import 'hr_cnss_declaration_screen.dart';
 import 'customers_screen.dart';
 import 'suppliers_screen.dart';
 import 'products_screen.dart';
@@ -50,13 +62,31 @@ import 'inventory_sheets_screen.dart';
 import 'user_management_screen.dart';
 import 'import_export_screen.dart';
 import 'support_tickets_screen.dart';
+import 'affiliate_dashboard_screen.dart';
 import 'trash_screen.dart';
 import 'user_tracking_screen.dart';
+import 'electronic_invoice_screen.dart';
+import 'hr_documents_screen.dart';
+import 'hr_accounting_screen.dart';
+import 'hr_legal_entity_screen.dart';
+import 'hr_establishments_screen.dart';
+import 'hr_managers_screen.dart';
+import 'hr_dashboard_screen.dart';
+import 'production_dashboard_screen.dart';
+import 'production_orders_screen.dart';
+import 'production_boms_screen.dart';
+import 'production_planning_screen.dart';
+import 'production_costs_screen.dart';
+import 'production_quality_screen.dart';
+import 'production_reports_screen.dart';
+import 'production_workcenters_screen.dart';
 import '../services/trial_service.dart';
 import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
 import '../services/update_service.dart';
 import '../widgets/update_banner_widget.dart';
+import '../widgets/stock_notification_bell.dart';
+import '../services/stock_notification_service.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -65,6 +95,7 @@ class AppShellScreen extends StatefulWidget {
 }
 
 class AppShellScreenState extends State<AppShellScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   AppModule _activeModule = AppModule.dashboard;
   bool _isSidebarCollapsed = false;
 
@@ -82,6 +113,7 @@ class AppShellScreenState extends State<AppShellScreen> {
     _checkInitialModule();
     TrialService.instance.initTrial();
     UpdateService.instance.checkForUpdate();
+    StockNotificationService.instance.init();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
       if (mounted) {
@@ -151,6 +183,20 @@ class AppShellScreenState extends State<AppShellScreen> {
         switch (_activeModule) {
           case AppModule.dashboard:
             return const DashboardScreen();
+          case AppModule.crmDashboard:
+            return const CrmDashboardScreen();
+          case AppModule.crmPipeline:
+            return const CrmPipelineScreen();
+          case AppModule.crmOpportunities:
+            return const CrmOpportunitiesScreen();
+          case AppModule.crmLeads:
+            return const CrmLeadsScreen();
+          case AppModule.crmAutomations:
+            return const CrmAutomationsScreen();
+          case AppModule.crmReports:
+            return const CrmReportsScreen();
+          case AppModule.crmEmails:
+            return const CrmEmailsScreen();
           case AppModule.customers:
             return const CustomersScreen();
           case AppModule.accounts:
@@ -181,6 +227,8 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const ProjectsScreen();
       case AppModule.reports:
         return const ReportsScreen();
+      case AppModule.eInvoice:
+        return const ElectronicInvoiceScreen();
       case AppModule.settings:
         return const SettingsScreen();
       case AppModule.payments:
@@ -193,7 +241,7 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const ReceivingVouchersScreen();
       case AppModule.withholdingTaxSales:
       case AppModule.withholdingTaxPurchase:
-        return WithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
+        return WithholdingTaxScreen(key: ValueKey(_activeModule), isSales: _activeModule == AppModule.withholdingTaxSales);
       case AppModule.warehouses:
         return const WarehousesScreen();
       case AppModule.exitVouchers:
@@ -234,10 +282,50 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const ImportExportScreen();
       case AppModule.support:
         return const SupportTicketsScreen();
+      case AppModule.affiliate:
+        return const AffiliateDashboardScreen();
       case AppModule.trash:
         return const TrashScreen();
+      case AppModule.hrDashboard:
+        return const HrDashboardScreen();
+      case AppModule.hrEmployees:
+        return const HrEmployeesScreen();
+      case AppModule.hrLeaves:
+        return const HrLeavesScreen();
+      case AppModule.hrAttendances:
+        return const HrAttendanceScreen();
+      case AppModule.hrPayroll:
+        return const HrPayrollScreen();
+      case AppModule.hrCnssDeclaration:
+        return const HrCnssDeclarationScreen();
+      case AppModule.hrDocuments:
+        return const HrDocumentsScreen();
+      case AppModule.hrAccounting:
+        return const HrAccountingScreen();
+      case AppModule.hrLegalEntity:
+        return const HrLegalEntityScreen();
+      case AppModule.hrEstablishments:
+        return const HrEstablishmentsScreen();
+      case AppModule.hrManagers:
+        return const HrManagersScreen();
       case AppModule.userTracking:
         return const UserTrackingScreen();
+      case AppModule.productionDashboard:
+        return const ProductionDashboardScreen();
+      case AppModule.productionOrders:
+        return const ProductionOrdersScreen();
+      case AppModule.productionBoms:
+        return const ProductionBomsScreen();
+      case AppModule.productionPlanning:
+        return const ProductionPlanningScreen();
+      case AppModule.productionCosts:
+        return const ProductionCostsScreen();
+      case AppModule.productionQuality:
+        return const ProductionQualityScreen();
+      case AppModule.productionReports:
+        return const ProductionReportsScreen();
+      case AppModule.productionWorkcenters:
+        return const ProductionWorkcentersScreen();
     }
   },
 );
@@ -247,6 +335,24 @@ class AppShellScreenState extends State<AppShellScreen> {
     String raw;
     switch (_activeModule) {
       case AppModule.dashboard: raw = 'Tableau de bord'; break;
+      case AppModule.crmDashboard: raw = 'Tableau de bord CRM'; break;
+      case AppModule.crmPipeline: raw = 'Pipeline de vente'; break;
+      case AppModule.crmOpportunities: raw = 'Opportunités'; break;
+      case AppModule.crmLeads: raw = 'Prospects (Leads)'; break;
+      case AppModule.crmAutomations: raw = 'Automatisations commerciales'; break;
+      case AppModule.crmReports: raw = 'Rapports CRM'; break;
+      case AppModule.crmEmails: raw = 'Intégration email'; break;
+      case AppModule.hrDashboard: raw = 'Tableau de bord RH'; break;
+      case AppModule.hrEmployees: raw = 'Personnel (Employés)'; break;
+      case AppModule.hrLeaves: raw = 'Congés & Absences'; break;
+      case AppModule.hrAttendances: raw = 'Présences / Pointages'; break;
+      case AppModule.hrPayroll: raw = 'Fiches de Paie'; break;
+      case AppModule.hrCnssDeclaration: raw = 'Déclaration CNSS'; break;
+      case AppModule.hrDocuments: raw = 'Documents'; break;
+      case AppModule.hrAccounting: raw = 'Comptabilité'; break;
+      case AppModule.hrLegalEntity: raw = 'Entité juridique'; break;
+      case AppModule.hrEstablishments: raw = 'Établissements'; break;
+      case AppModule.hrManagers: raw = 'Gestionnaires'; break;
       case AppModule.customers: raw = 'Clients'; break;
       case AppModule.suppliers: raw = 'Fournisseurs'; break;
       case AppModule.products: raw = 'Articles'; break;
@@ -290,7 +396,17 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.userManagement: raw = 'Gestion des utilisateurs'; break;
       case AppModule.importExport: raw = 'Import / Export des données'; break;
       case AppModule.support: raw = 'Support client'; break;
+      case AppModule.affiliate: raw = 'Affiliation & Parrainage'; break;
       case AppModule.userTracking: raw = 'Traçabilité Utilisateurs'; break;
+      case AppModule.eInvoice: raw = 'Facture électronique'; break;
+      case AppModule.productionDashboard: raw = 'Tableau de bord Production'; break;
+      case AppModule.productionOrders: raw = 'Ordres de fabrication (OF)'; break;
+      case AppModule.productionBoms: raw = 'Nomenclatures (BOM)'; break;
+      case AppModule.productionPlanning: raw = 'Planification de production'; break;
+      case AppModule.productionCosts: raw = 'Suivi des coûts de revient'; break;
+      case AppModule.productionQuality: raw = 'Contrôle qualité & NC'; break;
+      case AppModule.productionReports: raw = 'Rapports de rendement'; break;
+      case AppModule.productionWorkcenters: raw = 'Postes de charge & Ateliers'; break;
     }
     return context.tr(raw);
   }
@@ -308,7 +424,7 @@ class AppShellScreenState extends State<AppShellScreen> {
           onModuleSelected: (module) {
             setState(() => _activeModule = module);
             if (isMobile) {
-              Navigator.pop(context); // Close drawer
+              _scaffoldKey.currentState?.closeDrawer();
             }
           },
         );
@@ -319,19 +435,17 @@ class AppShellScreenState extends State<AppShellScreen> {
             Container(
               height: 56,
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                border: Border(bottom: BorderSide(color: AppColors.border)),
-                boxShadow: AppShadows.sm,
+                 color: AppColors.surface,
+                 border: Border(bottom: BorderSide(color: AppColors.border)),
+                 boxShadow: AppShadows.sm,
               ),
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 24),
               child: Row(
                 children: [
                   if (isMobile)
-                    Builder(
-                      builder: (ctx) => IconButton(
-                        icon: Icon(Icons.menu),
-                        onPressed: () => Scaffold.of(ctx).openDrawer(),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                     ),
                   Expanded(
                     child: Text(
@@ -341,7 +455,9 @@ class AppShellScreenState extends State<AppShellScreen> {
                     ),
                   ),
                   const SyncIndicator(),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                  const StockNotificationBell(),
+                  const SizedBox(width: 10),
                   // User menu
                   ValueListenableBuilder<bool>(
                     valueListenable: PermissionService.instance.permissionsNotifier,
@@ -409,9 +525,14 @@ class AppShellScreenState extends State<AppShellScreen> {
           ],
         );
 
+        final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+        final drawerWidth = (320.0 * textScale).clamp(300.0, 380.0);
+
         if (isMobile) {
           return Scaffold(
+            key: _scaffoldKey,
             drawer: Drawer(
+              width: drawerWidth,
               child: SafeArea(child: sidebar),
             ),
             body: contentArea,
@@ -419,6 +540,7 @@ class AppShellScreenState extends State<AppShellScreen> {
         }
 
         return Scaffold(
+          key: _scaffoldKey,
           body: Row(
             children: [
               sidebar,

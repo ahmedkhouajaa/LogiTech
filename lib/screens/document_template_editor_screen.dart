@@ -60,6 +60,25 @@ class _DocumentTemplateEditorScreenState
       cfBox['positionY'] = 150.0;
     }
     _config['customFieldsBox'] = cfBox;
+
+    final logoMap = Map<String, dynamic>.from(_config['logo'] as Map? ?? {});
+    final currentLogoW = (logoMap['width'] as num?)?.toDouble();
+    if (currentLogoW == null || currentLogoW <= 20.0) {
+      logoMap['width'] = 30.0;
+      logoMap['height'] = 22.5;
+      _config['logo'] = logoMap;
+
+      final compName = Map<String, dynamic>.from(_config['companyName'] as Map? ?? {});
+      if ((compName['positionX'] as num?)?.toDouble() == 40.0 || compName['positionX'] == null) {
+        compName['positionX'] = 48.0;
+        _config['companyName'] = compName;
+      }
+      final compDetails = Map<String, dynamic>.from(_config['companyDetails'] as Map? ?? {});
+      if ((compDetails['positionX'] as num?)?.toDouble() == 40.0 || compDetails['positionX'] == null) {
+        compDetails['positionX'] = 48.0;
+        _config['companyDetails'] = compDetails;
+      }
+    }
   }
 
   @override
@@ -601,8 +620,8 @@ class _DocumentTemplateEditorScreenState
 
       switch (itemKey) {
         case 'logo':
-          final curW = (map['width'] as num?)?.toDouble() ?? 20.0;
-          final curH = (map['height'] as num?)?.toDouble() ?? 15.0;
+          final curW = (map['width'] as num?)?.toDouble() ?? 30.0;
+          final curH = (map['height'] as num?)?.toDouble() ?? 22.5;
           if (width != null) map['width'] = width.clamp(10.0, 100.0);
           if (height != null) map['height'] = height.clamp(8.0, 80.0);
           if (widthDelta != null) map['width'] = (curW + widthDelta).clamp(10.0, 100.0);
@@ -925,8 +944,8 @@ class _DocumentTemplateEditorScreenState
         case 'logo':
           title = 'Logo de l\'entreprise';
           icon = Icons.image_rounded;
-          w = (map['width'] as num?)?.toDouble() ?? 20.0;
-          h = (map['height'] as num?)?.toDouble() ?? 15.0;
+          w = (map['width'] as num?)?.toDouble() ?? 30.0;
+          h = (map['height'] as num?)?.toDouble() ?? 22.5;
           canW = true;
           canH = true;
           break;

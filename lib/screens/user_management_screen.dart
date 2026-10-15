@@ -207,10 +207,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              LayoutBuilder(
+                builder: (context, headerConstraints) {
+                  final isNarrow = headerConstraints.maxWidth < 650;
+                  final titleWidget = Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         context.tr('Gestion des Utilisateurs'),
@@ -237,100 +238,144 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  if (isCurrentUserAdmin)
-                    ElevatedButton.icon(
-                      onPressed: _navigateToAddUser,
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text(context.tr('Ajouter un Utilisateur'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        elevation: 0,
-                      ),
-                    ),
-                ],
+                  );
+
+                  final addBtn = isCurrentUserAdmin
+                      ? ElevatedButton.icon(
+                          onPressed: _navigateToAddUser,
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: Text(context.tr('Ajouter un Utilisateur'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            elevation: 0,
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleWidget,
+                        if (isCurrentUserAdmin) ...[
+                          const SizedBox(height: 10),
+                          addBtn,
+                        ],
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      titleWidget,
+                      addBtn,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 10),
 
               // Filter & Search Bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: AppShadows.sm,
-                ),
-                child: Row(
-                  children: [
-                    // Search Input
-                    Expanded(
-                      child: SizedBox(
-                        height: 32,
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                          decoration: InputDecoration(
-                            hintText: 'Rechercher un utilisateur (nom, email, téléphone)...',
-                            hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                            prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textTertiary),
-                            prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                            filled: true,
-                            fillColor: AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF8FAFC),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide: BorderSide(color: AppColors.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(6),
-                              borderSide: BorderSide(color: AppColors.border),
-                            ),
-                          ),
+              LayoutBuilder(
+                builder: (context, filterConstraints) {
+                  final isNarrowFilter = filterConstraints.maxWidth < 750;
+                  final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+                  final searchHeight = (34.0 * textScale).clamp(32.0, 44.0);
+
+                  final searchWidget = SizedBox(
+                    height: searchHeight,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un utilisateur (nom, email, téléphone)...',
+                        hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                        prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textTertiary),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                        filled: true,
+                        fillColor: AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: AppColors.border),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                  );
 
-                    // Role Filter Chips
-                    Row(
-                      children: ['Tous', 'Administrateur', 'Collaborateur'].map((role) {
-                        final isSelected = _selectedRoleFilter == role;
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: ChoiceChip(
-                            label: Text(context.tr(role), style: TextStyle(fontSize: 11.5, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                            selected: isSelected,
-                            selectedColor: AppColors.primary.withValues(alpha: 0.15),
-                            backgroundColor: AppColors.surface,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            labelStyle: TextStyle(
-                              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                            ),
-                            side: BorderSide(
-                              color: isSelected ? AppColors.primary : AppColors.border,
-                            ),
-                            onSelected: (_) => _onRoleFilterChanged(role),
+                  final chipsWidget = Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: ['Tous', 'Administrateur', 'Collaborateur'].map((role) {
+                      final isSelected = _selectedRoleFilter == role;
+                      return ChoiceChip(
+                        label: Text(context.tr(role), style: TextStyle(fontSize: 11.5, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        selected: isSelected,
+                        selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                        backgroundColor: AppColors.surface,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        labelStyle: TextStyle(
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                        side: BorderSide(
+                          color: isSelected ? AppColors.primary : AppColors.border,
+                        ),
+                        onSelected: (_) => _onRoleFilterChanged(role),
+                      );
+                    }).toList(),
+                  );
+
+                  final refreshBtn = IconButton(
+                    icon: Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: _loadUsers,
+                    tooltip: context.tr('Actualiser la liste'),
+                  );
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(color: AppColors.border),
+                      boxShadow: AppShadows.sm,
+                    ),
+                    child: isNarrowFilter
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              searchWidget,
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(child: chipsWidget),
+                                  const SizedBox(width: 8),
+                                  refreshBtn,
+                                ],
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(child: searchWidget),
+                              const SizedBox(width: 12),
+                              chipsWidget,
+                              const SizedBox(width: 8),
+                              refreshBtn,
+                            ],
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Refresh Button
-                    IconButton(
-                      icon: Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 18),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: _loadUsers,
-                      tooltip: context.tr('Actualiser la liste'),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 10),
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/auth_service.dart';
@@ -29,9 +30,10 @@ class AuthSignUpRequested extends AuthEvent {
   final String email;
   final String password;
   final String name;
-  const AuthSignUpRequested(this.email, this.password, this.name);
+  final String? partnerCode;
+  const AuthSignUpRequested(this.email, this.password, this.name, {this.partnerCode});
   @override
-  List<Object?> get props => [email, password, name];
+  List<Object?> get props => [email, password, name, partnerCode];
 }
 
 class AuthGoogleSignInRequested extends AuthEvent {}
@@ -132,11 +134,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Listen to token changes for revocation / expiration (Scenarios 15, 18)
     _tokenSub = _authService.idTokenChanges.listen((user) {
-      scheduleMicrotask(() {
-        if (user == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
-          add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
-        }
-      });
+      if (user == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
+        // Allow a grace period to avoid false session expiration during transient token refresh on app resume
+        Future.delayed(const Duration(seconds: 4), () {
+          if (isClosed) return;
+          final currentUser = _authService.currentUser;
+          if (currentUser == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
+            add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
+          }
+        });
+      }
+    }, onError: (e) {
+      debugPrint('[AuthBloc] idTokenChanges stream error: $e');
     });
 
     // Listen to real-time deactivation triggers
@@ -245,7 +254,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     emit(AuthLoading());
     try {
-      final success = await _authService.signUpWithEmail(event.email, event.password, event.name);
+      final success = await _authService.signUpWithEmail(
+        event.email,
+        event.password,
+        event.name,
+        partnerCode: event.partnerCode,
+      );
       if (success) {
         emit(AuthSignUpSuccess(event.email));
       } else {

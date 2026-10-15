@@ -148,7 +148,7 @@ class AiChatService {
     return AiChatMessage(
       id: 'welcome',
       text:
-          "Bonjour ! Je suis votre Assistant IA LogiTech. 🤖\nComment puis-je vous aider aujourd'hui ? Vous pouvez me saluer, me poser des questions sur votre entreprise (devis, factures, achats, livraisons, stock, trésorerie), ou me demander des conseils de gestion.",
+          "Bonjour ! Je suis votre assistant LogiTech Copilot.\nComment puis-je vous aider aujourd'hui ? Vous pouvez consulter vos indicateurs clés (trésorerie, factures, devis, stocks) ou me poser une question sur votre gestion d'entreprise.",
       isUser: false,
       timestamp: DateTime.now(),
     );
@@ -433,12 +433,12 @@ class AiChatService {
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=$apiKey');
 
       final systemInstruction =
-          "Tu es LogiTech AI, un assistant virtuel intelligent, courtois et très professionnel pour l'application ERP/CRM LogiTech. "
+          "Tu es LogiTech Copilot, un assistant décisionnel d'entreprise sobre, courtois, précis et hautement professionnel pour l'application ERP/CRM LogiTech. "
           "Tu comprends parfaitement le français, l'arabe, le dialecte maghrébin/tunisien (slm, chokran, cv, labas), et l'anglais. "
-          "Si l'utilisateur te salue (slm, salam, bonjour, salut), réponds poliment et chaleureusement sans réciter de données. "
-          "Si l'utilisateur pose une question de gestion ou générale, réponds de façon intelligente et experte. "
+          "Si l'utilisateur te salue, réponds poliment et succinctement. "
+          "Si l'utilisateur pose une question de gestion ou générale, réponds avec clarté, expertise et rigueur. "
           "Si l'utilisateur demande des chiffres de son entreprise, utilise les données Firestore en temps réel suivantes (en devise TND) : ${jsonEncode(dbContext)}. "
-          "Réponds de façon directe, claire, humaine et élégante, sans mentionner de code technique ni de requêtes.";
+          "Structure tes réponses avec des puces claires et des sections lisibles. Maintiens une présentation sobre et soignée digne d'un tableau de bord de direction financière. Évite impérativement les accumulations d'emojis superflus.";
 
       final client = HttpClient();
       final request = await client.postUrl(url);

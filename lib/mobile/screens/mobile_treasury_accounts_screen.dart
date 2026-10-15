@@ -30,6 +30,7 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -79,15 +80,22 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
   
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+    return BlocConsumer<TreasuryAccountsBloc, TreasuryAccountsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is TreasuryAccountsLoaded || state is TreasuryAccountsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is TreasuryAccountsLoading || state is TreasuryAccountsInitial;
+        bool isLoading = _isFirstLoad || state is TreasuryAccountsLoading || state is TreasuryAccountsInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
         List<Widget> cards = [];
 
-        if (state is TreasuryAccountsLoaded) {
+        if (!_isFirstLoad && state is TreasuryAccountsLoaded) {
           final items = state.accounts;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

@@ -102,6 +102,9 @@ class Payment {
   final String? relatedInvoiceId;
   final String? relatedQuoteId;
   final bool isDeleted;
+  final String? bankName;
+  final DateTime? maturityDate;
+  final String? issuerName;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -123,6 +126,9 @@ class Payment {
     this.relatedInvoiceId,
     this.relatedQuoteId,
     this.isDeleted = false,
+    this.bankName,
+    this.maturityDate,
+    this.issuerName,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -146,6 +152,9 @@ class Payment {
         'related_invoice_id': relatedInvoiceId,
         'related_quote_id': relatedQuoteId,
         'is_deleted': isDeleted ? 1 : 0,
+        'bank_name': bankName,
+        'maturity_date': maturityDate?.toIso8601String(),
+        'issuer_name': issuerName,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -172,6 +181,13 @@ class Payment {
         relatedInvoiceId: map['related_invoice_id']?.toString(),
         relatedQuoteId: map['related_quote_id']?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
+        bankName: map['bank_name']?.toString(),
+        maturityDate: map['maturity_date'] != null
+            ? (map['maturity_date'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['maturity_date'] as int)
+                : DateTime.tryParse(map['maturity_date'].toString()))
+            : null,
+        issuerName: map['issuer_name']?.toString() ?? map['party_name']?.toString(),
         createdAt: map['created_at'] != null
             ? (map['created_at'] is int
                 ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
@@ -202,6 +218,9 @@ class Payment {
     String? relatedInvoiceId,
     String? relatedQuoteId,
     bool? isDeleted,
+    String? bankName,
+    DateTime? maturityDate,
+    String? issuerName,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) =>
@@ -223,6 +242,9 @@ class Payment {
         relatedInvoiceId: relatedInvoiceId ?? this.relatedInvoiceId,
         relatedQuoteId: relatedQuoteId ?? this.relatedQuoteId,
         isDeleted: isDeleted ?? this.isDeleted,
+        bankName: bankName ?? this.bankName,
+        maturityDate: maturityDate ?? this.maturityDate,
+        issuerName: issuerName ?? this.issuerName,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );

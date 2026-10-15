@@ -11,7 +11,6 @@ import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../services/contact_import_export_service.dart';
 import '../../widgets/import_export/contact_import_dialog.dart';
-import '../../models/supplier.dart';
 import '../../screens/supplier_detail_screen.dart';
 
 class MobileSuppliersScreen extends StatefulWidget {
@@ -63,7 +62,6 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
   }
 
   Widget _buildActionsButton(BuildContext context, SuppliersState state) {
-    final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
     return PopupMenuButton<String>(
       tooltip: 'Actions Import / Export',
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -136,21 +134,21 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
           await ContactImportExportService.instance.exportContactsToExcel(
             context: context,
             type: ContactType.supplier,
-            contacts: suppliers,
+            exportAll: true,
           );
         } else if (val == 'export_csv') {
           if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
           await ContactImportExportService.instance.exportContactsToCsv(
             context: context,
             type: ContactType.supplier,
-            contacts: suppliers,
+            exportAll: true,
           );
         } else if (val == 'export_json') {
           if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
           await ContactImportExportService.instance.exportContactsToJson(
             context: context,
             type: ContactType.supplier,
-            contacts: suppliers,
+            exportAll: true,
           );
         } else if (val == 'import_excel') {
           if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;

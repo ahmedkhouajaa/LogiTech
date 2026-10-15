@@ -25,6 +25,7 @@ import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/custom_fields_form_section.dart';
 import '../widgets/document_tax_settings_dialog.dart';
@@ -245,20 +246,21 @@ class _CreateReturnNoteScreenState
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    String number = widget.existing?.returnNumber ?? '';
-    if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
-        context: context,
-        docCollection: 'return_notes',
-        docTypeName: 'Bon de Retour',
-        prefix: 'BR',
-      );
-      if (seq == null) {
-        setState(() => _isSaving = false);
-        return;
-      }
-      number = generateDocNumber('BR', seq, docCollection: 'return_notes');
+    final numResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'return_notes',
+      docTypeName: 'Bon de Retour',
+      defaultPrefix: 'BR',
+      existingNumber: widget.existing?.returnNumber,
+    );
+
+    if (numResult.cancelled) {
+      setState(() => _isSaving = false);
+      return;
     }
+
+    final number = numResult.number;
+    final isDraft = numResult.isDraft;
 
     final custState = context.read<CustomersBloc>().state;
     String? custName;
@@ -279,7 +281,7 @@ class _CreateReturnNoteScreenState
       customerId: _selectedCustomerId!,
       customerName: custName,
       dateEmission: _date,
-      status: _status.name,
+      status: isDraft ? 'draft' : _status.name,
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       conditions:
           _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,
@@ -306,6 +308,18 @@ class _CreateReturnNoteScreenState
         totalHT: item.totalHT,
       )).toList(),
     );
+
+    if (isDraft && !_isEditing) {
+      await OfflineDocumentService.instance.savePendingDocument('return_notes', note.toMap());
+      bloc.add(const LoadFirstReturnNotes());
+      nav.pop();
+      messenger.showSnackBar(SnackBar(
+        content: Text('Bon de Retour ${note.returnNumber} enregistré en Brouillon (en attente de sync)'),
+        backgroundColor: AppColors.warning,
+        duration: const Duration(seconds: 4),
+      ));
+      return;
+    }
 
     if (_isEditing) {
       bloc.add(UpdateReturnNote(note));

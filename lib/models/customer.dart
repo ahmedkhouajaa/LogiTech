@@ -39,6 +39,7 @@ class Customer {
   final String priceList;
   final String? privateNote;
   final bool isDefault;
+  final bool isLead;
 
   final String? enterpriseId;
 
@@ -59,6 +60,7 @@ class Customer {
     this.enterpriseId,
     this.isDeleted = false,
     this.isDefault = false,
+    this.isLead = false,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.customerType = 'entreprise',
@@ -126,6 +128,9 @@ class Customer {
         'private_note': privateNote,
         'is_default': isDefault ? 1 : 0,
         'isDefault': isDefault,
+        'is_lead': isLead ? 1 : 0,
+        'isLead': isLead,
+        'is_converted_lead': (!isLead && code.toUpperCase().startsWith('LEAD')) ? 1 : 0,
       };
 
   factory Customer.fromMap(Map<String, dynamic> map) => Customer(
@@ -145,6 +150,9 @@ class Customer {
         enterpriseId: (map['enterprise_id'] ?? map['enterpriseId'])?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['isDeleted'] == 1 || map['isDeleted'] == true,
         isDefault: map['is_default'] == 1 || map['is_default'] == true || map['isDefault'] == true || (map['name']?.toString().trim().toLowerCase() == 'client passager'),
+        isLead: (map['is_lead'] == 1 || map['is_lead'] == true || map['isLead'] == true || map['isLead'] == 1) ||
+            ((map['is_converted_lead'] != 1 && map['is_converted_lead'] != true) &&
+             (map['code']?.toString() ?? '').toUpperCase().startsWith('LEAD')),
         createdAt: DateTime.tryParse(map['created_at']?.toString() ?? (map['createdAt']?.toString() ?? '')) ?? DateTime.now(),
         updatedAt: DateTime.tryParse(map['updated_at']?.toString() ?? (map['updatedAt']?.toString() ?? '')) ?? DateTime.now(),
         customerType: map['customer_type']?.toString() ?? (map['customerType']?.toString() ?? (map['type']?.toString() ?? 'entreprise')),
@@ -187,6 +195,7 @@ class Customer {
     String? enterpriseId,
     bool? isDeleted,
     bool? isDefault,
+    bool? isLead,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? customerType,
@@ -228,6 +237,7 @@ class Customer {
         enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         isDefault: isDefault ?? this.isDefault,
+        isLead: isLead ?? this.isLead,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         customerType: customerType ?? this.customerType,

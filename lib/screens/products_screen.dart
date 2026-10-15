@@ -28,6 +28,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final Set<String> _selectedProductIds = {};
+  bool _isFirstLoad = true;
   String _search = '';
   final ScrollController _scrollController = ScrollController();
 
@@ -66,23 +67,35 @@ class _ProductsScreenState extends State<ProductsScreen> {
         // Modern Action Bar
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              BlocBuilder<ProductsBloc, ProductsState>(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 880;
+              final canCreate = PermissionService.instance.canCreate(UserPermissionResources.productsList);
+
+              final searchBarWidget = SizedBox(
+                width: isNarrow ? null : 240,
+                height: 34,
+                child: AppSearchBar(
+                  onChanged: (v) => setState(() => _search = v.toLowerCase()),
+                ),
+              );
+
+              return BlocBuilder<ProductsBloc, ProductsState>(
                 buildWhen: (prev, curr) => curr is ProductsLoaded || curr is ProductsLoading || curr is ProductsInitial,
                 builder: (context, state) {
-                  final totalCount = state is ProductsLoaded
+                  final totalCount = (!_isFirstLoad && state is ProductsLoaded)
                       ? (state.totalCount > state.products.length ? state.totalCount : state.products.length)
                       : null;
-                  final matchingCount = (state is ProductsLoaded && _search.isNotEmpty)
+                  final matchingCount = (!_isFirstLoad && state is ProductsLoaded && _search.isNotEmpty)
                       ? state.products.where((p) =>
                           p.name.toLowerCase().contains(_search) ||
                           p.code.toLowerCase().contains(_search) ||
                           (p.reference?.toLowerCase().contains(_search) ?? false)).length
                       : null;
 
-                  return Column(
+                  final titleSection = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -119,145 +132,179 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                     ],
                   );
-                },
-              ),
-              const Spacer(),
-              if (_selectedProductIds.isNotEmpty) ...[
-                _buildBulkActionsDropdown(),
-                const SizedBox(width: 10),
-              ],
-              SizedBox(
-                width: 250,
-                height: 32,
-                child: AppSearchBar(
-                  onChanged: (v) => setState(() => _search = v.toLowerCase()),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // ... Actions Button Popup
-              PopupMenuButton<String>(
-                tooltip: 'Actions Import / Export Articles',
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                color: AppColors.surface,
-                elevation: 4,
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
-                      const SizedBox(width: 6),
-                      Text(
-                        context.tr('Actions'),
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                itemBuilder: (ctx) {
-                  final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
-                  final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
-                  final items = <PopupMenuEntry<String>>[];
-                  if (canExport) {
-                    items.addAll([
-                      PopupMenuItem(
-                        value: 'export_excel',
-                        child: Text(ctx.tr('Exporter Excel'), style: const TextStyle(fontSize: 13)),
-                      ),
-                      PopupMenuItem(
-                        value: 'export_csv',
-                        child: Text(ctx.tr('Exporter CSV'), style: const TextStyle(fontSize: 13)),
-                      ),
-                      PopupMenuItem(
-                        value: 'export_json',
-                        child: Text(ctx.tr('Exporter JSON'), style: const TextStyle(fontSize: 13)),
-                      ),
-                    ]);
-                  }
-                  if (canExport && canImport) {
-                    items.add(const PopupMenuDivider());
-                  }
-                  if (canImport) {
-                    items.add(
-                      PopupMenuItem(
-                        value: 'import_excel',
-                        child: Text(
-                          ctx.tr('Importer depuis Excel'),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    );
-                  }
-                  return items;
-                },
-                onSelected: (val) async {
-                  final state = context.read<ProductsBloc>().state;
-                  final products = state is ProductsLoaded ? state.products : <Product>[];
 
-                  if (val == 'export_excel') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ArticleImportExportService.instance.exportArticlesToExcel(
-                      context: context,
-                      products: products,
-                    );
-                  } else if (val == 'export_csv') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ArticleImportExportService.instance.exportArticlesToCsv(
-                      context: context,
-                      products: products,
-                    );
-                  } else if (val == 'export_json') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ArticleImportExportService.instance.exportArticlesToJson(
-                      context: context,
-                      products: products,
-                    );
-                  } else if (val == 'import_excel') {
-                    if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
-                    ArticleImportDialog.show(
-                      context,
-                      onImportSuccess: () {
-                        context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 10));
-                        context.read<StockBloc>().add(LoadStock());
-                      },
+                  final actionsDropdown = PopupMenuButton<String>(
+                    tooltip: 'Actions Import / Export Articles',
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    color: AppColors.surface,
+                    elevation: 4,
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.tr('Actions'),
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (ctx) {
+                      final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+                      final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+                      final items = <PopupMenuEntry<String>>[];
+                      if (canExport) {
+                        items.addAll([
+                          PopupMenuItem(
+                            value: 'export_excel',
+                            child: Text(ctx.tr('Exporter Excel'), style: const TextStyle(fontSize: 13)),
+                          ),
+                          PopupMenuItem(
+                            value: 'export_csv',
+                            child: Text(ctx.tr('Exporter CSV'), style: const TextStyle(fontSize: 13)),
+                          ),
+                          PopupMenuItem(
+                            value: 'export_json',
+                            child: Text(ctx.tr('Exporter JSON'), style: const TextStyle(fontSize: 13)),
+                          ),
+                        ]);
+                      }
+                      if (canExport && canImport) {
+                        items.add(const PopupMenuDivider());
+                      }
+                      if (canImport) {
+                        items.add(
+                          PopupMenuItem(
+                            value: 'import_excel',
+                            child: Text(
+                              ctx.tr('Importer depuis Excel'),
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        );
+                      }
+                      return items;
+                    },
+                    onSelected: (val) async {
+                      if (val == 'export_excel') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ArticleImportExportService.instance.exportArticlesToExcel(
+                          context: context,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_csv') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ArticleImportExportService.instance.exportArticlesToCsv(
+                          context: context,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_json') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ArticleImportExportService.instance.exportArticlesToJson(
+                          context: context,
+                          exportAll: true,
+                        );
+                      } else if (val == 'import_excel') {
+                        if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+                        ArticleImportDialog.show(
+                          context,
+                          onImportSuccess: () {
+                            context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 10));
+                            context.read<StockBloc>().add(LoadStock());
+                          },
+                        );
+                      }
+                    },
+                  );
+
+                  final newProductBtn = canCreate
+                      ? ElevatedButton.icon(
+                          onPressed: () => _navigateToCreate(context, null),
+                          icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                          label: Text(context.tr('Nouvel Article'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleSection,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (_selectedProductIds.isNotEmpty) ...[
+                              _buildBulkActionsDropdown(),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(child: searchBarWidget),
+                            const SizedBox(width: 8),
+                            actionsDropdown,
+                            if (canCreate) ...[
+                              const SizedBox(width: 8),
+                              newProductBtn,
+                            ],
+                          ],
+                        ),
+                      ],
                     );
                   }
+
+                  return Row(
+                    children: [
+                      titleSection,
+                      const Spacer(),
+                      if (_selectedProductIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      searchBarWidget,
+                      const SizedBox(width: 10),
+                      actionsDropdown,
+                      if (canCreate) ...[
+                        const SizedBox(width: 10),
+                        newProductBtn,
+                      ],
+                    ],
+                  );
                 },
-              ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.productsList)) ...[
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: () => _navigateToCreate(context, null),
-                  icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                  label: Text(context.tr('Nouvel Article'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-              ],
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
         
         // Data List
         Expanded(
-          child: BlocBuilder<ProductsBloc, ProductsState>(
+          child: BlocConsumer<ProductsBloc, ProductsState>(
+            listener: (context, state) {
+              if (_isFirstLoad && (state is ProductsLoaded || state is ProductsError)) {
+                setState(() {
+                  _isFirstLoad = false;
+                });
+              }
+            },
             builder: (context, state) {
-                  if (state is ProductsLoading || state is ProductsInitial) {
+                  if (_isFirstLoad || state is ProductsLoading || state is ProductsInitial) {
                     return AppShimmer(
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),

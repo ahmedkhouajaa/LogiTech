@@ -60,6 +60,92 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
     );
   }
 
+  List<PopupMenuEntry<String>> _buildMenuItems(
+    BuildContext context,
+    Enterprise current,
+    List<Enterprise> enterprises,
+  ) {
+    final isAdmin = PermissionService.instance.isAdmin || EnterpriseService.instance.enterprises.isEmpty;
+    return [
+      PopupMenuItem<String>(
+        enabled: false,
+        child: Text(
+          context.tr('MES ENTREPRISES'),
+          style: TextStyle(
+            color: AppColors.textTertiary,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ),
+      ...enterprises.map((e) {
+        final isSelected = e.id == current.id;
+        return PopupMenuItem<String>(
+          value: e.id,
+          child: Row(
+            children: [
+              Icon(
+                isSelected ? Icons.check_circle_rounded : Icons.business_rounded,
+                size: 18,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  e.name,
+                  style: TextStyle(
+                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+      if (isAdmin) ...[
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: '__create_new__',
+          child: Row(
+            children: [
+              Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                context.tr('Créer une entreprise'),
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
+  void _handleEnterpriseSelected(BuildContext context, String value) {
+    if (value == '__create_new__') {
+      if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('Action réservée aux administrateurs')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+      showCreateEnterpriseDialog(context);
+    } else {
+      context.read<EnterpriseBloc>().add(SwitchEnterprise(value));
+    }
+  }
+
   Widget _buildDesktopSwitcher(
     BuildContext context,
     Enterprise current,
@@ -67,21 +153,44 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
   ) {
     if (isCollapsed) {
       return Tooltip(
-        message: current.name,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            gradient: AppGradients.primary,
+        message: '${current.name} • ${context.tr("Changer d'entreprise")}',
+        waitDuration: const Duration(milliseconds: 300),
+        child: PopupMenuButton<String>(
+          tooltip: '',
+          offset: const Offset(54, 0),
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(color: AppColors.border, width: 1.5),
           ),
-          child: Center(
-            child: Text(
-              current.name.isNotEmpty ? current.name[0].toUpperCase() : 'E',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+          onSelected: (value) => _handleEnterpriseSelected(context, value),
+          itemBuilder: (context) => _buildMenuItems(context, current, enterprises),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: AppGradients.primary,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1.2,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                current.name.isNotEmpty ? current.name[0].toUpperCase() : 'E',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
@@ -90,93 +199,15 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
     }
 
     return PopupMenuButton<String>(
-      tooltip: context.tr('Changer d\'entreprise'),
+      tooltip: '',
       offset: const Offset(0, 45),
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+        side: BorderSide(color: AppColors.border, width: 1.5),
       ),
-      onSelected: (value) {
-        if (value == '__create_new__') {
-          if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.tr('Action réservée aux administrateurs')),
-                backgroundColor: AppColors.error,
-              ),
-            );
-            return;
-          }
-          showCreateEnterpriseDialog(context);
-        } else {
-          context.read<EnterpriseBloc>().add(SwitchEnterprise(value));
-        }
-      },
-      itemBuilder: (context) {
-        final isAdmin = PermissionService.instance.isAdmin || EnterpriseService.instance.enterprises.isEmpty;
-        return [
-          PopupMenuItem<String>(
-            enabled: false,
-            child: Text(
-              context.tr('MES ENTREPRISES'),
-              style: TextStyle(
-                color: AppColors.textTertiary,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.1,
-              ),
-            ),
-          ),
-          ...enterprises.map((e) {
-            final isSelected = e.id == current.id;
-            return PopupMenuItem<String>(
-              value: e.id,
-              child: Row(
-                children: [
-                  Icon(
-                    isSelected ? Icons.check_circle_rounded : Icons.business_rounded,
-                    size: 18,
-                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      e.name,
-                      style: TextStyle(
-                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 13,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          if (isAdmin) ...[
-            const PopupMenuDivider(),
-            PopupMenuItem<String>(
-              value: '__create_new__',
-              child: Row(
-                children: [
-                  Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
-                  const SizedBox(width: 10),
-                  Text(
-                    context.tr('Créer une entreprise'),
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ];
-      },
+      onSelected: (value) => _handleEnterpriseSelected(context, value),
+      itemBuilder: (context) => _buildMenuItems(context, current, enterprises),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(

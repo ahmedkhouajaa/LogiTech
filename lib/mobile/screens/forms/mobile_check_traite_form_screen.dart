@@ -14,6 +14,7 @@ import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../services/trial_service.dart';
+import '../../../../services/error_handler.dart';
 
 class MobileCheckTraiteFormScreen extends StatefulWidget {
   final CheckTraite? existing;
@@ -147,10 +148,9 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
         ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: $e'),
-        backgroundColor: AppColors.error,
-      ));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

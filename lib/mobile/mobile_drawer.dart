@@ -37,7 +37,11 @@ class _MobileDrawerState extends State<MobileDrawer> {
         AppModulesService.instance.notifier,
       ]),
       builder: (context, _) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+        final drawerWidth = (320.0 * textScale).clamp(300.0, 380.0);
+
         return Drawer(
+          width: drawerWidth,
           backgroundColor: AppColors.sidebarBg,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.only(
@@ -56,9 +60,19 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     children: [
                       _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
                       _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports et statistiques'),
-                      // Section 1: Documents commerciaux
-                      if (_hasAnyVisibleGroup(['ventes', 'achats', 'paiements', 'tresorerie', 'retenue_source', 'contacts', 'articles', 'stock']))
+                      _buildItem(AppModule.eInvoice, Icons.receipt_long_rounded, 'Facture électronique'),
+                      // Section 1: Documents commerciaux & CRM
+                      if (_hasAnyVisibleGroup(['crm', 'ventes', 'achats', 'paiements', 'tresorerie', 'retenue_source', 'contacts', 'articles', 'stock']))
                         const _DrawerDivider(),
+                      _buildGroup('crm', 'CRM', Icons.hub_rounded, [
+                        _buildItem(AppModule.crmDashboard, Icons.dashboard_customize_rounded, 'Tableau de bord CRM'),
+                        _buildItem(AppModule.crmPipeline, Icons.view_kanban_rounded, 'Pipeline de vente'),
+                        _buildItem(AppModule.crmOpportunities, Icons.auto_graph_rounded, 'Opportunités'),
+                        _buildItem(AppModule.crmLeads, Icons.contact_phone_rounded, 'Prospects (Leads)'),
+                        _buildItem(AppModule.crmAutomations, Icons.smart_toy_rounded, 'Automatisations'),
+                        _buildItem(AppModule.crmReports, Icons.insights_rounded, 'Rapports CRM'),
+                        _buildItem(AppModule.crmEmails, Icons.mark_email_read_rounded, 'Intégration email'),
+                      ]),
                       _buildGroup('ventes', 'Ventes', Icons.trending_up_rounded, [
                         _buildItem(AppModule.quotes, Icons.description_rounded, 'Devis'),
                         _buildItem(AppModule.customerOrders, Icons.shopping_cart_rounded, 'Commandes Client'),
@@ -104,10 +118,33 @@ class _MobileDrawerState extends State<MobileDrawer> {
                         _buildItem(AppModule.inventorySheet, Icons.fact_check_rounded, 'Fiche d\'inventaire'),
                         _buildItem(AppModule.warehouses, Icons.warehouse_rounded, 'Entrepots'),
                       ]),
-                      // Section 2: Projets + Paramètres
-                      if (_hasAnyVisibleDrawerItem([AppModule.projects]))
+                      _buildGroup('production', 'Production', Icons.precision_manufacturing_rounded, [
+                        _buildItem(AppModule.productionDashboard, Icons.dashboard_customize_rounded, 'Tableau de bord Production'),
+                        _buildItem(AppModule.productionOrders, Icons.assignment_rounded, 'Ordres de fabrication'),
+                        _buildItem(AppModule.productionBoms, Icons.account_tree_rounded, 'Nomenclatures (BOM)'),
+                        _buildItem(AppModule.productionPlanning, Icons.calendar_month_rounded, 'Planification de production'),
+                        _buildItem(AppModule.productionCosts, Icons.price_check_rounded, 'Suivi des coûts'),
+                        _buildItem(AppModule.productionQuality, Icons.verified_rounded, 'Contrôle qualité'),
+                        _buildItem(AppModule.productionReports, Icons.bar_chart_rounded, 'Rapports de rendement'),
+                        _buildItem(AppModule.productionWorkcenters, Icons.precision_manufacturing_outlined, 'Postes de travail'),
+                      ]),
+                      // Section 2: Projets & RH
+                      if (_hasAnyVisibleDrawerItem([AppModule.projects]) || _hasAnyVisibleDrawerItem([AppModule.hrDashboard, AppModule.hrEmployees, AppModule.hrLeaves, AppModule.hrAttendances, AppModule.hrPayroll, AppModule.hrCnssDeclaration, AppModule.hrDocuments, AppModule.hrAccounting, AppModule.hrLegalEntity, AppModule.hrEstablishments, AppModule.hrManagers]))
                         const _DrawerDivider(),
                       _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
+                      _buildGroup('rh', 'RH & Paie', Icons.badge_rounded, [
+                        _buildItem(AppModule.hrDashboard, Icons.dashboard_outlined, 'Tableau de bord'),
+                        _buildItem(AppModule.hrEmployees, Icons.people_outline_rounded, 'Personnel (Employés)'),
+                        _buildItem(AppModule.hrLeaves, Icons.event_available_rounded, 'Congés & Absences'),
+                        _buildItem(AppModule.hrAttendances, Icons.access_time_rounded, 'Présences / Pointages'),
+                        _buildItem(AppModule.hrPayroll, Icons.payments_rounded, 'Fiches de Paie'),
+                        _buildItem(AppModule.hrCnssDeclaration, Icons.assignment_turned_in_rounded, 'Déclaration CNSS'),
+                        _buildItem(AppModule.hrDocuments, Icons.folder_shared_rounded, 'Documents'),
+                        _buildItem(AppModule.hrAccounting, Icons.account_balance_rounded, 'Comptabilité'),
+                        _buildItem(AppModule.hrLegalEntity, Icons.account_balance_outlined, 'Entité juridique'),
+                        _buildItem(AppModule.hrEstablishments, Icons.apartment_rounded, 'Établissements'),
+                        _buildItem(AppModule.hrManagers, Icons.manage_accounts_outlined, 'Gestionnaires'),
+                      ]),
                       // Paramètres always visible
                       const _DrawerDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
@@ -123,6 +160,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       _buildItem(AppModule.customStatuses, Icons.bookmarks_outlined, 'Statuts personnalisés'),
                       _buildItem(AppModule.importExport, Icons.sync_alt_rounded, 'Import / Export'),
                       _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
+                      _buildItem(AppModule.affiliate, Icons.handshake_rounded, 'Affiliation & Parrainage'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
                       _buildItem(AppModule.userTracking, Icons.manage_history_rounded, 'Traçabilité Utilisateurs'),
@@ -137,7 +175,9 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     height: 44,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        Navigator.pop(context);
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        }
                         context.read<AuthBloc>().add(AuthLogoutRequested());
                       },
                       icon: const Icon(Icons.logout_rounded, size: 18),
@@ -190,8 +230,10 @@ class _MobileDrawerState extends State<MobileDrawer> {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
             widget.onModuleSelected(module);
-            Navigator.pop(context);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -216,6 +258,8 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       fontSize: 13,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (isActive)

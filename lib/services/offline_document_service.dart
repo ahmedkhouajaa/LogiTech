@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../utils/helpers.dart';
+import '../utils/constants.dart';
 import 'firestore_repository.dart';
 import 'connectivity_service.dart';
 
@@ -100,6 +101,8 @@ class OfflineDocumentService {
       'supplier_credit_notes',
       'return_notes',
       'supplier_returns',
+      'stock_movements',
+      'payments',
     ];
 
     int totalSynced = 0;
@@ -113,7 +116,18 @@ class OfflineDocumentService {
       for (final map in pending) {
         try {
           final docId = map['id'] as String;
-          int seq = 0;
+
+          if (collection == 'stock_movements') {
+            map['is_synced'] = 1;
+            map['updated_at'] = DateTime.now().toIso8601String();
+            await FirestoreRepository.instance.saveDocument('stock_movements', docId, map);
+            await removePendingDocument('stock_movements', docId);
+            totalSynced++;
+            debugPrint('✅ [OFFLINE DOC] Synced stock_movement document -> $docId');
+            continue;
+          }
+
+          int? seq;
           String prefix = 'DOC';
 
           switch (collection) {
@@ -123,7 +137,7 @@ class OfflineDocumentService {
               break;
             case 'invoices':
               seq = await DatabaseHelper.instance.getNextInvoiceSequence();
-              prefix = 'FA';
+              prefix = 'FAC';
               break;
             case 'delivery_notes':
               seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
@@ -173,7 +187,7 @@ class OfflineDocumentService {
               break;
             case 'supplier_credit_notes':
               seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
-              prefix = 'AV';
+              prefix = 'AVF';
               break;
             case 'return_notes':
               seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
@@ -181,14 +195,24 @@ class OfflineDocumentService {
               break;
             case 'supplier_returns':
               seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
-              prefix = 'RF';
+              prefix = 'BRF';
+              break;
+            case 'payments':
+              seq = await DatabaseHelper.instance.getNextPaymentSequence();
+              prefix = (map['direction'] == 'encaissement') ? DocPrefix.paymentIn : DocPrefix.paymentOut;
               break;
           }
 
-          final officialNumber = generateDocNumber(prefix, seq);
+          if (seq == null) {
+            debugPrint('⚠️ [OFFLINE DOC] Failed to get server sequence for $collection (network weak), halting sync batch.');
+            break;
+          }
+
+          final officialNumber = generateDocNumber(prefix, seq, docCollection: collection);
           map['number'] = officialNumber;
           map['transaction_number'] = officialNumber;
           map['transactionNumber'] = officialNumber;
+          map['payment_number'] = officialNumber;
           map['is_synced'] = 1;
           map['updated_at'] = DateTime.now().toIso8601String();
 

@@ -1,3 +1,4 @@
+import 'traite_editor_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
@@ -58,8 +59,10 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   late TextEditingController _amountCtrl;
   String? _selectedAccountId;
   final _referenceCtrl = TextEditingController();
+  late TextEditingController _issuerCtrl;
+  late TextEditingController _bankCtrl;
   DateTime _paymentDate = DateTime.now();
-  DateTime _maturityDate = DateTime.now().add(const Duration(days: 30));
+  DateTime? _maturityDate;
   final _notesCtrl = TextEditingController();
 
   String? get _selectedAccountName {
@@ -93,6 +96,10 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   @override
   void initState() {
     super.initState();
+    _issuerCtrl = TextEditingController(
+      text: widget.purchaseInvoice.supplierName?.isNotEmpty == true ? widget.purchaseInvoice.supplierName! : 'Fournisseur passager',
+    );
+    _bankCtrl = TextEditingController();
     context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
     _updateAmountField();
     _loadTreasuryAccounts();
@@ -134,12 +141,35 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   void dispose() {
     _amountCtrl.dispose();
     _referenceCtrl.dispose();
+    _issuerCtrl.dispose();
+    _bankCtrl.dispose();
     _notesCtrl.dispose();
     _animController.dispose();
     super.dispose();
   }
 
 
+
+  void _openTraiteEditor() {
+    TraiteEditorDialog.show(
+      context,
+      initialAmount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0,
+      initialNumber: _referenceCtrl.text,
+      initialIssuer: _issuerCtrl.text,
+      initialRecipient: 'Notre Société',
+      initialCreationDate: _paymentDate,
+      initialMaturityDate: _maturityDate,
+      onApply: (data) {
+        setState(() {
+          if (data.documentNumber.isNotEmpty) _referenceCtrl.text = data.documentNumber;
+          if (data.amount > 0) _amountCtrl.text = data.amount.toStringAsFixed(3).replaceAll('.', ',');
+          if (data.issuerName.isNotEmpty) _issuerCtrl.text = data.issuerName;
+          _paymentDate = data.creationDate;
+          _maturityDate = data.maturityDate;
+        });
+      },
+    );
+  }
 
   void _save() async {
     if (_isSaving) return;
@@ -176,15 +206,24 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
         final docNum = refText.isNotEmpty
             ? refText
             : '${_paymentMethod == 'traite' ? 'TR' : 'CHQ'}-${now.millisecondsSinceEpoch % 1000000}';
+        final partyName = _paymentMethod == 'traite' && _issuerCtrl.text.trim().isNotEmpty
+            ? _issuerCtrl.text.trim()
+            : (widget.purchaseInvoice.supplierName?.isNotEmpty == true ? widget.purchaseInvoice.supplierName! : 'Fournisseur passager');
+        final bank = _paymentMethod == 'cheque' && _bankCtrl.text.trim().isNotEmpty
+            ? _bankCtrl.text.trim()
+            : null;
+        final maturity = _maturityDate ?? _paymentDate;
+
         final checkTraite = CheckTraite(
           documentNumber: docNum,
           type: _paymentMethod,
           entityType: 'fournisseur',
           partyId: widget.purchaseInvoice.supplierId,
-          partyName: widget.purchaseInvoice.supplierName ?? '',
+          partyName: partyName,
+          bankName: bank,
           amount: parsedAmount,
           issueDate: _paymentDate,
-          maturityDate: _maturityDate,
+          maturityDate: maturity,
           status: 'en_attente',
           compteTresorerieId: _selectedAccountId,
           compteTresorerieName: _selectedAccountName,
@@ -941,6 +980,9 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
               ),
               SizedBox(width: 10),
               Text('Détails du paiement', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const Spacer(),
+              if (_paymentMethod == 'traite')
+                buildTraiteEditorButton(isSmall: true, onTap: _openTraiteEditor),
             ],
           ),
           SizedBox(height: 20),
@@ -965,25 +1007,71 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
             Icons.account_balance_outlined,
             _buildTreasuryAccountDropdown(),
           ),
-          SizedBox(height: 16),
-          _buildMobileFormField(
-            'Référence',
-            Icons.tag,
-            TextField(
-              controller: _referenceCtrl,
-              decoration: _mobileInputDecoration('Saisir la référence'),
-            ),
-          ),
-          if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
+          if (_paymentMethod == 'traite') ...[
             SizedBox(height: 16),
             _buildMobileFormField(
-              'Date d\'Échéance *',
+              'Émetteur / Propriétaire de la traite',
+              Icons.person_outline,
+              TextField(
+                controller: _issuerCtrl,
+                decoration: _mobileInputDecoration('Fournisseur passager'),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Numéro de traite',
+              Icons.tag,
+              TextField(
+                controller: _referenceCtrl,
+                decoration: _mobileInputDecoration('Saisir le numéro de traite'),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Date de création de traite',
+              Icons.calendar_today_outlined,
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _paymentDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (d != null) setState(() => _paymentDate = d);
+                },
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: AppColors.surfaceAlt.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Échéance (facultatif)',
               Icons.event_available_outlined,
               InkWell(
                 onTap: () async {
                   final d = await showDatePicker(
                     context: context,
-                    initialDate: _maturityDate,
+                    initialDate: _maturityDate ?? DateTime.now().add(const Duration(days: 30)),
                     firstDate: DateTime(2020),
                     lastDate: DateTime(2035),
                   );
@@ -1002,7 +1090,144 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                       Icon(Icons.event, size: 18, color: AppColors.primary),
                       const SizedBox(width: 10),
                       Text(
-                        DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate),
+                        _maturityDate != null
+                            ? DateFormat('d MMMM yyyy', 'fr_FR').format(_maturityDate!)
+                            : 'Sélectionner la date',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: _maturityDate != null ? AppColors.textPrimary : AppColors.textTertiary,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_maturityDate != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _maturityDate = null),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(Icons.clear, size: 16, color: AppColors.textTertiary),
+                          ),
+                        ),
+                      Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ] else if (_paymentMethod == 'cheque') ...[
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Banque émettrice',
+              Icons.account_balance,
+              Autocomplete<String>(
+                initialValue: TextEditingValue(text: _bankCtrl.text),
+                optionsBuilder: (TextEditingValue val) {
+                  if (val.text.isEmpty) return AppColors.tunisianBanks;
+                  return AppColors.tunisianBanks.where((b) => b.toLowerCase().contains(val.text.toLowerCase()));
+                },
+                onSelected: (String sel) {
+                  _bankCtrl.text = sel;
+                },
+                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  controller.addListener(() {
+                    _bankCtrl.text = controller.text;
+                  });
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: _mobileInputDecoration('Saisir la banque émettrice').copyWith(
+                      suffixIcon: const Icon(Icons.unfold_more, size: 18),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Numéro de chèque',
+              Icons.tag,
+              TextField(
+                controller: _referenceCtrl,
+                decoration: _mobileInputDecoration('Saisir le numéro de chèque'),
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Date de paiement',
+              Icons.calendar_today_outlined,
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _paymentDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2035),
+                  );
+                  if (d != null) setState(() => _paymentDate = d);
+                },
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: AppColors.surfaceAlt.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            if (_paymentMethod != 'especes') ...[
+              SizedBox(height: 16),
+              _buildMobileFormField(
+                'Référence',
+                Icons.tag,
+                TextField(
+                  controller: _referenceCtrl,
+                  decoration: _mobileInputDecoration('Saisir la référence'),
+                ),
+              ),
+            ],
+            SizedBox(height: 16),
+            _buildMobileFormField(
+              'Date de paiement',
+              Icons.calendar_today_outlined,
+              InkWell(
+                onTap: () async {
+                  final d = await showDatePicker(
+                    context: context,
+                    initialDate: _paymentDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (d != null) setState(() => _paymentDate = d);
+                },
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: AppColors.surfaceAlt.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate),
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                       ),
                       const Spacer(),
@@ -1013,43 +1238,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
               ),
             ),
           ],
-          SizedBox(height: 16),
-          _buildMobileFormField(
-            'Date de paiement',
-            Icons.calendar_today_outlined,
-            InkWell(
-              onTap: () async {
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: _paymentDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                );
-                if (d != null) setState(() => _paymentDate = d);
-              },
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  color: AppColors.surfaceAlt.withOpacity(0.5),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.event, size: 18, color: AppColors.primary),
-                    SizedBox(width: 10),
-                    Text(
-                      DateFormat('dd MMM yyyy', 'fr_FR').format(_paymentDate),
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    Spacer(),
-                    Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
-                  ],
-                ),
-              ),
-            ),
-          ),
           SizedBox(height: 16),
           _buildMobileFormField(
             'Notes',
@@ -1434,8 +1622,10 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                   ),
                                   Row(
                                     children: [
-                                      IconButton(icon: Icon(Icons.delete_outline, color: AppColors.error, size: 18), onPressed: () {}, constraints: BoxConstraints(), padding: EdgeInsets.zero),
-                                      SizedBox(width: 12),
+                                      if (_paymentMethod == 'traite') ...[
+                                        buildTraiteEditorButton(onTap: _openTraiteEditor),
+                                        const SizedBox(width: 12),
+                                      ],
                                       Icon(Icons.keyboard_arrow_up, color: AppColors.textSecondary, size: 20),
                                     ],
                                   )
@@ -1478,84 +1668,220 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                     ],
                                   ),
                                   SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFormField(
-                                          'Compte de trésorerie *',
-                                          BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                                          builder: (context, state) {
-                                            final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
-                                            String? displayName;
-                                            if (_selectedAccountId != null) {
-                                              final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
-                                              if (acc != null) displayName = '${acc.name} (${formatCurrencyDT(acc.balance)})';
-                                            }
-                                            return SearchableSelectorField(
-                                              hint: 'Sélectionner un compte',
-                                              selectedText: displayName,
-                                              onTap: () async {
-                                                final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
-                                                if (res != null) setState(() => _selectedAccountId = res);
-                                              },
-                                            );
+                                  _buildFormField(
+                                    'Compte de trésorerie *',
+                                    BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                                      builder: (context, state) {
+                                        final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
+                                        String? displayName;
+                                        if (_selectedAccountId != null) {
+                                          final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
+                                          if (acc != null) displayName = '${acc.name} (${acc.type == 'cash' ? 'Caisse' : 'Banque'})';
+                                        }
+                                        return SearchableSelectorField(
+                                          hint: 'Sélectionner un compte',
+                                          selectedText: displayName,
+                                          onTap: () async {
+                                            final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
+                                            if (res != null) setState(() => _selectedAccountId = res);
                                           },
-                                        )),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  if (_paymentMethod == 'traite') ...[
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Émetteur / Propriétaire de la traite',
+                                      TextField(
+                                        controller: _issuerCtrl,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Fournisseur passager',
+                                          border: OutlineInputBorder(),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        ),
                                       ),
-                                      SizedBox(width: 16),
-                                      Expanded(
-                                        child: _buildFormField(
-                                          'Référence',
-                                          TextField(
-                                            controller: _referenceCtrl,
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Numéro de traite',
+                                      TextField(
+                                        controller: _referenceCtrl,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Saisir le numéro de traite',
+                                          border: OutlineInputBorder(),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Date de création de traite',
+                                      InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(context: context, initialDate: _paymentDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
+                                          if (d != null) setState(() => _paymentDate = d);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate)),
+                                              Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Échéance (facultatif)',
+                                      InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(
+                                            context: context,
+                                            initialDate: _maturityDate ?? DateTime.now().add(const Duration(days: 30)),
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime(2035),
+                                          );
+                                          if (d != null) setState(() => _maturityDate = d);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                _maturityDate != null
+                                                    ? DateFormat('d MMMM yyyy', 'fr_FR').format(_maturityDate!)
+                                                    : 'Sélectionner la date',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: _maturityDate != null ? AppColors.textPrimary : AppColors.textTertiary,
+                                                ),
+                                              ),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (_maturityDate != null)
+                                                    GestureDetector(
+                                                      onTap: () => setState(() => _maturityDate = null),
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.only(right: 6),
+                                                        child: Icon(Icons.clear, size: 16, color: AppColors.textTertiary),
+                                                      ),
+                                                    ),
+                                                  Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ] else if (_paymentMethod == 'cheque') ...[
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Banque émettrice',
+                                      Autocomplete<String>(
+                                        initialValue: TextEditingValue(text: _bankCtrl.text),
+                                        optionsBuilder: (TextEditingValue val) {
+                                          if (val.text.isEmpty) return AppColors.tunisianBanks;
+                                          return AppColors.tunisianBanks.where((b) => b.toLowerCase().contains(val.text.toLowerCase()));
+                                        },
+                                        onSelected: (String sel) {
+                                          _bankCtrl.text = sel;
+                                        },
+                                        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                                          controller.addListener(() {
+                                            _bankCtrl.text = controller.text;
+                                          });
+                                          return TextField(
+                                            controller: controller,
+                                            focusNode: focusNode,
                                             decoration: const InputDecoration(
-                                              hintText: 'Saisir la référence',
+                                              hintText: 'Saisir la banque émettrice',
                                               border: OutlineInputBorder(),
                                               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                              suffixIcon: Icon(Icons.unfold_more, size: 18),
                                             ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Numéro de chèque',
+                                      TextField(
+                                        controller: _referenceCtrl,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Saisir le numéro de chèque',
+                                          border: OutlineInputBorder(),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    _buildFormField(
+                                      'Date de paiement',
+                                      InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(context: context, initialDate: _paymentDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
+                                          if (d != null) setState(() => _paymentDate = d);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate)),
+                                              Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    if (_paymentMethod != 'especes') ...[
+                                      SizedBox(height: 16),
+                                      _buildFormField(
+                                        'Référence',
+                                        TextField(
+                                          controller: _referenceCtrl,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Saisir la référence',
+                                            border: OutlineInputBorder(),
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                           ),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  if (_paymentMethod == 'cheque' || _paymentMethod == 'traite') ...[
                                     SizedBox(height: 16),
-                                    _buildFormField('Date d\'Échéance *', InkWell(
-                                      onTap: () async {
-                                        final d = await showDatePicker(context: context, initialDate: _maturityDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
-                                        if (d != null) setState(() => _maturityDate = d);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_maturityDate)),
-                                            Icon(Icons.event_available, size: 16, color: AppColors.primary),
-                                          ],
+                                    _buildFormField(
+                                      'Date de paiement',
+                                      InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(context: context, initialDate: _paymentDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                          if (d != null) setState(() => _paymentDate = d);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(DateFormat('d MMMM yyyy', 'fr_FR').format(_paymentDate)),
+                                              Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    )),
-                                  ],
-                                  SizedBox(height: 16),
-                                  _buildFormField('Date de paiement', InkWell(
-                                    onTap: () async {
-                                      final d = await showDatePicker(context: context, initialDate: _paymentDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
-                                      if (d != null) setState(() => _paymentDate = d);
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_paymentDate)),
-                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                                        ],
-                                      ),
                                     ),
-                                  )),
+                                  ],
                                   SizedBox(height: 16),
                                   _buildFormField('Notes', TextField(
                                     controller: _notesCtrl,

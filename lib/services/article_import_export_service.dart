@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../utils/file_save_helper.dart';
 import '../utils/excel_safe_helper.dart';
 import '../models/product.dart';
+import '../database/database_helper.dart';
 import 'enterprise_service.dart';
 
 /// Parsed row with validation status for article import preview
@@ -181,13 +183,107 @@ class ArticleImportExportService {
     },
   ];
 
+  // ─── 0. FETCH ALL ARTICLES ────────────────────────────────────────
+
+  /// Fetches ALL articles for the active enterprise / user from Firestore / local storage
+  Future<List<Product>> fetchAllArticles() async {
+    final entId = _currentEnterpriseId;
+    final uid = _currentUid;
+    try {
+      Query query = _firestore.collection('articles');
+      if (entId != null && entId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: entId);
+      } else if (uid != null && uid.isNotEmpty) {
+        query = query.where('userId', isEqualTo: uid);
+      }
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get().timeout(kIsWeb ? const Duration(seconds: 8) : const Duration(seconds: 15));
+      } catch (_) {
+        try {
+          snapshot = await query.get(const GetOptions(source: Source.cache));
+        } catch (_) {
+          snapshot = await query.get();
+        }
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        final results = <Product>[];
+        for (final doc in snapshot.docs) {
+          final data = Map<String, dynamic>.from(doc.data() as Map);
+          data['id'] = doc.id;
+          final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
+          if (isDel) continue;
+          try {
+            results.add(Product.fromMap(data));
+          } catch (e) {
+            debugPrint("Error parsing product in fetchAllArticles: $e");
+          }
+        }
+        if (results.isNotEmpty) {
+          results.sort((a, b) => a.code.toLowerCase().compareTo(b.code.toLowerCase()));
+          return results;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching all articles from Firestore: $e");
+    }
+
+    try {
+      final local = await DatabaseHelper.instance.getProducts();
+      final filtered = local.where((p) => !p.isDeleted).toList();
+      if (filtered.isNotEmpty) {
+        filtered.sort((a, b) => a.code.toLowerCase().compareTo(b.code.toLowerCase()));
+        return filtered;
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
   // ─── 1. EXPORT TO EXCEL / CSV / JSON ─────────────────────────────
 
   /// Exports articles to an Excel (.xlsx) file
   Future<String?> exportArticlesToExcel({
     required BuildContext context,
-    required List<Product> products,
+    List<Product>? products,
+    bool exportAll = true,
   }) async {
+    List<Product> listToExport = products ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les articles...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      final all = await fetchAllArticles();
+      if (all.isNotEmpty) {
+        listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucun article à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
     final excel = Excel.createExcel();
     const sheetName = 'Articles';
     final sheet = excel[sheetName];
@@ -222,8 +318,8 @@ class ArticleImportExportService {
     }
 
     // Data Rows
-    for (int i = 0; i < products.length; i++) {
-      final p = products[i];
+    for (int i = 0; i < listToExport.length; i++) {
+      final p = listToExport[i];
       final r = i + 1;
 
       sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: r)).value = TextCellValue(p.id);
@@ -249,18 +345,65 @@ class ArticleImportExportService {
     final timestamp = DateTime.now().toIso8601String().split('T').first;
     final fileName = 'export_articles_$timestamp.xlsx';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: Uint8List.fromList(fileBytes),
       fileName: fileName,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} articles exportés avec succès (Excel).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   /// Exports articles to CSV format
   Future<String?> exportArticlesToCsv({
     required BuildContext context,
-    required List<Product> products,
+    List<Product>? products,
+    bool exportAll = true,
   }) async {
+    List<Product> listToExport = products ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les articles...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      final all = await fetchAllArticles();
+      if (all.isNotEmpty) {
+        listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucun article à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
     final buffer = StringBuffer();
     final headers = [
       '_id',
@@ -282,7 +425,7 @@ class ArticleImportExportService {
 
     buffer.writeln(headers.join(';'));
 
-    for (final p in products) {
+    for (final p in listToExport) {
       final values = [
         p.id,
         p.code,
@@ -307,29 +450,88 @@ class ArticleImportExportService {
     final timestamp = DateTime.now().toIso8601String().split('T').first;
     final fileName = 'export_articles_$timestamp.csv';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: bytes,
       fileName: fileName,
       mimeType: 'text/csv',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} articles exportés avec succès (CSV).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   /// Exports articles to JSON format
   Future<String?> exportArticlesToJson({
     required BuildContext context,
-    required List<Product> products,
+    List<Product>? products,
+    bool exportAll = true,
   }) async {
-    final list = products.map((p) => p.toMap()).toList();
+    List<Product> listToExport = products ?? [];
+    if (exportAll || listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 12),
+                Text('Préparation de l\'exportation de tous les articles...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      final all = await fetchAllArticles();
+      if (all.isNotEmpty) {
+        listToExport = all;
+      }
+    }
+
+    if (listToExport.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Aucun article à exporter.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return null;
+    }
+
+    final list = listToExport.map((p) => p.toMap()).toList();
     final jsonStr = const JsonEncoder.withIndent('  ').convert(list);
     final bytes = Uint8List.fromList(utf8.encode(jsonStr));
     final timestamp = DateTime.now().toIso8601String().split('T').first;
     final fileName = 'export_articles_$timestamp.json';
 
-    return await FileSaveHelper.saveFile(
+    final savedPath = await FileSaveHelper.saveFile(
       bytes: bytes,
       fileName: fileName,
       mimeType: 'application/json',
     );
+
+    if (savedPath != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${listToExport.length} articles exportés avec succès (JSON).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    return savedPath;
   }
 
   // ─── 2. DOWNLOADABLE TEMPLATES (EXCEL & CSV) ─────────────────────

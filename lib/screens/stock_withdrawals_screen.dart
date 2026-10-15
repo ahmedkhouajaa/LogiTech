@@ -58,6 +58,7 @@ class StockWithdrawalsScreen extends StatefulWidget {
 }
 
 class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
+  bool _isFirstLoad = true;
   int _rowsPerPage = 20;
   int _currentPage = 0;
   
@@ -152,7 +153,14 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StockWithdrawalsBloc, StockWithdrawalsState>(
+    return BlocConsumer<StockWithdrawalsBloc, StockWithdrawalsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is StockWithdrawalsLoaded || state is StockWithdrawalsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
         List<StockWithdrawal> entries = [];
         if (state is StockWithdrawalsLoaded) {
@@ -389,7 +397,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
             Expanded(
               child: Builder(
                 builder: (context) {
-                  if (state is StockWithdrawalsLoading) {
+                  if (_isFirstLoad || state is StockWithdrawalsLoading) {
                     return Center(child: CircularProgressIndicator());
                   }
                   if (state is StockWithdrawalsError) {
@@ -952,7 +960,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               child: Builder(
                 builder: (context) {
-                  if (state is StockWithdrawalsLoading || state is StockWithdrawalsInitial) {
+                  if (_isFirstLoad || state is StockWithdrawalsLoading || state is StockWithdrawalsInitial) {
                     return ShimmerTable(
                       headerColumns: [
                         Expanded(flex: 2, child: Text(context.tr('Référence'), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),

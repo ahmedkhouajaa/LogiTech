@@ -26,6 +26,7 @@ import '../models/delivery_note.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import 'create_delivery_note_screen.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
@@ -51,6 +52,7 @@ class CustomerOrdersScreen extends StatefulWidget {
 class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   // Selection state for bulk actions
   final Set<String> _selectedOrderIds = {};
+  bool _isFirstLoad = true;
 
   // Filter state
   String? _selectedClientId;
@@ -117,10 +119,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         // Header
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 650;
+              final titleWidget = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -130,16 +132,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   const SizedBox(height: 2),
                   Text(context.tr('Gérer vos commandes client'), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
-              ),
-              Row(
-                children: [
-                  if (_selectedOrderIds.isNotEmpty) ...[
-                    _buildBulkActionsDropdown(),
-                    const SizedBox(width: 10),
-                  ],
-                  if (PermissionService.instance.canCreate(UserPermissionResources.salesOrders))
-                    AppButton(
-                      label: context.tr('Créer une Commande Client'),
+              );
+
+              final newOrderBtn = PermissionService.instance.canCreate(UserPermissionResources.salesOrders)
+                  ? AppButton(
+                      label: isNarrow ? context.tr('Nouvelle commande') : context.tr('Créer une Commande Client'),
                       icon: Icons.add_rounded,
                       onPressed: () => Navigator.push(
                         context,
@@ -156,10 +153,44 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           ),
                         ),
                       ),
+                    )
+                  : const SizedBox.shrink();
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleWidget,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_selectedOrderIds.isNotEmpty) ...[
+                          _buildBulkActionsDropdown(),
+                          const SizedBox(width: 10),
+                        ],
+                        newOrderBtn,
+                      ],
                     ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  titleWidget,
+                  Row(
+                    children: [
+                      if (_selectedOrderIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      newOrderBtn,
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -636,14 +667,21 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<CustomerOrdersBloc, CustomerOrdersState>(
+    return BlocConsumer<CustomerOrdersBloc, CustomerOrdersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is CustomerOrdersLoaded || state is CustomerOrdersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        if (state is CustomerOrdersLoading || state is CustomerOrdersInitial) {
+        if (_isFirstLoad || state is CustomerOrdersLoading || state is CustomerOrdersInitial) {
           return _buildTableShimmer();
         }
         if (state is CustomerOrdersError) {
-            return AppErrorWidget(message: state.message);
-          }
+          return AppErrorWidget(message: state.message);
+        }
         if (state is CustomerOrdersLoaded) {
           List<CustomerOrder> filteredOrders = state.orders;
           if (_selectedClientId != null && _selectedClientId != 'all') {
@@ -1192,14 +1230,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'invoices',
       docTypeName: 'Facture',
-      prefix: DocPrefix.invoice,
+      defaultPrefix: DocPrefix.invoice,
     );
-    if (seq == null) return;
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
+    if (docNumResult.cancelled) return;
+    final invoiceNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1221,20 +1260,25 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       orderId: order.id,
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
+      status: isDraft ? InvoiceStatus.draft : InvoiceStatus.unpaid,
       totalHT: order.totalHTAfterDiscount,
       totalTva: order.totalTVA,
       totalTTC: order.totalTTC,
       notes: order.notes,
       items: invoiceItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final invoicesBloc = context.read<InvoicesBloc>();
-      invoicesBloc.add(AddInvoice(invoice));
-    } catch (e) {
-      await DatabaseHelper.instance.insertInvoice(invoice);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
+    } else {
+      try {
+        final invoicesBloc = context.read<InvoicesBloc>();
+        invoicesBloc.add(AddInvoice(invoice));
+      } catch (e) {
+        await DatabaseHelper.instance.insertInvoice(invoice);
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -1246,8 +1290,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Commande convertie en facture avec succes'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft
+            ? 'Facture enregistrée en Brouillon (en attente de sync)'
+            : 'Commande convertie en facture avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }
@@ -1326,14 +1372,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DocumentNumberingService.ensureNumberSequence(
+    final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
       context: context,
       docCollection: 'delivery_notes',
       docTypeName: 'Bon de Livraison',
-      prefix: DocPrefix.deliveryNote,
+      defaultPrefix: DocPrefix.deliveryNote,
     );
-    if (seq == null) return;
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq, docCollection: 'delivery_notes');
+    if (docNumResult.cancelled) return;
+    final deliveryNumber = docNumResult.number;
+    final isDraft = docNumResult.isDraft;
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(),
@@ -1353,17 +1400,22 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       customerName: order.customerName,
       orderId: order.id,
       date: DateTime.now(),
-      status: 'delivered',
+      status: isDraft ? 'draft' : 'delivered',
       notes: order.notes,
       items: deliveryItems,
       createdAt: DateTime.now(),
+      isSynced: !isDraft,
     );
 
-    try {
-      final deliveryBloc = context.read<DeliveryNotesBloc>();
-      deliveryBloc.add(AddDeliveryNote(deliveryNote));
-    } catch (e) {
-      await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+    if (isDraft) {
+      await OfflineDocumentService.instance.savePendingDocument('delivery_notes', deliveryNote.toMap());
+    } else {
+      try {
+        final deliveryBloc = context.read<DeliveryNotesBloc>();
+        deliveryBloc.add(AddDeliveryNote(deliveryNote));
+      } catch (e) {
+        await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+      }
     }
 
     final updatedOrder = order.copyWith(
@@ -1376,8 +1428,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Commande convertie en bon de livraison avec succes'),
-        backgroundColor: AppColors.success,
+        content: Text(isDraft
+            ? 'Bon de livraison enregistré en Brouillon (en attente de sync)'
+            : 'Commande convertie en bon de livraison avec succès'),
+        backgroundColor: isDraft ? AppColors.warning : AppColors.success,
       ));
     }
   }

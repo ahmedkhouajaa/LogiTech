@@ -245,28 +245,25 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
 
     try {
       final isOnline = ConnectivityService.instance.isOnline;
+      final collectionName = widget.isExitVoucher ? 'exit_vouchers' : 'stock_withdrawals';
+      final docTypeName = widget.isExitVoucher ? 'Bon de Sortie' : 'Bon de Prélèvement';
+      final defaultPrefix = widget.isExitVoucher ? 'BS' : 'BP';
 
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'bons_sortie',
-            docTypeName: widget.isExitVoucher ? 'Bon de Sortie' : 'Bon de Prélèvement',
-            prefix: widget.isExitVoucher ? 'BS' : 'BP',
-          );
-          if (seq == null) {
-            setState(() => _isLoading = false);
-            return;
-          }
-          number = generateDocNumber(
-            widget.isExitVoucher ? 'BS' : 'BP',
-            seq,
-            docCollection: widget.isExitVoucher ? 'bons_sortie' : 'bons_prelevement',
-          );
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: widget.isExitVoucher ? 'bons_sortie' : 'bons_prelevement',
+          docTypeName: docTypeName,
+          defaultPrefix: defaultPrefix,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
         }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -292,7 +289,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
         projectId: _selectedProjectId,
         warehouseId: _selectedWarehouseId,
         date: _date,
-        status: statusStr,
+        status: isDraft ? 'draft' : statusStr,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
         timbreFiscal: _timbreFiscal,
@@ -322,14 +319,11 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
           showDiscount: item.showDiscount,
         )).toList(),
         isDeleted: widget.existing?.isDeleted ?? false,
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
       );
 
-      final collectionName = widget.isExitVoucher ? 'exit_vouchers' : 'stock_withdrawals';
-
-      if (!isOnline && !_isEditing) {
+      if (isDraft) {
         await OfflineDocumentService.instance.savePendingDocument(collectionName, note.toMap());
-        await OfflineDocumentService.instance.savePendingDocument(widget.isExitVoucher ? 'bons_sortie' : 'bons_prelevement', note.toMap());
         if (widget.isExitVoucher) {
           exitVouchersBloc.add(LoadFirstExitVouchers());
         } else {
@@ -338,8 +332,9 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
         if (mounted) {
           nav.pop();
           messenger.showSnackBar(SnackBar(
-            content: Text('Document ${note.number} enregistré hors-ligne (en attente de sync)'),
+            content: Text('${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${note.number} enregistré en Brouillon (en attente de sync)'),
             backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
           ));
         }
         return;

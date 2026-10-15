@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/payments/payments_bloc.dart';
@@ -26,6 +25,7 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
   Timer? _searchDebounce;
   String _activeFilter = 'Tous';
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -85,15 +85,22 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PaymentsBloc, PaymentsState>(
+    return BlocConsumer<PaymentsBloc, PaymentsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is PaymentsLoaded || state is PaymentsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is PaymentsLoading || state is PaymentsInitial;
+        bool isLoading = _isFirstLoad || state is PaymentsLoading || state is PaymentsInitial;
         bool isEmpty = true;
         List<Widget> cards = [];
         int totalMatchingCount = 0;
         bool isLoadingMore = false;
 
-        if (state is PaymentsLoaded) {
+        if (!_isFirstLoad && state is PaymentsLoaded) {
           final items = state.payments;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount;

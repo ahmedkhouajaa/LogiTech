@@ -23,8 +23,12 @@ import 'clients/license_extension_screen.dart';
 import 'clients/client_history_screen.dart';
 import 'clients/client_export_screen.dart';
 import 'clients/user_activation_screen.dart';
+import 'clients/user_articles_screen.dart';
+import 'clients/user_documents_manager_screen.dart';
 import '../services/user_presence_helper.dart';
 import 'firestore_metrics_screen.dart';
+import 'promo_codes_screen.dart';
+import 'affiliate_management_screen.dart';
 import '../../widgets/admin_publish_update_dialog.dart';
 
 class SupportAdminShellScreen extends StatefulWidget {
@@ -83,7 +87,12 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
   Widget build(BuildContext context) {
     final agent = FirebaseAuth.instance.currentUser;
     final agentEmail = agent?.email ?? 'support@logitech.tn';
-    final isMobile = MediaQuery.of(context).size.width < 900;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 900;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+    final double baseWidth = screenWidth >= 1600 ? 310.0 : (screenWidth >= 1200 ? 295.0 : 280.0);
+    final double desktopWidth = _isCollapsed ? 68.0 : (baseWidth * textScale).clamp(280.0, 390.0);
+    final double drawerWidth = (320.0 * textScale).clamp(300.0, 380.0);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -161,13 +170,13 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
           const SizedBox(width: 12),
         ],
       ),
-      drawer: isMobile ? Drawer(child: _buildDrawerContent(agentEmail, isDrawer: true)) : null,
+      drawer: isMobile ? Drawer(width: drawerWidth, child: _buildDrawerContent(agentEmail, isDrawer: true)) : null,
       body: Row(
         children: [
           if (!isMobile)
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: _isCollapsed ? 68 : 270,
+              width: desktopWidth,
               decoration: const BoxDecoration(
                 color: Color(0xFF0F172A),
                 border: Border(right: BorderSide(color: Color(0xFF1E293B))),
@@ -211,6 +220,10 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
         return const AllClientsScreen(key: ValueKey('clientsAll'));
       case AdminNavModule.userActivation:
         return const UserActivationScreen(key: ValueKey('userActivation'));
+      case AdminNavModule.articleUser:
+        return const UserArticlesScreen(key: ValueKey('articleUser'));
+      case AdminNavModule.userDocuments:
+        return const UserDocumentsManagerScreen(key: ValueKey('userDocuments'));
       case AdminNavModule.clientsSearch:
         return const ClientSearchScreen(key: ValueKey('clientsSearch'));
       case AdminNavModule.clientsBanned:
@@ -239,6 +252,10 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
         return const PaymentHistoryScreen(key: ValueKey('paymentHistory'));
       case AdminNavModule.paymentPlans:
         return const PaymentHistoryScreen(key: ValueKey('paymentPlans'), showPlansOnly: true);
+      case AdminNavModule.promoCodes:
+        return const PromoCodesScreen(key: ValueKey('promoCodes'));
+      case AdminNavModule.affiliateManagement:
+        return const AffiliateManagementScreen(key: ValueKey('affiliateManagement'));
 
       // Agent management
       case AdminNavModule.agentsTeam:
@@ -423,10 +440,12 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
                               _menuItem(AdminNavModule.ticketsAll, 'Tous les Tickets', Icons.all_inbox_rounded, collapsed, isDrawer),
                               const Divider(color: Color(0xFF1E293B), height: 16),
 
-                              // 3. Client Management (GESTION DES CLIENTS - 8 options)
+                              // 3. Client Management (GESTION DES CLIENTS - 10 options)
                               _sectionHeader('GESTION DES CLIENTS', collapsed),
                               _menuItem(AdminNavModule.clientsAll, 'Tous les Clients', Icons.groups_rounded, collapsed, isDrawer),
                               _menuItem(AdminNavModule.userActivation, 'User Activation', Icons.how_to_reg_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.articleUser, 'Article User', Icons.inventory_2_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.userDocuments, 'Documents Utilisateur', Icons.folder_shared_rounded, collapsed, isDrawer),
                               _menuItem(AdminNavModule.clientsSearch, 'Rechercher un Client', Icons.person_search_rounded, collapsed, isDrawer),
                               _menuItem(AdminNavModule.clientsBanned, 'Clients Bannis/Désactivés', Icons.block_rounded, collapsed, isDrawer, badge: badgeCounts['bannedClients'], badgeColor: const Color(0xFFEF4444)),
                               _menuItem(AdminNavModule.clientsPasswords, 'Gestion Mots de Passe', Icons.key_rounded, collapsed, isDrawer),
@@ -440,6 +459,8 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
                               _menuItem(AdminNavModule.paymentValidation, 'Validation Paiements', Icons.verified_rounded, collapsed, isDrawer, badge: badgeCounts['pendingPayments'], badgeColor: const Color(0xFFF59E0B)),
                               _menuItem(AdminNavModule.paymentHistory, 'Historique Paiements', Icons.receipt_long_rounded, collapsed, isDrawer),
                               _menuItem(AdminNavModule.paymentPlans, 'Plans & Abonnements', Icons.card_membership_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.promoCodes, 'Codes Promo & Offres', Icons.local_offer_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.affiliateManagement, 'Affiliation & Parrainage', Icons.handshake_rounded, collapsed, isDrawer),
                               const Divider(color: Color(0xFF1E293B), height: 16),
 
                               // 5. Agent Management (SuperAdmin)
@@ -547,58 +568,65 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
     Color? badgeColor,
   }) {
     final isSelected = _activeModule == module;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+    final itemMinHeight = (38.0 * textScale).clamp(38.0, 52.0);
 
-    return InkWell(
-      onTap: () {
-        setState(() => _activeModule = module);
-        if (isDrawer) {
-          Navigator.pop(context);
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 38,
-        margin: const EdgeInsets.symmetric(vertical: 1.5),
-        padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              size: 17,
-              color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-            ),
-            if (!collapsed) ...[
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-                    fontSize: 12.5,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 500),
+      child: InkWell(
+        onTap: () {
+          setState(() => _activeModule = module);
+          if (isDrawer) {
+            Navigator.pop(context);
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: BoxConstraints(minHeight: itemMinHeight),
+          margin: const EdgeInsets.symmetric(vertical: 1.5),
+          padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF2563EB) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
               ),
-              if (badge != null && badge > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    color: badgeColor ?? const Color(0xFF3B82F6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+              if (!collapsed) ...[
+                const SizedBox(width: 10),
+                Expanded(
                   child: Text(
-                    badge.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    label,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
+                      fontSize: 12.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (badge != null && badge > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: badgeColor ?? const Color(0xFF3B82F6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      badge.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -611,39 +639,47 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
     bool isDrawer, {
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 38,
-        margin: const EdgeInsets.symmetric(vertical: 1.5),
-        padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              size: 17,
-              color: const Color(0xFF60A5FA),
-            ),
-            if (!collapsed) ...[
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Color(0xFFCBD5E1),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.normal,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+    final itemMinHeight = (38.0 * textScale).clamp(38.0, 52.0);
+
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 500),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: BoxConstraints(minHeight: itemMinHeight),
+          margin: const EdgeInsets.symmetric(vertical: 1.5),
+          padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: const Color(0xFF60A5FA),
               ),
+              if (!collapsed) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Color(0xFFCBD5E1),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -662,6 +698,8 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
       // Client Management
       case AdminNavModule.clientsAll: return 'Annuaire de Tous les Clients';
       case AdminNavModule.userActivation: return 'Activation & Présence des Utilisateurs (User Activation)';
+      case AdminNavModule.articleUser: return 'Articles Utilisateur (Article User)';
+      case AdminNavModule.userDocuments: return 'Gestion des Documents & Modules Client';
       case AdminNavModule.clientsSearch: return 'Recherche Globale de Clients';
       case AdminNavModule.clientsBanned: return 'Clients Bannis & Suspendus';
       case AdminNavModule.clientsPasswords: return 'Gestion des Mots de Passe Utilisateurs';
@@ -675,6 +713,8 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
       case AdminNavModule.paymentValidation: return 'Validation des Paiements & Licences';
       case AdminNavModule.paymentHistory: return 'Historique des Transactions';
       case AdminNavModule.paymentPlans: return 'Plans d\'Abonnement Actifs';
+      case AdminNavModule.promoCodes: return 'Gestion des Codes Promo & Offres';
+      case AdminNavModule.affiliateManagement: return 'Programme d\'Affiliation & Parrainage';
       case AdminNavModule.agentsTeam: return 'Gestion de l\'Équipe Support';
       case AdminNavModule.agentsInvite: return 'Inviter un Agent Support';
       case AdminNavModule.agentsPerformance: return 'Performance des Agents';

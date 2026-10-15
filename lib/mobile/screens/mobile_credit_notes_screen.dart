@@ -34,6 +34,7 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -106,9 +107,16 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CreditNotesBloc, CreditNotesState>(
+    return BlocConsumer<CreditNotesBloc, CreditNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is CreditNotesLoaded || state is CreditNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is CreditNotesLoading || state is CreditNotesInitial;
+        bool isLoading = _isFirstLoad || state is CreditNotesLoading || state is CreditNotesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -120,7 +128,7 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
           customersList = customersState.customers;
         }
 
-        if (state is CreditNotesLoaded) {
+        if (!_isFirstLoad && state is CreditNotesLoaded) {
           final items = state.creditNotes;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

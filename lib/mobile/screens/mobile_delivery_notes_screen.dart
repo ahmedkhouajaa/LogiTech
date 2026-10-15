@@ -38,6 +38,7 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -130,9 +131,16 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DeliveryNotesBloc, DeliveryNotesState>(
+    return BlocConsumer<DeliveryNotesBloc, DeliveryNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is DeliveryNotesLoaded || state is DeliveryNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is DeliveryNotesLoading || state is DeliveryNotesInitial;
+        bool isLoading = _isFirstLoad || state is DeliveryNotesLoading || state is DeliveryNotesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -144,7 +152,7 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
           customersList = customersState.customers;
         }
 
-        if (state is DeliveryNotesLoaded) {
+        if (!_isFirstLoad && state is DeliveryNotesLoaded) {
           final items = state.notes;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

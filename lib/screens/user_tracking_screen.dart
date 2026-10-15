@@ -197,119 +197,331 @@ class _UserTrackingScreenState extends State<UserTrackingScreen> {
     return true;
   }
 
+  String _getDocumentType(UserActivityLog log) {
+    final col = log.collection.toLowerCase().trim();
+    switch (col) {
+      case 'articles':
+      case 'products':
+        return 'Article';
+      case 'product_families':
+      case 'categories':
+        return 'Famille / Catégorie d\'articles';
+      case 'quotes':
+      case 'devis':
+        return 'Devis (Vente)';
+      case 'customer_orders':
+      case 'commandes':
+        return 'Commande client';
+      case 'delivery_notes':
+      case 'bons_livraison':
+        return 'Bon de livraison';
+      case 'invoices':
+      case 'factures':
+        return 'Facture de vente';
+      case 'bons_sortie':
+        return 'Bon de sortie';
+      case 'credit_notes':
+      case 'avoirs':
+        return 'Avoir client';
+      case 'return_notes':
+      case 'bons_retour':
+        return 'Bon de retour client';
+      case 'supplier_orders':
+      case 'commandes_fournisseur':
+        return 'Commande fournisseur';
+      case 'receiving_vouchers':
+      case 'bons_reception':
+        return 'Bon de réception';
+      case 'purchase_invoices':
+      case 'factures_achat':
+        return 'Facture d\'achat';
+      case 'supplier_credit_notes':
+      case 'avoirs_fournisseur':
+        return 'Avoir fournisseur';
+      case 'supplier_returns':
+      case 'retours_fournisseur':
+        return 'Retour fournisseur';
+      case 'clients':
+      case 'customers':
+        return 'Fiche Client';
+      case 'fournisseurs':
+      case 'suppliers':
+        return 'Fiche Fournisseur';
+      case 'stock_entries':
+        return 'Bon d\'entrée stock';
+      case 'bons_prelevement':
+        return 'Bon de prélèvement stock';
+      case 'stock_transfers':
+        return 'Bon de transfert stock';
+      case 'inventory_sheets':
+        return 'Fiche d\'inventaire';
+      case 'warehouses':
+        return 'Entrepôt';
+      case 'paiements':
+      case 'payments':
+        return 'Règlement / Paiement';
+      case 'treasury_accounts':
+        return 'Compte de trésorerie';
+      case 'treasury_transactions':
+        return 'Transaction de trésorerie';
+      case 'checks_traites':
+        return 'Chèque / Traite';
+      case 'withholding_tax':
+        return 'Certificat de retenue à la source';
+      case 'employees':
+      case 'hr_employees':
+        return 'Personnel (Employé)';
+      case 'leaves':
+      case 'hr_leaves':
+        return 'Congé & Absence';
+      case 'attendances':
+      case 'hr_attendances':
+        return 'Présence / Pointage';
+      case 'payrolls':
+      case 'hr_payroll':
+        return 'Fiche de paie';
+      case 'cnss':
+      case 'hr_cnss_declaration':
+        return 'Déclaration CNSS';
+      case 'projects':
+        return 'Projet';
+      case 'users':
+      case 'user_management':
+        return 'Compte Utilisateur';
+      case 'corbeille':
+        return 'Élément corbeille';
+      default:
+        if (log.module.isNotEmpty && log.module != 'Général') {
+          return log.module;
+        }
+        return 'Document';
+    }
+  }
+
+  String _getTargetFileOrDoc(UserActivityLog log) {
+    final details = log.details;
+    String extraName = '';
+    if (details != null) {
+      extraName = (details['customer_name'] ??
+              details['customerName'] ??
+              details['supplier_name'] ??
+              details['supplierName'] ??
+              details['client_name'] ??
+              details['clientName'] ??
+              details['name'] ??
+              details['designation'] ??
+              details['reason'] ??
+              details['title'] ??
+              details['fileName'] ??
+              details['file_name'] ??
+              details['filename'] ??
+              details['nom_fichier'] ??
+              details['label'] ??
+              details['reference'] ??
+              '')
+          .toString()
+          .trim();
+    }
+
+    final ref = log.documentReference.trim();
+
+    if (ref.isNotEmpty && extraName.isNotEmpty && extraName != ref && !ref.contains(extraName)) {
+      return '$ref — $extraName';
+    } else if (ref.isNotEmpty) {
+      return ref;
+    } else if (extraName.isNotEmpty) {
+      return extraName;
+    }
+
+    // Fallback: extract any quoted identifier from the description « ... »
+    final quoteMatch = RegExp(r'«\s*([^»]+)\s*»').firstMatch(log.description);
+    if (quoteMatch != null && quoteMatch.group(1) != null) {
+      final q = quoteMatch.group(1)!.trim();
+      if (q.isNotEmpty && q != log.module && q != _getDocumentType(log)) {
+        return q;
+      }
+    }
+
+    return '';
+  }
+
+  String? _getAttachedFileName(UserActivityLog log) {
+    final details = log.details;
+    if (details == null) return null;
+    final file = (details['fileName'] ??
+            details['file_name'] ??
+            details['filename'] ??
+            details['nom_fichier'] ??
+            details['attachment'] ??
+            details['piece_jointe'])
+        ?.toString()
+        .trim();
+    if (file != null && file.isNotEmpty) {
+      return file;
+    }
+    return null;
+  }
+
   void _showActivityDetails(UserActivityLog log) {
     final actionColor = _getActionColor(log.action);
     final moduleColor = _getModuleColor(log.module);
+    final docType = _getDocumentType(log);
+    final attachedFile = _getAttachedFileName(log);
+
+    final initialRef = _getTargetFileOrDoc(log);
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: AppColors.surface,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: actionColor.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(_getActionIcon(log.action), color: actionColor, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) {
+        String currentRef = initialRef;
+        bool isResolving = initialRef.isEmpty && log.documentId.isNotEmpty && log.collection.isNotEmpty;
+        bool hasTriggeredFetch = false;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            if (isResolving && !hasTriggeredFetch) {
+              hasTriggeredFetch = true;
+              UserTrackingService.instance.resolveDocumentReference(log.collection, log.documentId).then((fetched) {
+                if (ctx.mounted) {
+                  setModalState(() {
+                    if (fetched.isNotEmpty) {
+                      currentRef = fetched;
+                    }
+                    isResolving = false;
+                  });
+                }
+              });
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: AppColors.surface,
+              title: Row(
                 children: [
-                  Text(
-                    _getActionLabel(log.action),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    log.module,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: moduleColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDetailRow('Description', log.description, isBold: true),
-                const Divider(height: 20),
-                _buildDetailRow('Utilisateur', '${log.userName} (${log.userEmail.isNotEmpty ? log.userEmail : 'N/A'})'),
-                _buildDetailRow('Rôle', log.userRole.toUpperCase()),
-                _buildDetailRow('Date & Heure', _formatTimestamp(log.timestamp)),
-                _buildDetailRow('Horodatage exact', log.timestamp.toIso8601String()),
-                if (log.documentReference.isNotEmpty)
-                  _buildDetailRow('Référence document', log.documentReference),
-                if (log.collection.isNotEmpty)
-                  _buildDetailRow('Collection Firestore', log.collection),
-                if (log.documentId.isNotEmpty)
-                  _buildDetailRow('ID Document', log.documentId),
-                if (log.details != null && log.details!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    'Données détaillées',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
+                      color: actionColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
                     ),
+                    child: Icon(_getActionIcon(log.action), color: actionColor, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: log.details!.entries.map((e) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '• ${e.key}: ${e.value}',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                      children: [
+                        Text(
+                          _getActionLabel(log.action),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          docType != log.module ? '$docType (${log.module})' : docType,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: moduleColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
+              ),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildDetailRow('Description', log.description, isBold: true),
+                      const Divider(height: 20),
+                      _buildDetailRow('Utilisateur', '${log.userName} (${log.userEmail.isNotEmpty ? log.userEmail : 'N/A'})'),
+                      _buildDetailRow('Rôle', log.userRole.toUpperCase()),
+                      _buildDetailRow('Date & Heure', _formatTimestamp(log.timestamp)),
+                      _buildDetailRow('Horodatage exact', log.timestamp.toIso8601String()),
+                      _buildDetailRow('Type de document', docType),
+                      _buildDetailRow(
+                        'Référence du document',
+                        isResolving
+                            ? 'Recherche de la référence...'
+                            : (currentRef.isNotEmpty ? currentRef : 'Non spécifiée'),
+                        isBold: currentRef.isNotEmpty,
+                      ),
+                      if (attachedFile != null && attachedFile.isNotEmpty && attachedFile != currentRef)
+                        _buildDetailRow('Fichier associé', attachedFile),
+                      if (log.details != null && log.details!.isNotEmpty) ...[
+                        () {
+                          final cleanEntries = log.details!.entries.where((e) {
+                            final k = e.key.toLowerCase().trim();
+                            return !k.contains('id') &&
+                                   k != 'collection' &&
+                                   k != 'firebaseuid' &&
+                                   k != 'firebase_uid' &&
+                                   k != 'enterprise_id';
+                          }).toList();
+                          if (cleanEntries.isEmpty) return const SizedBox.shrink();
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 12),
+                              Text(
+                                'Informations complémentaires',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: cleanEntries.map((e) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Text(
+                                        '• ${e.key}: ${e.value}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          );
+                        }(),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(context.tr('Fermer'), style: TextStyle(color: AppColors.primary)),
+                ),
               ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(context.tr('Fermer'), style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -906,31 +1118,42 @@ class _UserTrackingScreenState extends State<UserTrackingScreen> {
                           // Top row: User name, role badge, timestamp
                           Row(
                             children: [
-                              Text(
-                                log.userName,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        log.userName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: Text(
+                                        log.userRole.toLowerCase(),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.background,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Text(
-                                  log.userRole.toLowerCase(),
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
                               Text(
                                 _formatTimestamp(log.timestamp),
                                 style: TextStyle(
@@ -1010,12 +1233,17 @@ class _UserTrackingScreenState extends State<UserTrackingScreen> {
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(color: AppColors.border),
                                   ),
-                                  child: Text(
-                                    log.documentReference,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textSecondary,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 240),
+                                    child: Text(
+                                      log.documentReference,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ),

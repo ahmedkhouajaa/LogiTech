@@ -20,6 +20,8 @@ import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../services/custom_status_service.dart';
+import '../../widgets/scanner_button.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobilePurchaseInvoicesScreen extends StatefulWidget {
   const MobilePurchaseInvoicesScreen({super.key});
@@ -37,6 +39,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -129,9 +132,16 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PurchaseInvoicesBloc, PurchaseInvoicesState>(
+    return BlocConsumer<PurchaseInvoicesBloc, PurchaseInvoicesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is PurchaseInvoicesLoaded || state is PurchaseInvoicesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is PurchaseInvoicesLoading || state is PurchaseInvoicesInitial;
+        bool isLoading = _isFirstLoad || state is PurchaseInvoicesLoading || state is PurchaseInvoicesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -143,7 +153,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
           suppliersList = suppliersState.suppliers;
         }
 
-        if (state is PurchaseInvoicesLoaded) {
+        if (!_isFirstLoad && state is PurchaseInvoicesLoaded) {
           final items = state.purchaseInvoices;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
@@ -254,6 +264,11 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
             context.read<SuppliersBloc>().add(LoadSuppliers());
           },
           onSearchChanged: _onSearchChanged,
+          searchTrailing: ScannerButton(
+            compact: true,
+            documentTitle: context.tr('Factures d\'achat'),
+            documentType: 'purchase_invoice',
+          ),
           filterOptions: const [],
           selectedFilter: _selectedStatus ?? 'Tous',
           onFilterChanged: (val) {

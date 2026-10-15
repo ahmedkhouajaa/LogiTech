@@ -36,6 +36,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -108,9 +109,16 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ReturnNotesBloc, ReturnNotesState>(
+    return BlocConsumer<ReturnNotesBloc, ReturnNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is ReturnNotesLoaded || state is ReturnNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is ReturnNotesLoading || state is ReturnNotesInitial;
+        bool isLoading = _isFirstLoad || state is ReturnNotesLoading || state is ReturnNotesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -122,7 +130,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
           customersList = customersState.customers;
         }
 
-        if (state is ReturnNotesLoaded) {
+        if (!_isFirstLoad && state is ReturnNotesLoaded) {
           final items = state.notes;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

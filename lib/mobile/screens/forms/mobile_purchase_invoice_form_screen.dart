@@ -234,22 +234,20 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
+      bool isDraft = false;
       if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'purchase_invoices',
-            docTypeName: 'Facture d\'Achat',
-            prefix: DocPrefix.purchaseInvoice,
-          );
-          if (seq == null) {
-            setState(() => _isLoading = false);
-            return;
-          }
-          number = generateDocNumber(DocPrefix.purchaseInvoice, seq, docCollection: 'purchase_invoices');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
+        final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+          context: context,
+          docCollection: 'purchase_invoices',
+          docTypeName: 'Facture d\'Achat',
+          defaultPrefix: DocPrefix.purchaseInvoice,
+        );
+        if (docNumResult.cancelled) {
+          setState(() => _isLoading = false);
+          return;
         }
+        number = docNumResult.number;
+        isDraft = docNumResult.isDraft;
       }
 
       String? suppName;
@@ -292,7 +290,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
         })(),
         date: _date,
         dueDate: _dueDate,
-        status: _status,
+        status: isDraft ? InvoiceStatus.draft : _status,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
         globalDiscountAmount: _globalDiscountAmount,
@@ -325,16 +323,16 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
           showDiscount: item.showDiscount,
         )).toList(),
         isDeleted: widget.existing?.isDeleted ?? false,
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: !isDraft && (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft) {
         await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', invoice.toMap());
         bloc.add(const LoadFirstPurchaseInvoices());
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Facture d\'Achat ${invoice.number} enregistrée hors-ligne (en attente de sync)'),
+            content: Text('Facture d\'Achat ${invoice.number} enregistrée en Brouillon (en attente de sync)'),
             backgroundColor: AppColors.warning,
             duration: const Duration(seconds: 3),
           ));

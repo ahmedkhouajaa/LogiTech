@@ -73,8 +73,8 @@ class Product {
 
   bool get isLowStock => !isService && stockQty <= lowStockThreshold && lowStockAlert;
 
-  bool get isForSale => destination == 'Vente' || destination == 'Vente et Achat';
-  bool get isForPurchase => destination == 'Achat' || destination == 'Vente et Achat';
+  bool get isForSale => destination == 'Vente' || destination == 'Vente et Achat' || destination.isEmpty || destination == 'Tous';
+  bool get isForPurchase => !isService || destination == 'Achat' || destination == 'Vente et Achat' || destination == 'Vente' || destination.isEmpty || destination == 'Tous';
 
   double get margin => sellingPrice > 0 && purchasePrice > 0
       ? ((sellingPrice - purchasePrice) / purchasePrice) * 100
@@ -149,13 +149,44 @@ class Product {
       sellingPrice: parseDouble(map['selling_price'] ?? map['sellingPrice'], 0.0),
       usualDiscount: parseDouble(map['usual_discount'] ?? map['usualDiscount'], 0.0),
       tvaRate: parseDouble(map['tva_rate'] ?? map['tvaRate'], 19.0),
-      stockQty: parseDouble(map['stock_qty'] ?? map['stockQty'], 0.0),
-      minStockQty: parseDouble(map['min_stock_qty'] ?? map['minStockQty'], 0.0),
+      stockQty: parseDouble(
+        map['stock_qty'] ??
+            map['stockQty'] ??
+            map['stock'] ??
+            map['quantity'] ??
+            map['quantite'] ??
+            map['current_stock'] ??
+            map['stock_physique'] ??
+            map['physical_stock'],
+        0.0,
+      ),
+      minStockQty: parseDouble(
+        map['min_stock_qty'] ??
+            map['minStockQty'] ??
+            map['min_stock'] ??
+            map['minStock'],
+        0.0,
+      ),
       allowNegativeStock: map['allow_negative_stock'] == 1 || map['allow_negative_stock'] == true || map['allowNegativeStock'] == true,
       lowStockAlert: map['low_stock_alert'] == 1 || map['low_stock_alert'] == true || map['lowStockAlert'] == true,
-      lowStockThreshold: parseDouble(map['low_stock_threshold'] ?? map['lowStockThreshold'], 5.0),
+      lowStockThreshold: parseDouble(
+        map['low_stock_threshold'] ??
+            map['lowStockThreshold'] ??
+            map['seuil_alerte'] ??
+            map['seuil_min'] ??
+            map['min_stock_qty'] ??
+            map['minStockQty'],
+        5.0,
+      ),
       highStockAlert: map['high_stock_alert'] == 1 || map['high_stock_alert'] == true || map['highStockAlert'] == true,
-      highStockThreshold: parseDouble(map['high_stock_threshold'] ?? map['highStockThreshold'], 0.0),
+      highStockThreshold: parseDouble(
+        map['high_stock_threshold'] ??
+            map['highStockThreshold'] ??
+            map['seuil_max'] ??
+            map['max_stock_qty'] ??
+            map['maxStockQty'],
+        0.0,
+      ),
       defaultWarehouseId: (map['default_warehouse_id'] ?? map['defaultWarehouseId'])?.toString(),
       barcode: (map['barcode'] ?? map['barCode'])?.toString(),
       privateNotes: (map['private_notes'] ?? map['privateNotes'])?.toString(),

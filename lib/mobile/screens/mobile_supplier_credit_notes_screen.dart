@@ -36,6 +36,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -108,9 +109,16 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SupplierCreditNotesBloc, SupplierCreditNotesState>(
+    return BlocConsumer<SupplierCreditNotesBloc, SupplierCreditNotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierCreditNotesLoaded || state is SupplierCreditNotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is SupplierCreditNotesLoading || state is SupplierCreditNotesInitial;
+        bool isLoading = _isFirstLoad || state is SupplierCreditNotesLoading || state is SupplierCreditNotesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -122,7 +130,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
           suppliersList = suppliersState.suppliers;
         }
 
-        if (state is SupplierCreditNotesLoaded) {
+        if (!_isFirstLoad && state is SupplierCreditNotesLoaded) {
           final items = state.creditNotes;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

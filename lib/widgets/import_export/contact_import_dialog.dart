@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../utils/constants.dart';
 import '../../services/contact_import_export_service.dart';
+import '../../services/error_handler.dart';
 
 class ContactImportDialog extends StatefulWidget {
   final ContactType type;
@@ -1082,9 +1083,7 @@ class _ContactImportDialogState extends State<ContactImportDialog>
     } catch (e) {
       if (mounted) {
         setState(() => _isImporting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'importation : $e'), backgroundColor: AppColors.error),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

@@ -36,6 +36,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSubscription;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -105,9 +106,16 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<QuotesBloc, QuotesState>(
+    return BlocConsumer<QuotesBloc, QuotesState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is QuotesLoaded || state is QuotesError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is QuotesLoading || state is QuotesInitial;
+        bool isLoading = _isFirstLoad || state is QuotesLoading || state is QuotesInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -119,7 +127,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           customersList = customersState.customers;
         }
 
-        if (state is QuotesLoaded) {
+        if (!_isFirstLoad && state is QuotesLoaded) {
           final items = state.quotes;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

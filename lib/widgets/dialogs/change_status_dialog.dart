@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/custom_status_definition.dart';
 import '../../services/custom_status_service.dart';
 import '../../utils/constants.dart';
+import '../../services/error_handler.dart';
 import '../dashboard_card.dart';
 
 /// Opens the standard "Changer le statut" dialog for any document type in Ventes and Achats.
@@ -156,9 +157,7 @@ Future<void> showDocumentChangeStatusDialog({
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         if (dialogCtx.mounted) {
-                          ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                            SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
-                          );
+                          ErrorHandler.showErrorSnackBar(dialogCtx, e);
                         }
                       }
                     },

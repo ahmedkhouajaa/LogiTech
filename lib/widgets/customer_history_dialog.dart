@@ -16,6 +16,8 @@ import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../services/offline_document_service.dart';
 import '../screens/history_pdf_preview_screen.dart';
+import '../services/error_handler.dart';
+import '../widgets/app_error_widget.dart';
 
 class CustomerHistoryDialog extends StatefulWidget {
   final Customer customer;
@@ -212,7 +214,7 @@ class _CustomerHistoryDialogState extends State<CustomerHistoryDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = ErrorHandler.parseError(e);
           _isLoading = false;
         });
       }
@@ -854,20 +856,9 @@ class _CustomerHistoryDialogState extends State<CustomerHistoryDialog> {
                       ),
                     )
                   : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline, size: 36, color: AppColors.error),
-                              const SizedBox(height: 8),
-                              Text('Erreur: $_errorMessage', style: TextStyle(color: AppColors.error)),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: _loadCustomerData,
-                                child: const Text('Réessayer'),
-                              ),
-                            ],
-                          ),
+                      ? AppErrorWidget(
+                          message: _errorMessage!,
+                          onRetry: _loadCustomerData,
                         )
                       : SingleChildScrollView(
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),

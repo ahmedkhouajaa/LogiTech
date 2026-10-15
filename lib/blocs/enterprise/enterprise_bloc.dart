@@ -37,6 +37,7 @@ class CreateEnterprise extends EnterpriseEvent {
   final String? address;
   final String? rib;
   final String? logoUrl;
+  final String? partnerCode;
 
   const CreateEnterprise(
     this.name, {
@@ -49,6 +50,7 @@ class CreateEnterprise extends EnterpriseEvent {
     this.address,
     this.rib,
     this.logoUrl,
+    this.partnerCode,
   });
 
   @override
@@ -63,6 +65,7 @@ class CreateEnterprise extends EnterpriseEvent {
         address,
         rib,
         logoUrl,
+        partnerCode,
       ];
 }
 
@@ -239,6 +242,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
         address: event.address,
         rib: event.rib,
         logoUrl: event.logoUrl,
+        partnerCode: event.partnerCode,
       );
       PermissionService.instance.grantImmediateOwnerAdmin(enterprise.id);
       emit(EnterpriseLoaded(

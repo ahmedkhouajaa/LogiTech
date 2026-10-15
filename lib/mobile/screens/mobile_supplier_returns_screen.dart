@@ -36,6 +36,7 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -108,9 +109,16 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SupplierReturnsBloc, SupplierReturnsState>(
+    return BlocConsumer<SupplierReturnsBloc, SupplierReturnsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierReturnsLoaded || state is SupplierReturnsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is SupplierReturnsLoading || state is SupplierReturnsInitial;
+        bool isLoading = _isFirstLoad || state is SupplierReturnsLoading || state is SupplierReturnsInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -122,7 +130,7 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
           suppliersList = suppliersState.suppliers;
         }
 
-        if (state is SupplierReturnsLoaded) {
+        if (!_isFirstLoad && state is SupplierReturnsLoaded) {
           final items = state.returns;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

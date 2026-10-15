@@ -20,6 +20,7 @@ import '../models/document_template.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
+import '../services/offline_document_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../l10n/app_localizations.dart';
@@ -1309,19 +1310,20 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     }
 
     final creditNoteId = _isEditing ? widget.existing!.id : const Uuid().v4();
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
-        context: context,
-        docCollection: 'credit_notes',
-        docTypeName: 'Avoir Client',
-        prefix: 'AV',
-      );
-      if (seq == null) {
-        return;
-      }
-      number = generateDocNumber('AV', seq, docCollection: 'credit_notes');
+    final numResult = await DocumentNumberingService.getNextDocumentNumber(
+      context: context,
+      docCollection: 'credit_notes',
+      docTypeName: 'Avoir Client',
+      defaultPrefix: 'AV',
+      existingNumber: widget.existing?.number,
+    );
+
+    if (numResult.cancelled) {
+      return;
     }
+
+    final number = numResult.number;
+    final isDraft = numResult.isDraft;
 
     final creditNote = CreditNote(
       id: creditNoteId,
@@ -1333,6 +1335,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       date: _date,
       dueDate: _dueDate,
       status: _status,
+      customStatus: isDraft ? 'brouillon' : null,
       totalHT: _totalHTAfterDiscount,
       totalTva: _totalTvaAfterDiscount,
       totalTTC: _totalTTC,
@@ -1355,6 +1358,20 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       items: _items,
       createdAt: _isEditing ? widget.existing!.createdAt : null,
     );
+
+    if (isDraft && !_isEditing) {
+      await OfflineDocumentService.instance.savePendingDocument('credit_notes', creditNote.toMap());
+      context.read<CreditNotesBloc>().add(LoadFirstCreditNotes());
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Avoir ${creditNote.number} enregistré en Brouillon (en attente de sync)'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
 
     if (_isEditing) {
       context.read<CreditNotesBloc>().add(UpdateCreditNote(creditNote));

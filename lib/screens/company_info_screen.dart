@@ -68,11 +68,23 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   @override
   void initState() {
     super.initState();
+    EnterpriseService.instance.currentEnterpriseNotifier.addListener(_onEnterpriseChanged);
     _loadSettings();
+  }
+
+  void _onEnterpriseChanged() {
+    if (!mounted || _isSaving) return;
+    final ent = EnterpriseService.instance.currentEnterprise;
+    if (ent == null) return;
+    if (_nameController.text != ent.name) _nameController.text = ent.name;
+    if (ent.taxId != null && _taxIdController.text != ent.taxId) _taxIdController.text = ent.taxId!;
+    if (ent.address != null && _addressController.text != ent.address) _addressController.text = ent.address!;
+    if (ent.rib != null && _ribController.text != ent.rib) _ribController.text = ent.rib!;
   }
 
   @override
   void dispose() {
+    EnterpriseService.instance.currentEnterpriseNotifier.removeListener(_onEnterpriseChanged);
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -555,7 +567,10 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
                       context.tr('Logo officiel de l\'entreprise'),
@@ -565,7 +580,6 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
@@ -785,7 +799,10 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
                       context.tr('Cachet officiel de l\'entreprise'),
@@ -795,7 +812,6 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(

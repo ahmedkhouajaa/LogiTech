@@ -26,6 +26,7 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
   String _searchQuery = '';
   String _selectedFilter = 'Tous';
   final ScrollController _scrollController = ScrollController();
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
   void didUpdateWidget(MobileRetenueSourceVentesList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isSales != widget.isSales) {
+      _isFirstLoad = true;
       context.read<RetenueSourceVenteBloc>().add(
         ResetRetenueSourceVentesPagination(
           searchQuery: _searchQuery,
@@ -103,14 +105,21 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<RetenueSourceVenteBloc, RetenueSourceVenteState>(
+    return BlocConsumer<RetenueSourceVenteBloc, RetenueSourceVenteState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is RetenueSourceVenteLoaded || state is RetenueSourceVenteError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is RetenueSourceVenteLoading || state is RetenueSourceVenteInitial;
+        bool isLoading = _isFirstLoad || state is RetenueSourceVenteLoading || state is RetenueSourceVenteInitial;
         bool isEmpty = true;
         int count = 0;
         List<Widget> cards = [];
 
-        if (state is RetenueSourceVenteLoaded) {
+        if (!_isFirstLoad && state is RetenueSourceVenteLoaded) {
           isEmpty = state.retenues.isEmpty;
           count = state.totalCount;
 

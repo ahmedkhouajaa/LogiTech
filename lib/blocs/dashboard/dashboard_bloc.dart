@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/error_handler.dart';
@@ -19,7 +20,18 @@ abstract class DashboardEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class DashboardRefreshRequested extends DashboardEvent {}
+class DashboardRefreshRequested extends DashboardEvent {
+  final DateTimeRange? dateRange;
+  final bool clearDateRange;
+
+  const DashboardRefreshRequested({
+    this.dateRange,
+    this.clearDateRange = false,
+  });
+
+  @override
+  List<Object?> get props => [dateRange, clearDateRange];
+}
 
 // States
 abstract class DashboardState extends Equatable {
@@ -40,6 +52,7 @@ class DashboardLoaded extends DashboardState {
   final List<Invoice> recentInvoices;
   final List<Product> lowStockProducts;
   final List<CheckTraite> upcomingChecks;
+  final DateTimeRange? dateRange;
 
   const DashboardLoaded({
     required this.totalInvoiced,
@@ -51,13 +64,14 @@ class DashboardLoaded extends DashboardState {
     required this.recentInvoices,
     required this.lowStockProducts,
     required this.upcomingChecks,
+    this.dateRange,
   });
 
   @override
   List<Object?> get props => [
         totalInvoiced, totalPaid, totalDeliveryNotes, totalTvaCollected,
         totalTvaDeductible, invoiceStatusBreakdown, recentInvoices,
-        lowStockProducts, upcomingChecks
+        lowStockProducts, upcomingChecks, dateRange
       ];
 }
 
@@ -71,8 +85,14 @@ class DashboardError extends DashboardState {
 // BLoC
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   static const String _cacheKeyPrefix = 'cached_dashboard_metrics_v2_';
+  DateTimeRange? _currentDateRange;
 
   DashboardBloc() : super(DashboardInitial()) {
+    final now = DateTime.now();
+    _currentDateRange = DateTimeRange(
+      start: DateTime(now.year, now.month, 1),
+      end: DateTime(now.year, now.month + 1, 0),
+    );
     on<DashboardRefreshRequested>(_onRefreshRequested);
   }
 
@@ -88,6 +108,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         'invoiceStatusBreakdown': state.invoiceStatusBreakdown,
         'recentInvoices': state.recentInvoices.map((i) => i.toMap()).toList(),
         'lowStockProducts': state.lowStockProducts.map((p) => p.toMap()).toList(),
+        'dateRangeStart': state.dateRange?.start.toIso8601String(),
+        'dateRangeEnd': state.dateRange?.end.toIso8601String(),
         'savedAt': DateTime.now().toIso8601String(),
       };
       await prefs.setString('$_cacheKeyPrefix$entId', jsonEncode(map));
@@ -127,6 +149,13 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         } catch (_) {}
       }
 
+      DateTimeRange? dateRange;
+      if (map['dateRangeStart'] != null && map['dateRangeEnd'] != null) {
+        final s = DateTime.tryParse(map['dateRangeStart']);
+        final e = DateTime.tryParse(map['dateRangeEnd']);
+        if (s != null && e != null) dateRange = DateTimeRange(start: s, end: e);
+      }
+
       return DashboardLoaded(
         totalInvoiced: (map['totalInvoiced'] as num?)?.toDouble() ?? 0.0,
         totalPaid: (map['totalPaid'] as num?)?.toDouble() ?? 0.0,
@@ -137,6 +166,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         recentInvoices: recentInvoices,
         lowStockProducts: lowStockProducts,
         upcomingChecks: const [],
+        dateRange: dateRange ?? _currentDateRange,
       );
     } catch (e) {
       debugPrint('[DashboardBloc] Error loading dashboard metrics from cache: $e');
@@ -144,13 +174,32 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
+  DateTime? _parseDocDate(dynamic val) {
+    if (val == null) return null;
+    if (val is Timestamp) return val.toDate();
+    if (val is DateTime) return val;
+    if (val is String) return DateTime.tryParse(val);
+    if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+    return null;
+  }
+
+  bool _isDateInRange(DateTime? date, DateTimeRange? range) {
+    if (range == null) return true;
+    if (date == null) return true;
+    final start = DateTime(range.start.year, range.start.month, range.start.day, 0, 0, 0);
+    final end = DateTime(range.end.year, range.end.month, range.end.day, 23, 59, 59, 999);
+    return !date.isBefore(start) && !date.isAfter(end);
+  }
+
   DashboardLoaded _computeState({
     required List<QueryDocumentSnapshot<Object?>> invoicesDocs,
     required List<QueryDocumentSnapshot<Object?>> paymentsDocs,
+    List<QueryDocumentSnapshot<Object?>> deliveryNotesDocs = const [],
     required double deliveryNotesCount,
     required List<QueryDocumentSnapshot<Object?>> purchaseInvoicesDocs,
     required List<QueryDocumentSnapshot<Object?>> productsDocs,
     List<Map<String, dynamic>> pendingInvoices = const [],
+    DateTimeRange? dateRange,
   }) {
     double totalInvoiced = 0.0;
     double totalTvaCollected = 0.0;
@@ -165,6 +214,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     // 1. Process invoices from Firestore
     for (var doc in invoicesDocs) {
       final data = doc.data() as Map<String, dynamic>;
+      final invDate = _parseDocDate(data['date']) ?? _parseDocDate(data['created_at']);
+      if (!_isDateInRange(invDate, dateRange)) continue;
+
       double totalTtc = (data['total_ttc'] as num?)?.toDouble() ?? 0.0;
       double totalTva = (data['total_tva'] as num?)?.toDouble() ?? 0.0;
       String status = data['status'] ?? 'brouillon';
@@ -195,6 +247,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final id = pMap['id']?.toString() ?? '';
       if (existingIds.contains(id)) continue;
 
+      final invDate = _parseDocDate(pMap['date']) ?? _parseDocDate(pMap['created_at']);
+      if (!_isDateInRange(invDate, dateRange)) continue;
+
       double totalTtc = (pMap['total_ttc'] as num?)?.toDouble() ?? 0.0;
       double totalTva = (pMap['total_tva'] as num?)?.toDouble() ?? 0.0;
       String status = pMap['status'] ?? 'brouillon';
@@ -221,18 +276,36 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final data = doc.data() as Map<String, dynamic>;
       bool isDeleted = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
       if (!isDeleted) {
+        final payDate = _parseDocDate(data['date']) ?? _parseDocDate(data['payment_date']) ?? _parseDocDate(data['created_at']);
+        if (!_isDateInRange(payDate, dateRange)) continue;
         totalPaid += (data['amount'] as num?)?.toDouble() ?? 0.0;
       }
     }
 
-    // 4. Purchase invoices
+    // 4. Delivery notes
+    double totalDeliveryNotes = 0.0;
+    if (deliveryNotesDocs.isNotEmpty) {
+      for (var doc in deliveryNotesDocs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final dnDate = _parseDocDate(data['date']) ?? _parseDocDate(data['delivery_date']) ?? _parseDocDate(data['created_at']);
+        if (_isDateInRange(dnDate, dateRange)) {
+          totalDeliveryNotes += 1.0;
+        }
+      }
+    } else {
+      totalDeliveryNotes = deliveryNotesCount;
+    }
+
+    // 5. Purchase invoices
     double totalTvaDeductible = 0.0;
     for (var doc in purchaseInvoicesDocs) {
       final data = doc.data() as Map<String, dynamic>;
+      final piDate = _parseDocDate(data['date']) ?? _parseDocDate(data['invoice_date']) ?? _parseDocDate(data['created_at']);
+      if (!_isDateInRange(piDate, dateRange)) continue;
       totalTvaDeductible += (data['total_tva'] as num?)?.toDouble() ?? 0.0;
     }
 
-    // 5. Products
+    // 6. Products
     List<Product> lowStockProducts = [];
     for (var doc in productsDocs) {
       final data = doc.data() as Map<String, dynamic>;
@@ -250,13 +323,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     return DashboardLoaded(
       totalInvoiced: totalInvoiced,
       totalPaid: totalPaid,
-      totalDeliveryNotes: deliveryNotesCount,
+      totalDeliveryNotes: totalDeliveryNotes,
       totalTvaCollected: totalTvaCollected,
       totalTvaDeductible: totalTvaDeductible,
       invoiceStatusBreakdown: statusBreakdown,
       recentInvoices: recentInvoices,
       lowStockProducts: lowStockProducts,
       upcomingChecks: const [],
+      dateRange: dateRange,
     );
   }
 
@@ -280,18 +354,25 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     DashboardRefreshRequested event,
     Emitter<DashboardState> emit,
   ) async {
+    if (event.clearDateRange) {
+      _currentDateRange = null;
+    } else if (event.dateRange != null) {
+      _currentDateRange = event.dateRange;
+    }
+
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     if (currentEntId == null || currentEntId.isEmpty) {
-      emit(const DashboardLoaded(
+      emit(DashboardLoaded(
         totalInvoiced: 0.0,
         totalPaid: 0.0,
         totalDeliveryNotes: 0.0,
         totalTvaCollected: 0.0,
         totalTvaDeductible: 0.0,
-        invoiceStatusBreakdown: {'paye': 0.0, 'brouillon': 0.0, 'confirme': 0.0, 'annule': 0.0},
-        recentInvoices: [],
-        lowStockProducts: [],
-        upcomingChecks: [],
+        invoiceStatusBreakdown: const {'paye': 0.0, 'brouillon': 0.0, 'confirme': 0.0, 'annule': 0.0},
+        recentInvoices: const [],
+        lowStockProducts: const [],
+        upcomingChecks: const [],
+        dateRange: _currentDateRange,
       ));
       return;
     }
@@ -347,10 +428,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         final cachedComputed = _computeState(
           invoicesDocs: invoicesCache?.docs ?? [],
           paymentsDocs: paymentsCache?.docs ?? [],
+          deliveryNotesDocs: deliveryNotesCache?.docs ?? [],
           deliveryNotesCount: (deliveryNotesCache?.docs.length.toDouble() ?? 0.0) + pendingDeliveryNotes.length.toDouble(),
           purchaseInvoicesDocs: purchaseInvoicesCache?.docs ?? [],
           productsDocs: productsCache?.docs ?? [],
           pendingInvoices: pendingInvoices,
+          dateRange: _currentDateRange,
         );
         emit(cachedComputed);
         unawaited(_saveToLocalCache(currentEntId, cachedComputed));
@@ -398,10 +481,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final freshState = _computeState(
         invoicesDocs: results[0].docs,
         paymentsDocs: results[1].docs,
+        deliveryNotesDocs: results[2].docs,
         deliveryNotesCount: results[2].docs.length.toDouble() + pendingDeliveryNotes.length.toDouble(),
         purchaseInvoicesDocs: results[3].docs,
         productsDocs: results[4].docs,
         pendingInvoices: pendingInvoices,
+        dateRange: _currentDateRange,
       );
 
       if (!emit.isDone) {

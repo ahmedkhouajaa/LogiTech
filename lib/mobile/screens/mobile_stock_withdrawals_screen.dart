@@ -43,6 +43,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
+  bool _isFirstLoad = true;
 
   bool get _isExitVoucher => widget.activeModule == AppModule.exitVouchers;
 
@@ -143,13 +144,20 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
     }
 
     if (_isExitVoucher) {
-      return BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+      return BlocConsumer<ExitVouchersBloc, ExitVouchersState>(
+        listener: (context, state) {
+          if (_isFirstLoad && (state is ExitVouchersLoaded || state is ExitVouchersError)) {
+            setState(() {
+              _isFirstLoad = false;
+            });
+          }
+        },
         builder: (context, state) {
-          bool isLoading = state is ExitVouchersLoading || state is ExitVouchersInitial;
+          bool isLoading = _isFirstLoad || state is ExitVouchersLoading || state is ExitVouchersInitial;
           bool isLoadingMore = false;
           int totalMatchingCount = 0;
           List<StockWithdrawal> items = [];
-          if (state is ExitVouchersLoaded) {
+          if (!_isFirstLoad && state is ExitVouchersLoaded) {
             items = state.withdrawals;
             isLoadingMore = state.isLoadingMore;
             totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
@@ -158,13 +166,20 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
         },
       );
     } else {
-      return BlocBuilder<StockWithdrawalsBloc, StockWithdrawalsState>(
+      return BlocConsumer<StockWithdrawalsBloc, StockWithdrawalsState>(
+        listener: (context, state) {
+          if (_isFirstLoad && (state is StockWithdrawalsLoaded || state is StockWithdrawalsError)) {
+            setState(() {
+              _isFirstLoad = false;
+            });
+          }
+        },
         builder: (context, state) {
-          bool isLoading = state is StockWithdrawalsLoading || state is StockWithdrawalsInitial;
+          bool isLoading = _isFirstLoad || state is StockWithdrawalsLoading || state is StockWithdrawalsInitial;
           bool isLoadingMore = false;
           int totalMatchingCount = 0;
           List<StockWithdrawal> items = [];
-          if (state is StockWithdrawalsLoaded) {
+          if (!_isFirstLoad && state is StockWithdrawalsLoaded) {
             items = state.withdrawals;
             isLoadingMore = state.isLoadingMore;
             totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;

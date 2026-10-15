@@ -19,6 +19,7 @@ import 'mobile_inventory_sheet_detail_screen.dart';
 import '../../models/inventory_sheet.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../widgets/dialogs/print_blank_inventory_dialog.dart';
+import '../../widgets/scanner_button.dart';
 
 class MobileInventorySheetsScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -36,6 +37,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -103,15 +105,22 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
   @override
   Widget build(BuildContext context) {
     final wState = context.watch<WarehousesBloc>().state;
-    return BlocBuilder<InventorySheetsBloc, InventorySheetsState>(
+    return BlocConsumer<InventorySheetsBloc, InventorySheetsState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is InventorySheetsLoaded || state is InventorySheetsError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is InventorySheetsLoading || state is InventorySheetsInitial;
+        bool isLoading = _isFirstLoad || state is InventorySheetsLoading || state is InventorySheetsInitial;
         bool isEmpty = false;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
         List<Widget> listItems = [];
 
-        if (state is InventorySheetsLoaded) {
+        if (!_isFirstLoad && state is InventorySheetsLoaded) {
           final items = state.sheets;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
@@ -217,10 +226,21 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
           scrollController: _scrollController,
           emptyMessage: context.tr('Aucune fiche trouvée.'),
           itemCount: totalMatchingCount,
-          searchTrailing: IconButton(
-            icon: Icon(Icons.print_outlined, color: AppColors.primary),
-            tooltip: context.tr("Imprimer fiche vierge"),
-            onPressed: () => PrintBlankInventoryDialog.show(context),
+          searchTrailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ScannerButton(
+                compact: true,
+                documentTitle: context.tr("Fiche d'inventaire"),
+                documentType: 'inventory_sheet',
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: Icon(Icons.print_outlined, color: AppColors.primary),
+                tooltip: context.tr("Imprimer fiche vierge"),
+                onPressed: () => PrintBlankInventoryDialog.show(context),
+              ),
+            ],
           ),
           fabText: _config.fabText,
           onFabPressed: () {

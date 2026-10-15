@@ -18,6 +18,7 @@ class ChecksTraitesScreen extends StatefulWidget {
 }
 
 class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> with SingleTickerProviderStateMixin {
+  bool _isFirstLoad = true;
   String _search = '';
   String _statusFilter = 'all'; // all, en_attente, depose, encaisse, rejete
   late TabController _tabController;
@@ -124,7 +125,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> with SingleTi
           builder: (context, state) {
             int clientCount = 0;
             int fournisseurCount = 0;
-            if (state is ChecksTraitesLoaded) {
+            if (!_isFirstLoad && state is ChecksTraitesLoaded) {
               clientCount = state.documents.where((d) => d.isClient).length;
               fournisseurCount = state.documents.where((d) => d.isFournisseur).length;
             }
@@ -181,9 +182,16 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> with SingleTi
 
         // Table
         Expanded(
-          child: BlocBuilder<ChecksTraitesBloc, ChecksTraitesState>(
+          child: BlocConsumer<ChecksTraitesBloc, ChecksTraitesState>(
+            listener: (context, state) {
+              if (_isFirstLoad && (state is ChecksTraitesLoaded || state is ChecksTraitesError)) {
+                setState(() {
+                  _isFirstLoad = false;
+                });
+              }
+            },
             builder: (context, state) {
-              if (state is ChecksTraitesLoading || state is ChecksTraitesInitial) {
+              if (_isFirstLoad || state is ChecksTraitesLoading || state is ChecksTraitesInitial) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(

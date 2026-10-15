@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_activity_log.dart';
 import '../models/user_management_model.dart';
+import '../utils/firestore_safe_helper.dart';
 import 'enterprise_service.dart';
 import 'user_management_service.dart';
 
@@ -20,6 +21,53 @@ class UserTrackingService {
   /// Cache for resolved user names to avoid repeated Firestore fetches
   final Map<String, String> _userNameCache = {};
   final Map<String, String> _userRoleCache = {};
+
+  /// Cache for resolved document references across sessions
+  final Map<String, String> _documentReferenceCache = {};
+
+  /// Resolves the human-readable reference of a document from Firestore or trash
+  Future<String> resolveDocumentReference(String collection, String documentId) async {
+    final col = collection.trim();
+    final docId = documentId.trim();
+    if (col.isEmpty || docId.isEmpty) return '';
+
+    final cacheKey = '$col/$docId';
+    if (_documentReferenceCache.containsKey(cacheKey)) {
+      return _documentReferenceCache[cacheKey]!;
+    }
+
+    try {
+      final docData = await FirestoreSafeHelper.getDocData(
+        _firestore.collection(col),
+        docId,
+      );
+      if (docData != null) {
+        final ref = extractDocumentReference(col, docData);
+        if (ref.isNotEmpty) {
+          _documentReferenceCache[cacheKey] = ref;
+          return ref;
+        }
+      }
+
+      // Check in trash if document was deleted or moved
+      final trashData = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('corbeille'),
+        docId,
+      );
+      if (trashData != null) {
+        final orig = trashData['data'] is Map ? Map<String, dynamic>.from(trashData['data']) : trashData;
+        final ref = extractDocumentReference(col, orig);
+        if (ref.isNotEmpty) {
+          _documentReferenceCache[cacheKey] = ref;
+          return ref;
+        }
+      }
+    } catch (e) {
+      debugPrint('UserTrackingService.resolveDocumentReference error: $e');
+    }
+
+    return '';
+  }
 
   /// Resolves human-readable module from collection
   static String getModuleForCollection(String collection, [Map<String, dynamic>? data]) {
@@ -77,17 +125,98 @@ class UserTrackingService {
     }
   }
 
+  /// Returns a specific document label for descriptions
+  static String getDocumentLabelForCollection(String collection) {
+    switch (collection.toLowerCase().trim()) {
+      case 'quotes':
+        return 'Devis';
+      case 'customer_orders':
+        return 'Commande client';
+      case 'delivery_notes':
+        return 'Bon de livraison';
+      case 'invoices':
+        return 'Facture';
+      case 'bons_sortie':
+        return 'Bon de sortie';
+      case 'credit_notes':
+        return 'Avoir';
+      case 'return_notes':
+        return 'Bon de retour';
+      case 'supplier_orders':
+        return 'Commande fournisseur';
+      case 'receiving_vouchers':
+        return 'Bon de réception';
+      case 'purchase_invoices':
+        return 'Facture d\'achat';
+      case 'supplier_credit_notes':
+        return 'Avoir fournisseur';
+      case 'supplier_returns':
+        return 'Retour fournisseur';
+      case 'stock_entries':
+        return 'Bon d\'entrée';
+      case 'bons_prelevement':
+        return 'Bon de prélèvement';
+      case 'stock_transfers':
+        return 'Bon de transfert';
+      case 'inventory_sheets':
+        return 'Fiche d\'inventaire';
+      case 'articles':
+        return 'Articles';
+      case 'clients':
+        return 'Clients';
+      case 'fournisseurs':
+        return 'Fournisseurs';
+      case 'warehouses':
+        return 'Entrepôts';
+      case 'paiements':
+        return 'Paiements';
+      case 'treasury_accounts':
+        return 'Comptes de trésorerie';
+      case 'treasury_transactions':
+        return 'Transactions de trésorerie';
+      case 'checks_traites':
+        return 'Chèques & Traites';
+      default:
+        return '';
+    }
+  }
+
   /// Extracts a display reference or name from document data
   static String extractDocumentReference(String collection, Map<String, dynamic> data) {
-    final ref = data['number'] ??
+    final ref = (data['number'] ??
         data['code'] ??
         data['reference'] ??
         data['payment_number'] ??
-        data['name'] ??
+        data['piece_number'] ??
+        data['check_number'] ??
+        data['title'] ??
         data['companyName'] ??
-        data['title'];
-    if (ref != null && ref.toString().trim().isNotEmpty) {
-      return ref.toString().trim();
+        data['company_name'] ??
+        data['name'])?.toString().trim();
+
+    final secondaryName = (data['customer_name'] ??
+        data['customerName'] ??
+        data['supplier_name'] ??
+        data['supplierName'] ??
+        data['client_name'] ??
+        data['clientName'] ??
+        data['name'] ??
+        data['designation'] ??
+        data['reason'] ??
+        data['label'] ??
+        data['fileName'] ??
+        data['file_name'])?.toString().trim();
+
+    if (ref != null && ref.isNotEmpty) {
+      if (secondaryName != null &&
+          secondaryName.isNotEmpty &&
+          secondaryName != ref &&
+          !ref.contains(secondaryName)) {
+        return '$ref — $secondaryName';
+      }
+      return ref;
+    } else if (secondaryName != null && secondaryName.isNotEmpty) {
+      return secondaryName;
     }
     return '';
   }
@@ -133,10 +262,44 @@ class UserTrackingService {
       final role = customUserRole ?? _userRoleCache[uid] ?? 'collaborateur';
 
       final resolvedModule = module ?? getModuleForCollection(collection, docData);
-      final ref = documentReference ?? (docData != null ? extractDocumentReference(collection, docData) : '');
+      String ref = documentReference ?? (docData != null ? extractDocumentReference(collection, docData) : '');
+
+      // If reference is still empty, auto-resolve it from the document in Firestore
+      if (ref.isEmpty && documentId.isNotEmpty && collection.isNotEmpty) {
+        try {
+          final fetchedRef = await resolveDocumentReference(collection, documentId);
+          if (fetchedRef.isNotEmpty) {
+            ref = fetchedRef;
+          }
+        } catch (_) {}
+      }
 
       // Generate human-readable description if not provided
-      final finalDescription = description ?? _generateDescription(action, resolvedModule, ref);
+      final finalDescription = description ?? _generateDescription(action, resolvedModule, ref, collection);
+
+      Map<String, dynamic>? finalDetails = details != null ? Map<String, dynamic>.from(details) : null;
+      if (docData != null) {
+        finalDetails ??= <String, dynamic>{};
+        for (final k in [
+          'name',
+          'designation',
+          'customer_name',
+          'customerName',
+          'supplier_name',
+          'supplierName',
+          'client_name',
+          'clientName',
+          'fileName',
+          'file_name',
+          'total_amount',
+          'totalAmount'
+        ]) {
+          if (docData.containsKey(k) && docData[k] != null && !finalDetails.containsKey(k)) {
+            finalDetails[k] = docData[k];
+          }
+        }
+        if (finalDetails.isEmpty) finalDetails = null;
+      }
 
       final now = DateTime.now();
       final logRef = _firestore.collection('user_activities').doc();
@@ -155,7 +318,7 @@ class UserTrackingService {
         documentReference: ref,
         description: finalDescription,
         timestamp: now,
-        details: details,
+        details: finalDetails,
       );
 
       await logRef.set(logItem.toMap());
@@ -164,19 +327,21 @@ class UserTrackingService {
     }
   }
 
-  String _generateDescription(String action, String module, String ref) {
+  String _generateDescription(String action, String module, String ref, [String collection = '']) {
+    final docLabel = getDocumentLabelForCollection(collection);
+    final targetContext = docLabel.isNotEmpty ? docLabel : module;
     final refSuffix = ref.isNotEmpty ? ' « $ref »' : '';
     switch (action) {
       case 'create':
-        return 'Création dans $module$refSuffix';
+        return 'Création dans $targetContext$refSuffix';
       case 'update':
-        return 'Modification dans $module$refSuffix';
+        return 'Modification dans $targetContext$refSuffix';
       case 'delete':
-        return 'Suppression dans $module$refSuffix (déplacé dans la corbeille)';
+        return 'Suppression dans $targetContext$refSuffix (déplacé dans la corbeille)';
       case 'delete_permanent':
-        return 'Suppression définitive dans $module$refSuffix';
+        return 'Suppression définitive dans $targetContext$refSuffix';
       case 'restore':
-        return 'Restauration dans $module$refSuffix depuis la corbeille';
+        return 'Restauration dans $targetContext$refSuffix depuis la corbeille';
       case 'empty_trash':
         return 'Vidage de la corbeille ($refSuffix)';
       case 'restore_all':
@@ -184,9 +349,9 @@ class UserTrackingService {
       case 'login':
         return 'Connexion au système';
       case 'export':
-        return 'Exportation de données ($module)';
+        return 'Exportation de données ($targetContext)';
       default:
-        return 'Action $action sur $module$refSuffix';
+        return 'Action $action sur $targetContext$refSuffix';
     }
   }
 

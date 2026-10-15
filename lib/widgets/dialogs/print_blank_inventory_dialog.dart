@@ -130,7 +130,7 @@ class _PrintBlankInventoryDialogState extends State<PrintBlankInventoryDialog> {
     String reference;
     try {
       final seq = await DatabaseHelper.instance.getNextInventorySheetSequence();
-      reference = generateDocNumber(DocPrefix.inventorySheet, seq);
+      reference = seq != null ? generateDocNumber(DocPrefix.inventorySheet, seq) : 'FI-${DateTime.now().year}-000001';
     } catch (_) {
       reference = 'FI-${DateTime.now().year}-000001';
     }

@@ -455,11 +455,11 @@ class PdfService {
     final showLogo = comp['showLogo'] != false;
     final logoX = (logoCfg['positionX'] as num?)?.toDouble() ?? 15.0;
     final logoY = (logoCfg['positionY'] as num?)?.toDouble() ?? 15.0;
-    final logoW = (logoCfg['width'] as num?)?.toDouble() ?? 20.0;
-    final logoH = (logoCfg['height'] as num?)?.toDouble() ?? 15.0;
+    final logoW = (logoCfg['width'] as num?)?.toDouble() ?? 30.0;
+    final logoH = (logoCfg['height'] as num?)?.toDouble() ?? 22.5;
 
     // 2. Company Name Configuration
-    final defaultCompX = showLogo ? 40.0 : 15.0;
+    final defaultCompX = showLogo ? 48.0 : 15.0;
     final nameCfg = config?['companyName'] as Map<String, dynamic>? ?? {};
     final showCompanyName = comp['showName'] != false;
     final nameX = (nameCfg['positionX'] as num?)?.toDouble() ?? defaultCompX;

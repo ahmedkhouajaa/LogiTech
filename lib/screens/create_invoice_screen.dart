@@ -1215,26 +1215,21 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final isOnline = ConnectivityService.instance.isOnline;
+      final numResult = await DocumentNumberingService.getNextDocumentNumber(
+        context: context,
+        docCollection: 'invoices',
+        docTypeName: 'Facture',
+        defaultPrefix: DocPrefix.invoice,
+        existingNumber: widget.existing?.number,
+      );
 
-      String number = widget.existing?.number ?? '';
-      if (number.isEmpty) {
-        if (isOnline) {
-          final seq = await DocumentNumberingService.ensureNumberSequence(
-            context: context,
-            docCollection: 'invoices',
-            docTypeName: 'Facture',
-            prefix: DocPrefix.invoice,
-          );
-          if (seq == null) {
-            setState(() => _isSaving = false);
-            return;
-          }
-          number = generateDocNumber(DocPrefix.invoice, seq, docCollection: 'invoices');
-        } else {
-          number = OfflineDocumentService.generateDraftNumber();
-        }
+      if (numResult.cancelled) {
+        setState(() => _isSaving = false);
+        return;
       }
+
+      final number = numResult.number;
+      final isDraft = numResult.isDraft;
 
       final invoiceId = _isEditing ? widget.existing!.id : _uuid.v4();
       final invoice = Invoice(
@@ -1254,7 +1249,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
         date: _date,
         dueDate: _dueDate,
-        status: _status,
+        status: isDraft ? InvoiceStatus.draft : _status,
         totalHT: _totalHTAfterDiscount,
         totalTva: _totalTvaAfterDiscount,
         totalTTC: _totalTTC,
@@ -1276,18 +1271,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         },
         items: _items.map((item) => item.copyWith(invoiceId: invoiceId)).toList(),
         createdAt: _isEditing ? widget.existing!.createdAt : null,
-        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
+        isSynced: isDraft ? false : (widget.existing?.isSynced ?? true),
       );
 
-      if (!isOnline && !_isEditing) {
+      if (isDraft && !_isEditing) {
         await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
         context.read<InvoicesBloc>().add(const LoadFirstInvoices());
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Facture ${invoice.number} enregistrée hors-ligne (en attente de sync)'),
+            content: Text('Facture ${invoice.number} enregistrée en Brouillon (en attente de synchronisation)'),
             backgroundColor: AppColors.warning,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
           ),
         );
         return;

@@ -46,9 +46,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
         // Modern Action Bar
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              BlocBuilder<CustomersBloc, CustomersState>(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 880;
+              final canCreate = PermissionService.instance.canCreate(UserPermissionResources.customers);
+
+              final searchBarWidget = SizedBox(
+                width: isNarrow ? null : 240,
+                height: 34,
+                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              );
+
+              return BlocBuilder<CustomersBloc, CustomersState>(
                 buildWhen: (prev, curr) => curr is CustomersLoaded || curr is CustomersLoading || curr is CustomersInitial,
                 builder: (context, state) {
                   final totalCount = state is CustomersLoaded
@@ -62,8 +71,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           (c.companyName?.toLowerCase().contains(_search) ?? false)).length
                       : null;
 
-                  return Column(
+                  final titleSection = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -100,137 +110,166 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       ),
                     ],
                   );
-                },
-              ),
-              const Spacer(),
-              if (_selectedCustomerIds.isNotEmpty) ...[
-                _buildBulkActionsDropdown(),
-                const SizedBox(width: 10),
-              ],
-              SizedBox(
-                width: 250,
-                height: 34,
-                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
-              ),
-              const SizedBox(width: 10),
-              // ... Actions Button Popup
-              PopupMenuButton<String>(
-                tooltip: 'Actions Import / Export',
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                color: AppColors.surface,
-                elevation: 4,
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
-                      const SizedBox(width: 6),
-                      Text(
-                        context.tr('Actions'),
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                itemBuilder: (ctx) {
-                  final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
-                  final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
-                  final items = <PopupMenuEntry<String>>[];
-                  if (canExport) {
-                    items.addAll([
-                      const PopupMenuItem(
-                        value: 'export_excel',
-                        child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'export_csv',
-                        child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'export_json',
-                        child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
-                      ),
-                    ]);
-                  }
-                  if (canExport && canImport) {
-                    items.add(const PopupMenuDivider());
-                  }
-                  if (canImport) {
-                    items.add(
-                      const PopupMenuItem(
-                        value: 'import_excel',
-                        child: Text(
-                          'Importer depuis Excel',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    );
-                  }
-                  return items;
-                },
-                onSelected: (val) async {
-                  final state = context.read<CustomersBloc>().state;
-                  final customers = state is CustomersLoaded ? state.customers : <Customer>[];
 
-                  if (val == 'export_excel') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToExcel(
-                      context: context,
-                      type: ContactType.customer,
-                      contacts: customers,
-                    );
-                  } else if (val == 'export_csv') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToCsv(
-                      context: context,
-                      type: ContactType.customer,
-                      contacts: customers,
-                    );
-                  } else if (val == 'export_json') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToJson(
-                      context: context,
-                      type: ContactType.customer,
-                      contacts: customers,
-                    );
-                  } else if (val == 'import_excel') {
-                    if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
-                    ContactImportDialog.show(
-                      context,
-                      type: ContactType.customer,
-                      onImportSuccess: () {
-                        context.read<CustomersBloc>().add(LoadCustomers());
-                      },
+                  final actionsDropdown = PopupMenuButton<String>(
+                    tooltip: 'Actions Import / Export',
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    color: AppColors.surface,
+                    elevation: 4,
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.tr('Actions'),
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (ctx) {
+                      final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+                      final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+                      final items = <PopupMenuEntry<String>>[];
+                      if (canExport) {
+                        items.addAll([
+                          const PopupMenuItem(
+                            value: 'export_excel',
+                            child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+                          ),
+                          const PopupMenuItem(
+                            value: 'export_csv',
+                            child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+                          ),
+                          const PopupMenuItem(
+                            value: 'export_json',
+                            child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+                          ),
+                        ]);
+                      }
+                      if (canExport && canImport) {
+                        items.add(const PopupMenuDivider());
+                      }
+                      if (canImport) {
+                        items.add(
+                          const PopupMenuItem(
+                            value: 'import_excel',
+                            child: Text(
+                              'Importer depuis Excel',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        );
+                      }
+                      return items;
+                    },
+                    onSelected: (val) async {
+                      if (val == 'export_excel') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToExcel(
+                          context: context,
+                          type: ContactType.customer,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_csv') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToCsv(
+                          context: context,
+                          type: ContactType.customer,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_json') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToJson(
+                          context: context,
+                          type: ContactType.customer,
+                          exportAll: true,
+                        );
+                      } else if (val == 'import_excel') {
+                        if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+                        ContactImportDialog.show(
+                          context,
+                          type: ContactType.customer,
+                          onImportSuccess: () {
+                            context.read<CustomersBloc>().add(LoadCustomers());
+                          },
+                        );
+                      }
+                    },
+                  );
+
+                  final newCustomerBtn = canCreate
+                      ? ElevatedButton.icon(
+                          onPressed: () => _showDialog(context, null),
+                          icon: const Icon(Icons.person_add_alt_1_rounded, size: 18, color: Colors.white),
+                          label: Text(context.tr('Nouveau Client'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleSection,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (_selectedCustomerIds.isNotEmpty) ...[
+                              _buildBulkActionsDropdown(),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(child: searchBarWidget),
+                            const SizedBox(width: 8),
+                            actionsDropdown,
+                            if (canCreate) ...[
+                              const SizedBox(width: 8),
+                              newCustomerBtn,
+                            ],
+                          ],
+                        ),
+                      ],
                     );
                   }
+
+                  return Row(
+                    children: [
+                      titleSection,
+                      const Spacer(),
+                      if (_selectedCustomerIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      searchBarWidget,
+                      const SizedBox(width: 10),
+                      actionsDropdown,
+                      if (canCreate) ...[
+                        const SizedBox(width: 10),
+                        newCustomerBtn,
+                      ],
+                    ],
+                  );
                 },
-              ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.customers)) ...[
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: () => _showDialog(context, null),
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18, color: Colors.white),
-                  label: Text(context.tr('Nouveau Client'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-              ],
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -821,6 +860,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
   late String _selectedPriceList;
   List<String> _priceLists = ['Prix par defaut'];
   Map<String, Map<String, double>> _customPriceLists = {}; // priceListName -> {productId -> customPrice}
+  bool _isSaving = false;
 
   late final TextEditingController _codeCtrl;
   late final TextEditingController _companyNameCtrl;
@@ -1076,14 +1116,26 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     ),
                     SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _save,
-                      icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                      label: Text(context.tr(widget.existing == null ? 'Créer' : 'Enregistrer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      onPressed: _isSaving ? null : _save,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                      label: Text(
+                        _isSaving ? context.tr('Enregistrement...') : context.tr(widget.existing == null ? 'Créer' : 'Enregistrer'),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                     ),
                   ],
@@ -1187,9 +1239,21 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         )
                       else
                         ElevatedButton.icon(
-                          onPressed: _save,
-                          icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                          label: Text(context.tr('Terminer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          onPressed: _isSaving ? null : _save,
+                          icon: _isSaving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                          label: Text(
+                            _isSaving ? context.tr('Enregistrement...') : context.tr('Terminer'),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
                             padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: 12),
@@ -2388,6 +2452,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
   }
 
   void _save() {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) {
       if (_customerType == 'entreprise' && _companyNameCtrl.text.trim().isEmpty) {
         _tabController.animateTo(0);
@@ -2472,13 +2537,18 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       privateNote: _privateNoteCtrl.text.trim().isEmpty ? null : _privateNoteCtrl.text.trim(),
     );
 
-    if (widget.existing == null) {
-      if (!TrialService.instance.checkCanCreate(context)) return;
-      context.read<CustomersBloc>().add(AddCustomer(customer));
-    } else {
-      context.read<CustomersBloc>().add(UpdateCustomer(customer));
+    setState(() => _isSaving = true);
+    try {
+      if (widget.existing == null) {
+        if (!TrialService.instance.checkCanCreate(context)) return;
+        context.read<CustomersBloc>().add(AddCustomer(customer));
+      } else {
+        context.read<CustomersBloc>().add(UpdateCustomer(customer));
+      }
+      Navigator.pop(context, customer);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-    Navigator.pop(context, customer);
   }
 }
 

@@ -23,6 +23,8 @@ import '../../services/permission_service.dart';
 import '../../services/sync_service.dart';
 import '../../services/custom_status_service.dart';
 import '../../models/user_management_model.dart';
+import '../../widgets/scanner_button.dart';
+import '../../l10n/app_localizations.dart';
 
 class MobileSupplierOrdersScreen extends StatefulWidget {
   const MobileSupplierOrdersScreen({super.key});
@@ -40,6 +42,7 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<int>? _syncSub;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -132,9 +135,16 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
+    return BlocConsumer<SupplierOrdersBloc, SupplierOrdersState>(
+      listener: (context, state) {
+        if (_isFirstLoad && (state is SupplierOrdersLoaded || state is SupplierOrdersError)) {
+          setState(() {
+            _isFirstLoad = false;
+          });
+        }
+      },
       builder: (context, state) {
-        bool isLoading = state is SupplierOrdersLoading || state is SupplierOrdersInitial;
+        bool isLoading = _isFirstLoad || state is SupplierOrdersLoading || state is SupplierOrdersInitial;
         bool isEmpty = true;
         bool isLoadingMore = false;
         int totalMatchingCount = 0;
@@ -146,7 +156,7 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
           suppliersList = suppliersState.suppliers;
         }
 
-        if (state is SupplierOrdersLoaded) {
+        if (!_isFirstLoad && state is SupplierOrdersLoaded) {
           final items = state.orders;
           isLoadingMore = state.isLoadingMore;
           totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
@@ -263,6 +273,11 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
             context.read<SuppliersBloc>().add(LoadSuppliers());
           },
           onSearchChanged: _onSearchChanged,
+          searchTrailing: ScannerButton(
+            compact: true,
+            documentTitle: context.tr('Commande Fournisseur'),
+            documentType: 'supplier_order',
+          ),
           filterOptions: const [],
           selectedFilter: _selectedStatus ?? 'Tous',
           onFilterChanged: (val) {

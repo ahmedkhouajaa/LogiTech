@@ -22,19 +22,50 @@ class OnboardingEnterpriseScreen extends StatelessWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.sidebarBg,
+        backgroundColor: AppColors.isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'LogiTech Pro',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
           actions: [
             TextButton.icon(
               onPressed: () {
                 context.read<AuthBloc>().add(AuthLogoutRequested());
               },
-              icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white70),
-              label: const Text('Déconnexion', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              icon: Icon(
+                Icons.logout_rounded,
+                size: 18,
+                color: AppColors.isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+              ),
+              label: Text(
+                'Déconnexion',
+                style: TextStyle(
+                  color: AppColors.isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
           ],
         ),
         body: SafeArea(

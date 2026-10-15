@@ -43,9 +43,18 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         // Modern Action Bar
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-          child: Row(
-            children: [
-              BlocBuilder<SuppliersBloc, SuppliersState>(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 880;
+              final canCreate = PermissionService.instance.canCreate(UserPermissionResources.suppliers);
+
+              final searchBarWidget = SizedBox(
+                width: isNarrow ? null : 240,
+                height: 34,
+                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              );
+
+              return BlocBuilder<SuppliersBloc, SuppliersState>(
                 buildWhen: (prev, curr) => curr is SuppliersLoaded || curr is SuppliersLoading || curr is SuppliersInitial,
                 builder: (context, state) {
                   final totalCount = state is SuppliersLoaded
@@ -59,8 +68,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                           (s.companyName?.toLowerCase().contains(_search) ?? false)).length
                       : null;
 
-                  return Column(
+                  final titleSection = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
@@ -97,137 +107,166 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       ),
                     ],
                   );
-                },
-              ),
-              const Spacer(),
-              if (_selectedSupplierIds.isNotEmpty) ...[
-                _buildBulkActionsDropdown(),
-                const SizedBox(width: 10),
-              ],
-              SizedBox(
-                width: 250,
-                height: 34,
-                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
-              ),
-              const SizedBox(width: 10),
-              // ... Actions Button Popup
-              PopupMenuButton<String>(
-                tooltip: 'Actions Import / Export',
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                color: AppColors.surface,
-                elevation: 4,
-                child: Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
-                      const SizedBox(width: 6),
-                      Text(
-                        context.tr('Actions'),
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                itemBuilder: (ctx) {
-                  final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
-                  final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
-                  final items = <PopupMenuEntry<String>>[];
-                  if (canExport) {
-                    items.addAll([
-                      const PopupMenuItem(
-                        value: 'export_excel',
-                        child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'export_csv',
-                        child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
-                      ),
-                      const PopupMenuItem(
-                        value: 'export_json',
-                        child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
-                      ),
-                    ]);
-                  }
-                  if (canExport && canImport) {
-                    items.add(const PopupMenuDivider());
-                  }
-                  if (canImport) {
-                    items.add(
-                      const PopupMenuItem(
-                        value: 'import_excel',
-                        child: Text(
-                          'Importer depuis Excel',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    );
-                  }
-                  return items;
-                },
-                onSelected: (val) async {
-                  final state = context.read<SuppliersBloc>().state;
-                  final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
 
-                  if (val == 'export_excel') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToExcel(
-                      context: context,
-                      type: ContactType.supplier,
-                      contacts: suppliers,
-                    );
-                  } else if (val == 'export_csv') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToCsv(
-                      context: context,
-                      type: ContactType.supplier,
-                      contacts: suppliers,
-                    );
-                  } else if (val == 'export_json') {
-                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
-                    await ContactImportExportService.instance.exportContactsToJson(
-                      context: context,
-                      type: ContactType.supplier,
-                      contacts: suppliers,
-                    );
-                  } else if (val == 'import_excel') {
-                    if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
-                    ContactImportDialog.show(
-                      context,
-                      type: ContactType.supplier,
-                      onImportSuccess: () {
-                        context.read<SuppliersBloc>().add(LoadSuppliers());
-                      },
+                  final actionsDropdown = PopupMenuButton<String>(
+                    tooltip: 'Actions Import / Export',
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    color: AppColors.surface,
+                    elevation: 4,
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.tr('Actions'),
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (ctx) {
+                      final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+                      final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+                      final items = <PopupMenuEntry<String>>[];
+                      if (canExport) {
+                        items.addAll([
+                          const PopupMenuItem(
+                            value: 'export_excel',
+                            child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+                          ),
+                          const PopupMenuItem(
+                            value: 'export_csv',
+                            child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+                          ),
+                          const PopupMenuItem(
+                            value: 'export_json',
+                            child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+                          ),
+                        ]);
+                      }
+                      if (canExport && canImport) {
+                        items.add(const PopupMenuDivider());
+                      }
+                      if (canImport) {
+                        items.add(
+                          const PopupMenuItem(
+                            value: 'import_excel',
+                            child: Text(
+                              'Importer depuis Excel',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        );
+                      }
+                      return items;
+                    },
+                    onSelected: (val) async {
+                      if (val == 'export_excel') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToExcel(
+                          context: context,
+                          type: ContactType.supplier,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_csv') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToCsv(
+                          context: context,
+                          type: ContactType.supplier,
+                          exportAll: true,
+                        );
+                      } else if (val == 'export_json') {
+                        if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                        await ContactImportExportService.instance.exportContactsToJson(
+                          context: context,
+                          type: ContactType.supplier,
+                          exportAll: true,
+                        );
+                      } else if (val == 'import_excel') {
+                        if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+                        ContactImportDialog.show(
+                          context,
+                          type: ContactType.supplier,
+                          onImportSuccess: () {
+                            context.read<SuppliersBloc>().add(LoadSuppliers());
+                          },
+                        );
+                      }
+                    },
+                  );
+
+                  final newSupplierBtn = canCreate
+                      ? ElevatedButton.icon(
+                          onPressed: () => _showDialog(context, null),
+                          icon: const Icon(Icons.factory_rounded, size: 18, color: Colors.white),
+                          label: Text(context.tr('Nouveau Fournisseur'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleSection,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (_selectedSupplierIds.isNotEmpty) ...[
+                              _buildBulkActionsDropdown(),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(child: searchBarWidget),
+                            const SizedBox(width: 8),
+                            actionsDropdown,
+                            if (canCreate) ...[
+                              const SizedBox(width: 8),
+                              newSupplierBtn,
+                            ],
+                          ],
+                        ),
+                      ],
                     );
                   }
+
+                  return Row(
+                    children: [
+                      titleSection,
+                      const Spacer(),
+                      if (_selectedSupplierIds.isNotEmpty) ...[
+                        _buildBulkActionsDropdown(),
+                        const SizedBox(width: 10),
+                      ],
+                      searchBarWidget,
+                      const SizedBox(width: 10),
+                      actionsDropdown,
+                      if (canCreate) ...[
+                        const SizedBox(width: 10),
+                        newSupplierBtn,
+                      ],
+                    ],
+                  );
                 },
-              ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.suppliers)) ...[
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: () => _showDialog(context, null),
-                  icon: const Icon(Icons.factory_rounded, size: 18, color: Colors.white),
-                  label: Text(context.tr('Nouveau Fournisseur'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-              ],
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -810,6 +849,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   late bool _deliverySameAsBilling;
   bool _deliveryExpanded = true;
   bool _bankExpanded = false;
+  bool _isSaving = false;
 
   late final TextEditingController _codeCtrl, _nameCtrl, _emailCtrl, _phoneCtrl, _addressCtrl, _cityCtrl, _postalCodeCtrl, _deliveryStreetCtrl, _deliveryCityCtrl, _deliveryPostalCodeCtrl, _taxCtrl, _rcCtrl, _notesCtrl, _bankAccountCtrl;
   late final TextEditingController _companyNameCtrl, _responsibleNameCtrl, _cinCtrl, _birthDateCtrl, _referenceCtrl;
@@ -984,14 +1024,26 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     ),
                     SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _save,
-                      icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                      label: Text(context.tr(widget.existing == null ? 'Creer' : 'Enregistrer'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      onPressed: _isSaving ? null : _save,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                      label: Text(
+                        _isSaving ? context.tr('Enregistrement...') : context.tr(widget.existing == null ? 'Creer' : 'Enregistrer'),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                     ),
                   ],
@@ -1799,6 +1851,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   }
 
   void _save() {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
     
     final String clientName = _supplierType == 'entreprise'
@@ -1837,12 +1890,17 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
       birthDate: _supplierType == 'particulier' ? (_birthDateCtrl.text.trim().isEmpty ? null : _birthDateCtrl.text.trim()) : null,
       referenceCode: _referenceCtrl.text.trim().isEmpty ? null : _referenceCtrl.text.trim(),
     );
-    if (widget.existing == null) {
-      if (!TrialService.instance.checkCanCreate(context)) return;
-      context.read<SuppliersBloc>().add(AddSupplier(supplier));
-    } else {
-      context.read<SuppliersBloc>().add(UpdateSupplier(supplier));
+    setState(() => _isSaving = true);
+    try {
+      if (widget.existing == null) {
+        if (!TrialService.instance.checkCanCreate(context)) return;
+        context.read<SuppliersBloc>().add(AddSupplier(supplier));
+      } else {
+        context.read<SuppliersBloc>().add(UpdateSupplier(supplier));
+      }
+      Navigator.pop(context, supplier.id);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-    Navigator.pop(context, supplier.id);
   }
 }

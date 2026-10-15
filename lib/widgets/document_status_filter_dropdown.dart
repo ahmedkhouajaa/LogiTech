@@ -55,9 +55,11 @@ class _DocumentStatusFilterDropdownState extends State<DocumentStatusFilterDropd
   @override
   Widget build(BuildContext context) {
     final allStatuses = CustomStatusService.instance.getAllStatusesSync(widget.documentType);
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final dynamicHeight = (34.0 * textScale).clamp(32.0, 46.0);
 
     return SizedBox(
-      height: 32,
+      height: dynamicHeight,
       child: PopupMenuButton<String?>(
         tooltip: context.tr('Filtrer par statut'),
         shape: RoundedRectangleBorder(
@@ -126,7 +128,7 @@ class _DocumentStatusFilterDropdownState extends State<DocumentStatusFilterDropd
           ),
         ],
         child: Container(
-          height: 32,
+          height: dynamicHeight,
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(6),

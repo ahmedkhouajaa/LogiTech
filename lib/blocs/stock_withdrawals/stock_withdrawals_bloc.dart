@@ -170,8 +170,14 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   Future<void> _onLoadFirstStockWithdrawals(LoadFirstStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
     emit(StockWithdrawalsLoading());
     try {
-      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('stock_withdrawals');
-      final pendingWithdrawals = pendingMaps.map((m) => StockWithdrawal.fromMap(m)).toList();
+      final pendingMaps1 = await OfflineDocumentService.instance.getPendingDocuments('stock_withdrawals');
+      final pendingMaps2 = await OfflineDocumentService.instance.getPendingDocuments('bons_prelevement');
+      final uniqueMap = <String, Map<String, dynamic>>{};
+      for (var m in [...pendingMaps1, ...pendingMaps2]) {
+        final id = m['id']?.toString();
+        if (id != null && id.isNotEmpty) uniqueMap[id] = m;
+      }
+      final pendingWithdrawals = uniqueMap.values.map((m) => StockWithdrawal.fromMap(m)).toList();
 
       List<StockWithdrawal> remoteWithdrawals = [];
       int totalCount = 0;

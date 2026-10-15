@@ -308,50 +308,13 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       }
     }
 
-    // Ensure the customer has the current enterpriseId
-    final customer = (event.customer.enterpriseId == null || event.customer.enterpriseId!.isEmpty || finalCode != event.customer.code)
-        ? Customer(
-            id: event.customer.id,
-            code: finalCode,
-            name: event.customer.name,
-            email: event.customer.email,
-            phone: event.customer.phone,
-            address: event.customer.address,
-            city: event.customer.city,
-            taxId: event.customer.taxId,
-            rc: event.customer.rc,
-            balance: event.customer.balance,
-            creditLimit: event.customer.creditLimit,
-            notes: event.customer.notes,
-            firebaseUid: event.customer.firebaseUid,
-            enterpriseId: currentEntId,
-            isDeleted: event.customer.isDeleted,
-            isDefault: false,
-            createdAt: event.customer.createdAt,
-            updatedAt: event.customer.updatedAt,
-            customerType: event.customer.customerType,
-            companyName: event.customer.companyName,
-            responsibleName: event.customer.responsibleName,
-            cinNumber: event.customer.cinNumber,
-            birthDate: event.customer.birthDate,
-            referenceCode: event.customer.referenceCode,
-            streetAddress: event.customer.streetAddress,
-            postalCode: event.customer.postalCode,
-            country: event.customer.country,
-            deliveryStreet: event.customer.deliveryStreet,
-            deliveryCity: event.customer.deliveryCity,
-            deliveryPostalCode: event.customer.deliveryPostalCode,
-            deliveryCountry: event.customer.deliveryCountry,
-            deliverySameAsBilling: event.customer.deliverySameAsBilling,
-            bankAccount: event.customer.bankAccount,
-            tvaSuspension: event.customer.tvaSuspension,
-            tvaAttestation: event.customer.tvaAttestation,
-            tvaStartDate: event.customer.tvaStartDate,
-            tvaEndDate: event.customer.tvaEndDate,
-            priceList: event.customer.priceList,
-            privateNote: event.customer.privateNote,
-          )
-        : event.customer;
+    final customer = event.customer.copyWith(
+      code: finalCode,
+      enterpriseId: (event.customer.enterpriseId != null && event.customer.enterpriseId!.isNotEmpty)
+          ? event.customer.enterpriseId
+          : currentEntId,
+      isDefault: false,
+    );
 
     final currentState = state;
     List<Customer> currentList = [];

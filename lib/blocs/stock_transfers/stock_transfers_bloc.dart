@@ -9,8 +9,10 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
-import '../../services/enterprise_service.dart';
+import '../../services/document_numbering_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/enterprise_service.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
@@ -142,6 +144,9 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
   Future<void> _onLoadFirstStockTransfers(LoadFirstStockTransfers event, Emitter<StockTransfersState> emit) async {
     emit(StockTransfersLoading());
     try {
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('stock_transfers');
+      final pendingTransfers = pendingMaps.map((m) => StockTransfer.fromMap(m)).toList();
+
       FirestorePaginationService.instance.resetStockTransfersPagination();
       final transfersFuture = FirestorePaginationService.instance.getFirstStockTransfers(
         pageSize: pageSize,
@@ -163,9 +168,19 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
       final transfers = results[0] as List<StockTransfer>;
       final totalCount = results[1] as int;
 
+      final combined = <StockTransfer>[...pendingTransfers];
+      final pendingIds = pendingTransfers.map((t) => t.id).toSet();
+      for (var t in transfers) {
+        if (!pendingIds.contains(t.id)) {
+          combined.add(t);
+        }
+      }
+
+      final finalTotal = totalCount + pendingTransfers.length;
+
       emit(StockTransfersLoaded(
-        transfers,
-        totalCount: totalCount > transfers.length ? totalCount : transfers.length,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
         hasMore: transfers.length >= pageSize,
       ));
     } catch (e) {
@@ -225,7 +240,9 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
       String number = event.transfer.number;
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
-        number = generateDocNumber(DocPrefix.stockTransfer, seq);
+        number = seq != null
+            ? generateDocNumber(DocPrefix.stockTransfer, seq)
+            : DocumentNumberingService.generateDraftDocumentNumber();
       }
       final transferToSave = event.transfer.copyWith(number: number);
       await FirestoreRepository.instance.saveStockTransfer(transferToSave);

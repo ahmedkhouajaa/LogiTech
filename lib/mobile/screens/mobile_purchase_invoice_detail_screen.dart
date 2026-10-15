@@ -25,6 +25,8 @@ import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
+import '../../services/document_numbering_service.dart';
+import '../../services/offline_document_service.dart';
 
 import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
@@ -450,8 +452,15 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
               Navigator.pop(context);
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
-              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq, docCollection: 'supplier_credit_notes');
+              final docNumResult = await DocumentNumberingService.getNextDocumentNumber(
+                context: context,
+                docCollection: 'supplier_credit_notes',
+                docTypeName: 'Avoir Fournisseur',
+                defaultPrefix: DocPrefix.supplierCreditNote,
+              );
+              if (docNumResult.cancelled) return;
+              final String cnNumber = docNumResult.number;
+              final bool isDraft = docNumResult.isDraft;
               
               final creditNote = SupplierCreditNote(
                 id: cnId,
@@ -472,7 +481,11 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
                 updatedAt: now,
               );
 
-              context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+              if (isDraft) {
+                await OfflineDocumentService.instance.savePendingDocument('supplier_credit_notes', creditNote.toMap());
+              } else {
+                context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+              }
               
               final updatedInvoice = invoice.copyWith(creditNoteId: creditNote.id);
               context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
@@ -485,8 +498,8 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Avoir fournisseur $cnNumber créé et stock réajusté avec succès'),
-                  backgroundColor: AppColors.success,
+                  content: Text(isDraft ? 'Avoir fournisseur $cnNumber enregistré en Brouillon (en attente de sync)' : 'Avoir fournisseur $cnNumber créé et stock réajusté avec succès'),
+                  backgroundColor: isDraft ? AppColors.warning : AppColors.success,
                 ),
               );
             },
